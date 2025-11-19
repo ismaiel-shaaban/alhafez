@@ -8,26 +8,36 @@ import { motion } from 'framer-motion'
 export default function PackagesList() {
   const { t } = useTranslation()
 
+  // Helper function to ensure features is always an array
+  const getFeatures = (key: string): string[] => {
+    const features = t(key, { returnObjects: true })
+    if (Array.isArray(features)) {
+      return features
+    }
+    // Fallback to empty array if not an array
+    return []
+  }
+
   const packages = [
     {
       id: 'basic',
       name: t('packages.basic.name'),
       price: t('packages.basic.price'),
-      features: t('packages.basic.features', { returnObjects: true }) as string[],
+      features: getFeatures('packages.basic.features'),
       popular: false,
     },
     {
       id: 'standard',
       name: t('packages.standard.name'),
       price: t('packages.standard.price'),
-      features: t('packages.standard.features', { returnObjects: true }) as string[],
+      features: getFeatures('packages.standard.features'),
       popular: true,
     },
     {
       id: 'premium',
       name: t('packages.premium.name'),
       price: t('packages.premium.price'),
-      features: t('packages.premium.features', { returnObjects: true }) as string[],
+      features: getFeatures('packages.premium.features'),
       popular: false,
     },
   ]
@@ -89,7 +99,7 @@ export default function PackagesList() {
           </div>
 
           <ul className="space-y-4 mb-8">
-            {pkg.features.map((feature, index) => (
+            {(Array.isArray(pkg.features) ? pkg.features : []).map((feature, index) => (
               <li key={index} className="flex items-start gap-3">
                 <div className="w-5 h-5 bg-gradient-to-br from-accent-green to-primary-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                   <Check className="w-3 h-3 text-white" />

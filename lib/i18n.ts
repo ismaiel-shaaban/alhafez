@@ -66,8 +66,15 @@ export function useTranslation(locale: Locale = 'ar') {
     }
 
     // Handle returnObjects option
-    if (options?.returnObjects && (typeof value === 'object' || Array.isArray(value))) {
-      return value
+    if (options?.returnObjects) {
+      if (Array.isArray(value)) {
+        return value
+      }
+      if (typeof value === 'object' && value !== null) {
+        return value
+      }
+      // If returnObjects is true but value is not an object/array, return empty array for safety
+      return []
     }
 
     return value ?? key

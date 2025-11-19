@@ -106,7 +106,7 @@ export default function PackagesPage() {
             </div>
 
             <ul className="space-y-3 mb-6">
-              {pkg.features.map((feature, index) => (
+              {(Array.isArray(pkg.features) ? pkg.features : []).map((feature, index) => (
                 <li key={index} className="flex items-start gap-3 text-primary-700">
                   <Check className="w-5 h-5 text-accent-green flex-shrink-0 mt-0.5" />
                   <span>{feature}</span>
