@@ -1,0 +1,217 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * ===================================================
+ * SINGLE SOURCE OF TRUTH FOR ALL COLORS
+ * ===================================================
+ * 
+ * ALL colors are defined in this file below in the :root section.
+ * To change ANY color on the website:
+ * 
+ * 1. Update the color values in the :root section below
+ * 2. Update the matching values in tailwind.config.js
+ * 3. That's it! Colors will update everywhere.
+ * 
+ * Note: Components use Tailwind classes (like bg-primary-500) which
+ * get their values from tailwind.config.js. Make sure both files match.
+ */
+
+@layer base {
+  :root {
+    --font-tajawal: 'Tajawal', sans-serif;
+    --font-poppins: 'Poppins', sans-serif;
+    
+    /* ========================================
+       COLOR VARIABLES - CHANGE COLORS HERE
+       ======================================== */
+    
+    /* Primary Colors - Based on #006873 */
+    --color-primary-50: #e6f7f9;
+    --color-primary-100: #b3e8ed;
+    --color-primary-200: #80d9e1;
+    --color-primary-300: #4dcad5;
+    --color-primary-400: #26bbc8;
+    --color-primary-500: #00acbb;
+    --color-primary-600: #009aa7;
+    --color-primary-700: #006873;
+    --color-primary-800: #004d55;
+    --color-primary-900: #003237;
+    --color-primary-950: #00191c;
+    
+    /* Accent Colors - Complementary colors */
+    --color-accent-green: #059669;
+    --color-accent-green-light: #10b981;
+    --color-accent-green-dark: #047857;
+    --color-accent-gold: #d97706;
+    --color-accent-gold-light: #f59e0b;
+    --color-accent-amber: #ea580c;
+    --color-accent-blue: #2563eb;
+    --color-accent-purple: #7c3aed;
+    
+    /* Semantic Colors - Base values (reference primary/accent above) */
+    --color-bg-primary: var(--color-primary-50);
+    --color-bg-secondary: #ffffff;
+    --color-bg-card: #ffffff;
+    --color-bg-navbar: rgba(255, 255, 255, 0.98);
+    --color-bg-footer: var(--color-primary-100);
+    
+    --color-text-primary: var(--color-primary-700);
+    --color-text-secondary: var(--color-primary-800);
+    --color-text-muted: #64748b;
+    
+    --color-border-primary: var(--color-primary-300);
+    --color-border-secondary: var(--color-primary-200);
+    
+    --color-button-primary: var(--color-primary-700);
+    --color-button-primary-hover: var(--color-primary-800);
+    --color-button-secondary-bg: rgba(255, 255, 255, 0.9);
+    --color-button-secondary-border: var(--color-primary-500);
+    
+    /* Beautiful Gradient Definitions - Premium, elegant gradients */
+    --gradient-body: 
+      radial-gradient(circle at 20% 50%, rgba(179, 232, 237, 0.15) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(128, 217, 225, 0.15) 0%, transparent 50%),
+      radial-gradient(circle at 40% 20%, rgba(230, 247, 249, 0.2) 0%, transparent 50%),
+      linear-gradient(135deg, #ffffff 0%, #f0fdfa 50%, #e6f7f9 100%);
+    --gradient-page: 
+      radial-gradient(ellipse at top left, rgba(179, 232, 237, 0.2) 0%, transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(128, 217, 225, 0.15) 0%, transparent 50%),
+      linear-gradient(180deg, #ffffff 0%, #f8fffe 30%, #e6f7f9 100%);
+    --gradient-footer: linear-gradient(180deg, rgba(179, 232, 237, 0.95) 0%, #80d9e1 50%, #4dcad5 100%);
+    --gradient-button-primary: linear-gradient(135deg, #006873 0%, #008a9a 100%);
+    --gradient-button-primary-hover: linear-gradient(135deg, #005662 0%, #006873 100%);
+    --gradient-section-title: linear-gradient(135deg, #006873 0%, #008a9a 100%);
+    --gradient-hero-title: linear-gradient(135deg, #006873 0%, #008a9a 100%);
+    --gradient-card: linear-gradient(135deg, #ffffff 0%, #fafefe 100%);
+  }
+
+  html[dir='rtl'] {
+    direction: rtl;
+  }
+
+  html[dir='ltr'] {
+    direction: ltr;
+  }
+
+  body {
+    @apply text-primary-900;
+    font-family: var(--font-tajawal);
+    background: var(--gradient-body);
+    background-attachment: fixed;
+    background-size: 100% 100%;
+    min-height: 100vh;
+    color: var(--color-text-primary);
+  }
+
+  html[dir='ltr'] body {
+    font-family: var(--font-poppins);
+  }
+}
+
+@layer components {
+  .container-custom {
+    @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .btn-primary {
+    @apply text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl hover:scale-105;
+    background: var(--gradient-button-primary);
+  }
+  
+  .btn-primary:hover {
+    background: var(--gradient-button-primary-hover);
+    box-shadow: 0 10px 25px rgba(0, 104, 115, 0.4);
+  }
+
+  .btn-secondary {
+    @apply border-2 font-semibold py-3 px-6 rounded-lg transition-all duration-300 hover:shadow-lg;
+    background-color: var(--color-button-secondary-bg);
+    border-color: var(--color-button-secondary-border);
+    color: var(--color-text-primary);
+  }
+  
+  .btn-secondary:hover {
+    @apply bg-white;
+    border-color: var(--color-button-primary);
+    color: var(--color-button-primary);
+  }
+
+  .section-title {
+    @apply text-3xl md:text-4xl lg:text-5xl font-bold text-center mb-4;
+    background: var(--gradient-section-title);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .section-subtitle {
+    @apply text-lg md:text-xl text-center mb-12;
+    color: var(--color-text-secondary);
+  }
+  
+  /* Background Utilities */
+  .bg-page {
+    background: var(--gradient-page);
+    background-attachment: fixed;
+    background-size: 100% 100%;
+    min-height: 100vh;
+  }
+  
+  .bg-card {
+    background: var(--gradient-card);
+  }
+  
+  .bg-navbar {
+    background-color: var(--color-bg-navbar);
+  }
+  
+  .bg-footer {
+    background: var(--gradient-footer);
+  }
+  
+  /* Animations */
+  @keyframes blob {
+    0%, 100% {
+      transform: translate(0px, 0px) scale(1);
+    }
+    33% {
+      transform: translate(30px, -50px) scale(1.1);
+    }
+    66% {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+  }
+  
+
+  .animate-blob {
+    animation: blob 7s infinite;
+  }
+  
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+  
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+  
+  /* Text Utilities */
+  .text-primary {
+    color: var(--color-text-primary);
+  }
+  
+  .text-secondary {
+    color: var(--color-text-secondary);
+  }
+  
+  /* Border Utilities */
+  .border-primary {
+    border-color: var(--color-border-primary);
+  }
+  
+  .border-secondary {
+    border-color: var(--color-border-secondary);
+  }
+}
