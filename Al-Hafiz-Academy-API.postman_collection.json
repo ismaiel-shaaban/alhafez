@@ -1262,7 +1262,7 @@
 	"variable": [
 		{
 			"key": "base_url",
-			"value": "http://al-hafiz-academy.cloudy-digital.com",
+			"value": "https://al-hafiz-academy.cloudy-digital.com",
 			"type": "string"
 		},
 		{

@@ -1,5 +1,5 @@
 // API Client Configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://al-hafiz-academy.cloudy-digital.com'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://al-hafiz-academy.cloudy-digital.com'
 
 // Get auth token from localStorage
 export const getAuthToken = (): string | null => {

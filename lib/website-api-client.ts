@@ -1,5 +1,5 @@
 // Website API Client Configuration (Public endpoints, no auth required)
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://al-hafiz-academy.cloudy-digital.com'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://al-hafiz-academy.cloudy-digital.com'
 
 // Get current locale
 export const getCurrentLocale = (): string => {
