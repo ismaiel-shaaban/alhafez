@@ -25,15 +25,17 @@ export default function AdminLogin() {
     setError('')
     setIsLoading(true)
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    const success = login(username, password)
-    
-    if (success) {
-      router.push('/admin/dashboard')
-    } else {
-      setError('اسم المستخدم أو كلمة المرور غير صحيحة')
+    try {
+      const success = await login(username, password)
+      
+      if (success) {
+        router.push('/admin/dashboard')
+      } else {
+        setError('اسم المستخدم أو كلمة المرور غير صحيحة')
+        setIsLoading(false)
+      }
+    } catch (error: any) {
+      setError(error.message || 'حدث خطأ أثناء تسجيل الدخول')
       setIsLoading(false)
     }
   }
@@ -142,7 +144,7 @@ export default function AdminLogin() {
           {/* Demo Credentials Hint */}
           <div className="mt-6 p-4 bg-primary-50 rounded-lg border border-primary-200">
             <p className="text-xs text-primary-600 text-center">
-              <strong>تجريبي:</strong> admin / admin123
+              <strong>تجريبي:</strong> admin / password
             </p>
           </div>
         </div>

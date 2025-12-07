@@ -2,56 +2,64 @@
 
 import { useEffect } from 'react'
 import { useAdminStore } from '@/store/useAdminStore'
-import { useStore } from '@/store/useStore'
-import { Users, BookOpen, DollarSign, TrendingUp, GraduationCap, MessageSquare, Award } from 'lucide-react'
+import { Users, BookOpen, GraduationCap, MessageSquare, Award } from 'lucide-react'
 import Link from 'next/link'
 
 export default function AdminDashboard() {
-  const { students, teachers, packages, testimonials, honorBoard } = useAdminStore()
-  const { students: registeredStudents } = useStore()
+  const { 
+    students, 
+    teachers, 
+    packages, 
+    reviews, 
+    honorBoard,
+    fetchStudents,
+    fetchTeachers,
+    fetchPackages,
+    fetchReviews,
+    fetchHonorBoard
+  } = useAdminStore()
 
-  // Sync registered students to admin store
+  // Load all data on mount
   useEffect(() => {
-    registeredStudents.forEach((student) => {
-      const exists = students.find((s) => s.id === student.id)
-      if (!exists) {
-        useAdminStore.getState().addStudent(student)
-      }
-    })
-  }, [registeredStudents, students])
+    fetchStudents()
+    fetchTeachers()
+    fetchPackages()
+    fetchReviews()
+    fetchHonorBoard()
+  }, [fetchStudents, fetchTeachers, fetchPackages, fetchReviews, fetchHonorBoard])
 
   const stats = [
     {
       title: 'إجمالي الطلاب',
-      value: students.length.toString(),
+      value: (students?.length || 0).toString(),
       icon: <Users className="w-8 h-8" />,
       color: 'bg-blue-500',
       href: '/admin/students',
     },
     {
       title: 'المعلمين',
-      value: teachers.length.toString(),
+      value: (teachers?.length || 0).toString(),
       icon: <GraduationCap className="w-8 h-8" />,
       color: 'bg-green-500',
       href: '/admin/teachers',
     },
     {
       title: 'الباقات',
-      value: packages.length.toString(),
+      value: (packages?.length || 0).toString(),
       icon: <BookOpen className="w-8 h-8" />,
       color: 'bg-purple-500',
       href: '/admin/packages',
     },
     {
       title: 'آراء الطلاب',
-      value: testimonials.length.toString(),
+      value: (reviews?.length || 0).toString(),
       icon: <MessageSquare className="w-8 h-8" />,
       color: 'bg-yellow-500',
       href: '/admin/testimonials',
     },
     {
       title: 'لوحة الشرف',
-      value: honorBoard.length.toString(),
+      value: (honorBoard?.length || 0).toString(),
       icon: <Award className="w-8 h-8" />,
       color: 'bg-orange-500',
       href: '/admin/honor-board',
@@ -104,7 +112,7 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {students.length === 0 ? (
+              {!students || students.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-8 text-center text-primary-600">
                     لا يوجد طلاب مسجلون بعد
@@ -119,8 +127,8 @@ export default function AdminDashboard() {
                     <td className="px-6 py-4 text-primary-900">{student.name}</td>
                     <td className="px-6 py-4 text-primary-700">{student.email}</td>
                     <td className="px-6 py-4 text-primary-700">{student.phone}</td>
-                    <td className="px-6 py-4 text-primary-700">{student.package}</td>
-                    <td className="px-6 py-4 text-primary-700">{student.gender}</td>
+                    <td className="px-6 py-4 text-primary-700">{student.package?.name || '-'}</td>
+                    <td className="px-6 py-4 text-primary-700">{student.gender_label || (student.gender === 'male' ? 'ذكر' : 'أنثى')}</td>
                   </tr>
                 ))
               )}

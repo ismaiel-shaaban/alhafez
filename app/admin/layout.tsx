@@ -14,31 +14,53 @@ import {
   LogOut,
   Menu,
   X,
+  DollarSign,
+  BookOpen,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
-  const { admin, logout } = useAdminStore()
+  const { admin, logout, checkAuth } = useAdminStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
   useEffect(() => {
-    if (!admin.isAuthenticated && pathname !== '/admin/login') {
+    // Check authentication on mount
+    const verifyAuth = async () => {
+      if (pathname !== '/admin/login') {
+        try {
+          await checkAuth()
+        } catch (error) {
+          console.error('Auth check failed:', error)
+        }
+      }
+      setIsCheckingAuth(false)
+    }
+    verifyAuth()
+  }, [pathname, checkAuth])
+
+  useEffect(() => {
+    if (!isCheckingAuth && !admin.isAuthenticated && pathname !== '/admin/login') {
       router.push('/admin/login')
     }
-  }, [admin.isAuthenticated, pathname, router])
+  }, [admin.isAuthenticated, pathname, router, isCheckingAuth])
 
-  if (!admin.isAuthenticated && pathname !== '/admin/login') {
-    return null
+  if (isCheckingAuth || (!admin.isAuthenticated && pathname !== '/admin/login')) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    )
   }
 
   if (pathname === '/admin/login') {
     return <>{children}</>
   }
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     router.push('/admin/login')
   }
 
@@ -46,7 +68,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
     { href: '/admin/students', label: 'الطلاب', icon: Users },
     { href: '/admin/teachers', label: 'المعلمين', icon: GraduationCap },
+    { href: '/admin/teacher-salary', label: 'الرواتب', icon: DollarSign },
     { href: '/admin/packages', label: 'الباقات', icon: Package },
+    { href: '/admin/features', label: 'المميزات', icon: BookOpen },
     { href: '/admin/testimonials', label: 'آراء الطلاب', icon: MessageSquare },
     { href: '/admin/honor-board', label: 'لوحة الشرف', icon: Award },
   ]
