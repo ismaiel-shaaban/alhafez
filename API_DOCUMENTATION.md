@@ -2,7 +2,7 @@
 
 ## Base URL
 ```
-http://al-hafiz-academy.cloudy-digital.com/api
+https://al-hafiz-academy.cloudy-digital.com/api
 ```
 
 ## Authentication

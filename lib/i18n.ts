@@ -5,6 +5,15 @@ type Locale = 'ar' | 'en'
 // Load translations synchronously for server/client compatibility
 let translations: Record<Locale, any> = {} as any
 
+// Track loading state for client-side
+let loadingPromises: Record<Locale, Promise<any> | null> = {
+  ar: null,
+  en: null,
+}
+
+// Callbacks to notify when translations are loaded (for reactivity)
+let translationCallbacks: Set<() => void> = new Set()
+
 if (typeof window === 'undefined') {
   // Server-side
   try {
@@ -22,33 +31,67 @@ if (typeof window === 'undefined') {
 }
 
 export async function loadTranslations(locale: Locale) {
+  // If already loaded, return immediately
   if (translations[locale]) return translations[locale]
   
-  try {
-    const response = await fetch(`/locales/${locale}/common.json`)
-    translations[locale] = await response.json()
-    return translations[locale]
-  } catch (e) {
-    console.error('Error loading translations:', e)
-    // Fallback to Arabic
-    if (!translations.ar) {
-      try {
-        const response = await fetch('/locales/ar/common.json')
-        translations.ar = await response.json()
-      } catch {}
+  // If already loading, return the existing promise
+  if (loadingPromises[locale]) {
+    return loadingPromises[locale]
+  }
+  
+  // Start loading
+  const loadPromise = (async () => {
+    try {
+      const response = await fetch(`/locales/${locale}/common.json`)
+      translations[locale] = await response.json()
+      // Notify all callbacks that translations have been loaded
+      translationCallbacks.forEach(cb => cb())
+      return translations[locale]
+    } catch (e) {
+      console.error('Error loading translations:', e)
+      // Fallback to Arabic
+      if (!translations.ar) {
+        try {
+          const response = await fetch('/locales/ar/common.json')
+          translations.ar = await response.json()
+          translationCallbacks.forEach(cb => cb())
+        } catch {}
+      }
+      return translations.ar || {}
+    } finally {
+      loadingPromises[locale] = null
     }
-    return translations.ar || {}
+  })()
+  
+  loadingPromises[locale] = loadPromise
+  return loadPromise
+}
+
+// Pre-load translations on client based on saved locale
+if (typeof window !== 'undefined') {
+  // Get saved locale or default to Arabic
+  const savedLocale = localStorage.getItem('locale') as Locale | null
+  const initialLocale = (savedLocale === 'ar' || savedLocale === 'en') ? savedLocale : 'ar'
+  
+  // Load translations for the initial locale immediately
+  loadTranslations(initialLocale).catch(() => {})
+  // Also pre-load the other locale
+  const otherLocale = initialLocale === 'ar' ? 'en' : 'ar'
+  loadTranslations(otherLocale).catch(() => {})
+}
+
+// Hook to subscribe to translation updates (for React components)
+export function subscribeToTranslations(callback: () => void) {
+  if (typeof window === 'undefined') return () => {}
+  translationCallbacks.add(callback)
+  return () => {
+    translationCallbacks.delete(callback)
   }
 }
 
-// Pre-load translations on client
-if (typeof window !== 'undefined') {
-  // Load translations on mount
-  loadTranslations('ar').catch(() => {})
-  loadTranslations('en').catch(() => {})
-}
-
 export function useTranslation(locale: Locale = 'ar') {
+  // This is a non-reactive hook - it just returns the translation function
+  // Reactivity is handled by the useTranslation hook in hooks/useTranslation.ts
   const t = (key: string, options?: { returnObjects?: boolean }): any => {
     const keys = key.split('.')
     let value: any = translations[locale] || translations.ar || {}

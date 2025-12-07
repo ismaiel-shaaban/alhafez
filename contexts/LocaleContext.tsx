@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { loadTranslations } from '@/lib/i18n'
 
 type Locale = 'ar' | 'en'
 
@@ -12,18 +13,26 @@ interface LocaleContextType {
 
 const LocaleContext = createContext<LocaleContextType | undefined>(undefined)
 
+// Get initial locale synchronously from localStorage
+function getInitialLocale(): Locale {
+  if (typeof window === 'undefined') return 'ar'
+  const savedLocale = localStorage.getItem('locale') as Locale | null
+  return (savedLocale === 'ar' || savedLocale === 'en') ? savedLocale : 'ar'
+}
+
 export function LocaleProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>('ar')
+  const [locale, setLocaleState] = useState<Locale>(getInitialLocale)
 
   useEffect(() => {
-    // Load locale from localStorage or default to Arabic
-    const savedLocale = localStorage.getItem('locale') as Locale | null
-    if (savedLocale === 'ar' || savedLocale === 'en') {
-      setLocaleState(savedLocale)
-      updateDocumentAttributes(savedLocale)
-    } else {
-      updateDocumentAttributes('ar')
-    }
+    // Update document attributes on mount
+    const initialLocale = getInitialLocale()
+    updateDocumentAttributes(initialLocale)
+    
+    // Load translations for the initial locale immediately
+    loadTranslations(initialLocale).catch(() => {})
+    // Also pre-load the other locale
+    const otherLocale = initialLocale === 'ar' ? 'en' : 'ar'
+    loadTranslations(otherLocale).catch(() => {})
   }, [])
 
   const updateDocumentAttributes = (newLocale: Locale) => {
@@ -37,6 +46,8 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     setLocaleState(newLocale)
     localStorage.setItem('locale', newLocale)
     updateDocumentAttributes(newLocale)
+    // Load translations when locale changes
+    loadTranslations(newLocale).catch(() => {})
   }
 
   const toggleLocale = () => {

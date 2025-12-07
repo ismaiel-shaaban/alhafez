@@ -2,7 +2,7 @@
 
 ## Base URL
 ```
-http://al-hafiz-academy.cloudy-digital.com/api
+https://al-hafiz-academy.cloudy-digital.com/api
 ```
 
 ## Overview
@@ -544,28 +544,28 @@ lang: ar (optional)
 
 ### Get All Website Data
 ```bash
-curl -X GET "http://al-hafiz-academy.cloudy-digital.com/api/website" \
+curl -X GET "https://al-hafiz-academy.cloudy-digital.com/api/website" \
   -H "Accept: application/json" \
   -H "lang: ar"
 ```
 
 ### Get Teachers
 ```bash
-curl -X GET "http://al-hafiz-academy.cloudy-digital.com/api/teachers?per_page=10" \
+curl -X GET "https://al-hafiz-academy.cloudy-digital.com/api/teachers?per_page=10" \
   -H "Accept: application/json" \
   -H "lang: en"
 ```
 
 ### Get Popular Packages
 ```bash
-curl -X GET "http://al-hafiz-academy.cloudy-digital.com/api/packages?is_popular=true" \
+curl -X GET "https://al-hafiz-academy.cloudy-digital.com/api/packages?is_popular=true" \
   -H "Accept: application/json" \
   -H "lang: ar"
 ```
 
 ### Register New Student
 ```bash
-curl -X POST "http://al-hafiz-academy.cloudy-digital.com/api/register" \
+curl -X POST "https://al-hafiz-academy.cloudy-digital.com/api/register" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -H "lang: ar" \
