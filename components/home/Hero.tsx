@@ -237,15 +237,15 @@ export default function Hero() {
         >
           <div className="flex items-center gap-3 px-6 py-3 bg-white/80 backdrop-blur-sm rounded-full shadow-lg border border-primary-200/50">
             <div className="w-3 h-3 bg-accent-green rounded-full animate-pulse"></div>
-            <span className="text-primary-800 font-semibold">معلمون متخصصون</span>
+            <span className="text-primary-800 font-semibold">{t('hero.specializedTeachers')}</span>
           </div>
           <div className="flex items-center gap-3 px-6 py-3 bg-white/80 backdrop-blur-sm rounded-full shadow-lg border border-primary-200/50">
             <div className="w-3 h-3 bg-primary-500 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
-            <span className="text-primary-800 font-semibold">جلسات مباشرة</span>
+            <span className="text-primary-800 font-semibold">{t('hero.liveSessions')}</span>
           </div>
           <div className="flex items-center gap-3 px-6 py-3 bg-white/80 backdrop-blur-sm rounded-full shadow-lg border border-primary-200/50">
             <div className="w-3 h-3 bg-accent-green rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
-            <span className="text-primary-800 font-semibold">منهج متكامل</span>
+            <span className="text-primary-800 font-semibold">{t('hero.integratedCurriculum')}</span>
           </div>
         </motion.div>
 

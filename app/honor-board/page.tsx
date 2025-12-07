@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import Navbar from '@/components/shared/Navbar'
 import Footer from '@/components/shared/Footer'
 import HonorBoardList from '@/components/honor-board/HonorBoardList'
-import { getTranslations } from '@/lib/translations'
 
 export const metadata: Metadata = {
   title: 'لوحة الشرف | أكاديمية الحافظ - الطلاب المتميزون',
@@ -19,17 +18,11 @@ export const metadata: Metadata = {
 }
 
 export default function HonorBoardPage() {
-  const t = getTranslations('ar')
-
   return (
     <div className="min-h-screen bg-page">
       <Navbar />
       <section className="pt-32 pb-20">
         <div className="container-custom">
-          <div className="text-center mb-12">
-            <h1 className="section-title">{t.honorBoard.title}</h1>
-            <p className="section-subtitle">{t.honorBoard.subtitle}</p>
-          </div>
           <HonorBoardList />
         </div>
       </section>

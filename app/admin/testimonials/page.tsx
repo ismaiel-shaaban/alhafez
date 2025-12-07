@@ -1,28 +1,95 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAdminStore } from '@/store/useAdminStore'
-import { Plus, Edit, Trash2, X, Star } from 'lucide-react'
+import { Plus, Edit, Trash2, X, Eye, Star, Search, Filter } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function TestimonialsPage() {
-  const { testimonials, addTestimonial, updateTestimonial, deleteTestimonial } = useAdminStore()
+  const { 
+    reviews, 
+    isLoadingReviews, 
+    fetchReviews, 
+    getReview,
+    addReview, 
+    updateReview, 
+    deleteReview,
+    students,
+    fetchStudents,
+    packages,
+    fetchPackages,
+    error 
+  } = useAdminStore()
   const [showModal, setShowModal] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
+  const [showViewModal, setShowViewModal] = useState(false)
+  const [viewedReview, setViewedReview] = useState<any>(null)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filters, setFilters] = useState({
+    rating: '',
+    package_id: '',
+    student_id: '',
+  })
   const [formData, setFormData] = useState({
-    name: '',
-    review: '',
+    student_id: '',
+    package_id: '',
     rating: 5,
-    package: '',
+    review: '',
+    review_en: '',
   })
 
-  const handleOpenModal = (testimonial?: any) => {
-    if (testimonial) {
-      setEditingId(testimonial.id)
-      setFormData(testimonial)
+  useEffect(() => {
+    fetchReviews()
+    fetchStudents()
+    fetchPackages()
+  }, [fetchReviews, fetchStudents, fetchPackages])
+
+  // Apply API filters when they change
+  useEffect(() => {
+    const apiFilters: any = {}
+    if (filters.rating) apiFilters.rating = parseInt(filters.rating)
+    if (filters.package_id) apiFilters.package_id = parseInt(filters.package_id)
+    if (filters.student_id) apiFilters.student_id = parseInt(filters.student_id)
+    
+    fetchReviews(apiFilters)
+  }, [filters.rating, filters.package_id, filters.student_id, fetchReviews])
+
+  // Filter by search term (client-side)
+  const filteredReviews = reviews.filter((review) => {
+    if (!searchTerm) return true
+    const search = searchTerm.toLowerCase()
+    return (
+      review.student?.name.toLowerCase().includes(search) ||
+      review.review_ar?.toLowerCase().includes(search) ||
+      review.review?.toLowerCase().includes(search) ||
+      review.review_en?.toLowerCase().includes(search)
+    )
+  })
+
+  const handleViewReview = async (id: number) => {
+    try {
+      const review = await getReview(id)
+      setViewedReview(review)
+      setShowViewModal(true)
+    } catch (error: any) {
+      alert(error.message || 'فشل تحميل بيانات الرأي')
+    }
+  }
+
+  const handleOpenModal = (review?: any) => {
+    if (review) {
+      setEditingId(review.id)
+      setFormData({
+        student_id: review.student_id?.toString() || '',
+        package_id: review.package_id?.toString() || '',
+        rating: review.rating || 5,
+        review: review.review_ar || review.review || '',
+        review_en: review.review_en || '',
+      })
     } else {
       setEditingId(null)
-      setFormData({ name: '', review: '', rating: 5, package: '' })
+      setFormData({ student_id: '', package_id: '', rating: 5, review: '', review_en: '' })
     }
     setShowModal(true)
   }
@@ -30,22 +97,41 @@ export default function TestimonialsPage() {
   const handleCloseModal = () => {
     setShowModal(false)
     setEditingId(null)
-    setFormData({ name: '', review: '', rating: 5, package: '' })
+    setFormData({ student_id: '', package_id: '', rating: 5, review: '', review_en: '' })
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (editingId) {
-      updateTestimonial(editingId, formData)
-    } else {
-      addTestimonial(formData)
+    setIsSubmitting(true)
+    try {
+      const reviewData = {
+        student_id: parseInt(formData.student_id) || 0,
+        package_id: formData.package_id ? parseInt(formData.package_id) : undefined,
+        rating: formData.rating,
+        review: formData.review,
+        review_en: formData.review_en || undefined,
+      }
+      
+      if (editingId) {
+        await updateReview(editingId, reviewData)
+      } else {
+        await addReview(reviewData)
+      }
+      handleCloseModal()
+    } catch (error: any) {
+      alert(error.message || 'حدث خطأ أثناء الحفظ')
+    } finally {
+      setIsSubmitting(false)
     }
-    handleCloseModal()
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: number) => {
     if (confirm('هل أنت متأكد من حذف هذا الرأي؟')) {
-      deleteTestimonial(id)
+      try {
+        await deleteReview(id)
+      } catch (error: any) {
+        alert(error.message || 'حدث خطأ أثناء الحذف')
+      }
     }
   }
 
@@ -53,49 +139,219 @@ export default function TestimonialsPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-4xl font-bold text-primary-900">إدارة آراء الطلاب</h1>
-        <button
-          onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-700 to-primary-600 text-white rounded-lg hover:from-primary-800 hover:to-primary-700 transition-all shadow-lg"
-        >
-          <Plus className="w-5 h-5" />
-          إضافة رأي
-        </button>
+        <div className="flex items-center gap-4">
+          <div className="text-primary-600 font-medium">إجمالي: {reviews.length}</div>
+          <button
+            onClick={() => handleOpenModal()}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-700 to-primary-600 text-white rounded-lg hover:from-primary-800 hover:to-primary-700 transition-all shadow-lg"
+          >
+            <Plus className="w-5 h-5" />
+            إضافة رأي
+          </button>
+        </div>
       </div>
 
-      {/* Testimonials Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {testimonials.map((testimonial) => (
-          <div
-            key={testimonial.id}
-            className="bg-white p-6 rounded-xl border-2 border-primary-200 shadow-lg hover:shadow-xl transition-all relative"
-          >
-            <div className="flex items-center gap-1 mb-4">
-              {[...Array(testimonial.rating)].map((_, i) => (
-                <Star key={i} className="w-5 h-5 fill-accent-gold text-accent-gold" />
-              ))}
-            </div>
-            <p className="text-primary-700 mb-4 leading-relaxed">{testimonial.review}</p>
-            <div className="border-t border-primary-200 pt-4">
-              <h4 className="font-bold text-primary-900 mb-1">{testimonial.name}</h4>
-              <p className="text-sm text-primary-600">{testimonial.package}</p>
-            </div>
-            <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-primary-200">
-              <button
-                onClick={() => handleOpenModal(testimonial)}
-                className="px-4 py-2 text-primary-600 hover:bg-primary-100 rounded-lg transition-colors"
-              >
-                <Edit className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => handleDelete(testimonial.id)}
-                className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+      {/* Error Message */}
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border-2 border-red-200 rounded-lg text-red-700">
+          {error}
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="bg-white rounded-xl border-2 border-primary-200 p-6 mb-6 shadow-lg">
+        <div className="flex items-center gap-2 mb-4">
+          <Filter className="w-5 h-5 text-primary-600" />
+          <h3 className="text-lg font-semibold text-primary-900">فلترة الآراء</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-primary-900 font-semibold mb-2 text-right">البحث</label>
+            <div className="relative">
+              <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-primary-400 w-5 h-5" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="ابحث عن رأي..."
+                className="w-full pr-12 pl-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                dir="rtl"
+              />
             </div>
           </div>
-        ))}
+          <div>
+            <label className="block text-primary-900 font-semibold mb-2 text-right">التقييم</label>
+            <select
+              value={filters.rating}
+              onChange={(e) => setFilters({ ...filters, rating: e.target.value })}
+              className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+              dir="rtl"
+            >
+              <option value="">جميع التقييمات</option>
+              <option value="5">5 نجوم</option>
+              <option value="4">4 نجوم</option>
+              <option value="3">3 نجوم</option>
+              <option value="2">2 نجوم</option>
+              <option value="1">1 نجمة</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-primary-900 font-semibold mb-2 text-right">الباقة</label>
+            <select
+              value={filters.package_id}
+              onChange={(e) => setFilters({ ...filters, package_id: e.target.value })}
+              className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+              dir="rtl"
+            >
+              <option value="">جميع الباقات</option>
+              {packages.map((pkg) => (
+                <option key={pkg.id} value={pkg.id}>
+                  {pkg.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-primary-900 font-semibold mb-2 text-right">الطالب</label>
+            <select
+              value={filters.student_id}
+              onChange={(e) => setFilters({ ...filters, student_id: e.target.value })}
+              className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+              dir="rtl"
+            >
+              <option value="">جميع الطلاب</option>
+              {students.map((student) => (
+                <option key={student.id} value={student.id}>
+                  {student.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
+
+      {/* Loading State */}
+      {isLoadingReviews ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      ) : (
+        <>
+          {/* Reviews Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredReviews.length === 0 ? (
+              <div className="col-span-full text-center py-12 text-primary-600">
+                {searchTerm || filters.rating || filters.package_id || filters.student_id
+                  ? 'لا توجد نتائج'
+                  : 'لا توجد آراء مسجلة بعد'}
+              </div>
+            ) : (
+              filteredReviews.map((review) => (
+                <div
+                  key={review.id}
+                  className="bg-white p-6 rounded-xl border-2 border-primary-200 shadow-lg hover:shadow-xl transition-all relative"
+                >
+                  <div className="flex items-center gap-1 mb-4">
+                    {[...Array(review.rating)].map((_, i) => (
+                      <Star key={i} className="w-5 h-5 fill-accent-gold text-accent-gold" />
+                    ))}
+                  </div>
+                  <p className="text-primary-700 mb-4 leading-relaxed">{review.review_ar || review.review}</p>
+                  <div className="border-t border-primary-200 pt-4">
+                    <h4 className="font-bold text-primary-900 mb-1">{review.student?.name || 'طالب'}</h4>
+                    <p className="text-sm text-primary-600">{review.package?.name || '-'}</p>
+                  </div>
+                  <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-primary-200">
+                    <button
+                      onClick={() => handleViewReview(review.id)}
+                      className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="عرض التفاصيل"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleOpenModal(review)}
+                      className="px-4 py-2 text-primary-600 hover:bg-primary-100 rounded-lg transition-colors"
+                      title="تعديل"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(review.id)}
+                      className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="حذف"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      )}
+
+      {/* View Review Details Modal */}
+      <AnimatePresence>
+        {showViewModal && viewedReview && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => setShowViewModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-primary-900">تفاصيل الرأي</h2>
+                <button
+                  onClick={() => setShowViewModal(false)}
+                  className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-primary-600 text-sm mb-1">الطالب</label>
+                    <p className="text-primary-900 font-semibold">{viewedReview.student?.name || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-primary-600 text-sm mb-1">الباقة</label>
+                    <p className="text-primary-900">{viewedReview.package?.name || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-primary-600 text-sm mb-1">التقييم</label>
+                    <div className="flex items-center gap-1">
+                      {[...Array(viewedReview.rating)].map((_, i) => (
+                        <Star key={i} className="w-5 h-5 fill-accent-gold text-accent-gold" />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-primary-600 text-sm mb-1">الرأي (عربي)</label>
+                  <p className="text-primary-900">{viewedReview.review_ar || viewedReview.review}</p>
+                </div>
+                {viewedReview.review_en && (
+                  <div>
+                    <label className="block text-primary-600 text-sm mb-1">الرأي (إنجليزي)</label>
+                    <p className="text-primary-900">{viewedReview.review_en}</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Add/Edit Modal */}
       <AnimatePresence>
@@ -112,7 +368,7 @@ export default function TestimonialsPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl p-8 max-w-lg w-full shadow-2xl"
+              className="bg-white rounded-2xl p-8 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto"
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-primary-900">
@@ -128,15 +384,37 @@ export default function TestimonialsPage() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-primary-900 font-semibold mb-2 text-right">اسم الطالب</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">الطالب</label>
+                  <select
+                    value={formData.student_id}
+                    onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
                     className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
                     dir="rtl"
                     required
-                  />
+                  >
+                    <option value="">اختر الطالب</option>
+                    {students.map((student) => (
+                      <option key={student.id} value={student.id}>
+                        {student.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">الباقة</label>
+                  <select
+                    value={formData.package_id}
+                    onChange={(e) => setFormData({ ...formData, package_id: e.target.value })}
+                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                    dir="rtl"
+                  >
+                    <option value="">اختر الباقة (اختياري)</option>
+                    {packages.map((pkg) => (
+                      <option key={pkg.id} value={pkg.id}>
+                        {pkg.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-primary-900 font-semibold mb-2 text-right">التقييم</label>
@@ -158,7 +436,7 @@ export default function TestimonialsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-primary-900 font-semibold mb-2 text-right">الرأي</label>
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">الرأي (عربي)</label>
                   <textarea
                     value={formData.review}
                     onChange={(e) => setFormData({ ...formData, review: e.target.value })}
@@ -169,22 +447,22 @@ export default function TestimonialsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-primary-900 font-semibold mb-2 text-right">الباقة</label>
-                  <input
-                    type="text"
-                    value={formData.package}
-                    onChange={(e) => setFormData({ ...formData, package: e.target.value })}
-                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
-                    dir="rtl"
-                    required
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">الرأي (إنجليزي)</label>
+                  <textarea
+                    value={formData.review_en}
+                    onChange={(e) => setFormData({ ...formData, review_en: e.target.value })}
+                    rows={4}
+                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                    placeholder="Optional"
                   />
                 </div>
                 <div className="flex items-center gap-4 pt-4">
                   <button
                     type="submit"
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-primary-700 to-primary-600 text-white rounded-lg hover:from-primary-800 hover:to-primary-700 transition-all"
+                    disabled={isSubmitting}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-primary-700 to-primary-600 text-white rounded-lg hover:from-primary-800 hover:to-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {editingId ? 'حفظ التعديلات' : 'إضافة'}
+                    {isSubmitting ? 'جاري الحفظ...' : editingId ? 'حفظ التعديلات' : 'إضافة'}
                   </button>
                   <button
                     type="button"

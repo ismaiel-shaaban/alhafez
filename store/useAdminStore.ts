@@ -1,247 +1,146 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
+import * as authAPI from '@/lib/api/auth'
+import * as studentsAPI from '@/lib/api/students'
+import * as teachersAPI from '@/lib/api/teachers'
+import * as packagesAPI from '@/lib/api/packages'
+import * as reviewsAPI from '@/lib/api/reviews'
+import * as honorBoardsAPI from '@/lib/api/honor-boards'
+import * as sessionsAPI from '@/lib/api/sessions'
+import * as teacherSalaryAPI from '@/lib/api/teacher-salary'
+import * as featuresAPI from '@/lib/api/features'
+import { getCurrentLocale } from '@/lib/api-client'
 
-interface AdminUser {
+// Re-export API types for convenience
+export type Teacher = teachersAPI.Teacher
+export type Package = packagesAPI.Package
+export type Review = reviewsAPI.Review
+export type HonorBoardEntry = honorBoardsAPI.HonorBoardEntry
+export type Student = studentsAPI.Student
+export type StudentSession = sessionsAPI.StudentSession
+export type Feature = featuresAPI.Feature
+export type TeacherSalaryResponse = teacherSalaryAPI.TeacherSalaryResponse
+export type TeacherPayment = teacherSalaryAPI.TeacherPayment
+
+export interface AdminUser {
   isAuthenticated: boolean
   username: string
-}
-
-interface Teacher {
-  id: string
-  name: string
-  specialization: string
-  experience: string
-  image: string | null
-}
-
-interface Package {
-  id: string
-  name: string
-  price: string
-  features: string[]
-  popular: boolean
-}
-
-interface Testimonial {
-  id: string
-  name: string
-  review: string
-  rating: number
-  package: string
-}
-
-interface HonorBoardEntry {
-  id: string
-  name: string
-  level: string
-  achievement: string
-  certificates?: string[] // Array of certificate image URLs
+  user?: authAPI.User
 }
 
 interface AdminState {
   // Authentication
   admin: AdminUser
-  login: (username: string, password: string) => boolean
-  logout: () => void
+  isLoading: boolean
+  error: string | null
+  login: (username: string, password: string) => Promise<boolean>
+  logout: () => Promise<void>
+  checkAuth: () => Promise<void>
 
   // Students
-  students: any[]
-  addStudent: (student: any) => void
-  updateStudent: (id: string, student: any) => void
-  deleteStudent: (id: string) => void
+  students: studentsAPI.Student[]
+  studentsMeta: {
+    current_page: number
+    total: number
+    last_page: number
+  } | null
+  isLoadingStudents: boolean
+  fetchStudents: (filters?: studentsAPI.StudentFilters) => Promise<void>
+  getStudent: (id: number) => Promise<studentsAPI.Student>
+  addStudent: (student: studentsAPI.CreateStudentRequest) => Promise<void>
+  updateStudent: (id: number, student: Partial<studentsAPI.CreateStudentRequest>) => Promise<void>
+  deleteStudent: (id: number) => Promise<void>
+
+  // Student Sessions
+  sessions: StudentSession[]
+  sessionsMeta: {
+    current_page: number
+    total: number
+    last_page: number
+  } | null
+  isLoadingSessions: boolean
+  fetchSessions: (filters?: sessionsAPI.SessionFilters) => Promise<void>
+  getSession: (id: number) => Promise<StudentSession>
+  addSession: (session: sessionsAPI.CreateSessionRequest) => Promise<void>
+  updateSession: (id: number, session: Partial<sessionsAPI.CreateSessionRequest & { is_completed?: boolean }>) => Promise<void>
+  completeSession: (id: number, notes?: string) => Promise<void>
+  deleteSession: (id: number) => Promise<void>
 
   // Teachers
   teachers: Teacher[]
-  addTeacher: (teacher: Omit<Teacher, 'id'>) => void
-  updateTeacher: (id: string, teacher: Partial<Teacher>) => void
-  deleteTeacher: (id: string) => void
+  teachersMeta: {
+    current_page: number
+    total: number
+    last_page: number
+  } | null
+  isLoadingTeachers: boolean
+  fetchTeachers: (page?: number) => Promise<void>
+  getTeacher: (id: number) => Promise<Teacher>
+  addTeacher: (teacher: teachersAPI.CreateTeacherRequest) => Promise<void>
+  updateTeacher: (id: number, teacher: Partial<teachersAPI.CreateTeacherRequest>) => Promise<void>
+  deleteTeacher: (id: number) => Promise<void>
 
   // Packages
   packages: Package[]
-  addPackage: (pkg: Omit<Package, 'id'>) => void
-  updatePackage: (id: string, pkg: Partial<Package>) => void
-  deletePackage: (id: string) => void
+  packagesMeta: {
+    current_page: number
+    total: number
+    last_page: number
+  } | null
+  isLoadingPackages: boolean
+  fetchPackages: (isPopular?: boolean) => Promise<void>
+  getPackage: (id: number) => Promise<Package>
+  addPackage: (pkg: packagesAPI.CreatePackageRequest) => Promise<void>
+  updatePackage: (id: number, pkg: Partial<packagesAPI.CreatePackageRequest>) => Promise<void>
+  deletePackage: (id: number) => Promise<void>
 
-  // Testimonials
-  testimonials: Testimonial[]
-  addTestimonial: (testimonial: Omit<Testimonial, 'id'>) => void
-  updateTestimonial: (id: string, testimonial: Partial<Testimonial>) => void
-  deleteTestimonial: (id: string) => void
+  // Reviews (Testimonials)
+  reviews: Review[]
+  reviewsMeta: {
+    current_page: number
+    total: number
+    last_page: number
+  } | null
+  isLoadingReviews: boolean
+  fetchReviews: (filters?: reviewsAPI.ReviewFilters) => Promise<void>
+  getReview: (id: number) => Promise<Review>
+  addReview: (review: reviewsAPI.CreateReviewRequest) => Promise<void>
+  updateReview: (id: number, review: Partial<reviewsAPI.CreateReviewRequest>) => Promise<void>
+  deleteReview: (id: number) => Promise<void>
 
   // Honor Board
   honorBoard: HonorBoardEntry[]
-  addHonorEntry: (entry: Omit<HonorBoardEntry, 'id'>) => void
-  updateHonorEntry: (id: string, entry: Partial<HonorBoardEntry>) => void
-  deleteHonorEntry: (id: string) => void
+  honorBoardMeta: {
+    current_page: number
+    total: number
+    last_page: number
+  } | null
+  isLoadingHonorBoard: boolean
+  fetchHonorBoard: (studentId?: number) => Promise<void>
+  getHonorEntry: (id: number) => Promise<HonorBoardEntry>
+  addHonorEntry: (entry: honorBoardsAPI.CreateHonorBoardRequest) => Promise<void>
+  updateHonorEntry: (id: number, entry: Partial<honorBoardsAPI.CreateHonorBoardRequest>) => Promise<void>
+  deleteHonorEntry: (id: number) => Promise<void>
+
+  // Features
+  features: featuresAPI.Feature[]
+  featuresMeta: {
+    current_page: number
+    total: number
+    last_page: number
+  } | null
+  isLoadingFeatures: boolean
+  fetchFeatures: (filters?: featuresAPI.FeatureFilters) => Promise<void>
+  getFeature: (id: number) => Promise<featuresAPI.Feature>
+  addFeature: (feature: featuresAPI.CreateFeatureRequest) => Promise<void>
+  updateFeature: (id: number, feature: Partial<featuresAPI.CreateFeatureRequest>) => Promise<void>
+  deleteFeature: (id: number) => Promise<void>
+
+  // Teacher Salary & Payments
+  getTeacherSalary: (teacherId: number, month: string) => Promise<teacherSalaryAPI.TeacherSalaryResponse>
+  markPaymentAsPaid: (teacherId: number, data: teacherSalaryAPI.MarkPaymentRequest) => Promise<void>
+  getTeacherPayments: (teacherId: number, page?: number) => Promise<{ payments: teacherSalaryAPI.TeacherPayment[]; pagination: any }>
 }
-
-// Default admin credentials (in production, use environment variables)
-const ADMIN_USERNAME = 'admin'
-const ADMIN_PASSWORD = 'admin123'
-
-const defaultTeachers: Teacher[] = [
-  {
-    id: '1',
-    name: 'الشيخ أحمد محمد',
-    specialization: 'حفظ القرآن والتجويد',
-    experience: '15 سنة خبرة',
-    image: null,
-  },
-  {
-    id: '2',
-    name: 'الشيخة فاطمة علي',
-    specialization: 'تعليم النساء والأطفال',
-    experience: '12 سنة خبرة',
-    image: null,
-  },
-  {
-    id: '3',
-    name: 'الشيخ محمود حسن',
-    specialization: 'أحكام التجويد',
-    experience: '18 سنة خبرة',
-    image: null,
-  },
-  {
-    id: '4',
-    name: 'الشيخة سارة أحمد',
-    specialization: 'تأسيس القراءة',
-    experience: '10 سنة خبرة',
-    image: null,
-  },
-]
-
-const defaultPackages: Package[] = [
-  {
-    id: 'basic',
-    name: 'الباقة الأساسية',
-    price: '100',
-    features: ['جلسة واحدة أسبوعياً', 'متابعة فردية', 'مواد تعليمية'],
-    popular: false,
-  },
-  {
-    id: 'standard',
-    name: 'الباقة المتوسطة',
-    price: '180',
-    features: ['جلستان أسبوعياً', 'متابعة فردية', 'مواد تعليمية', 'شهادة إتمام'],
-    popular: true,
-  },
-  {
-    id: 'premium',
-    name: 'الباقة المميزة',
-    price: '250',
-    features: ['ثلاث جلسات أسبوعياً', 'متابعة فردية مكثفة', 'مواد تعليمية', 'شهادة معتمدة', 'تقييم دوري'],
-    popular: false,
-  },
-]
-
-const defaultTestimonials: Testimonial[] = [
-  {
-    id: '1',
-    name: 'أحمد محمد',
-    review: 'تجربة رائعة! المعلمون متخصصون والمنهج ممتاز.',
-    rating: 5,
-    package: 'الباقة المميزة',
-  },
-  {
-    id: '2',
-    name: 'فاطمة علي',
-    review: 'ابني تحسن كثيراً في قراءة القرآن. شكراً لكم!',
-    rating: 5,
-    package: 'الباقة الأساسية',
-  },
-  {
-    id: '3',
-    name: 'خالد حسن',
-    review: 'أكاديمية ممتازة بكل المقاييس. أنصح الجميع بالانضمام.',
-    rating: 5,
-    package: 'الباقة المميزة',
-  },
-]
-
-const defaultHonorBoard: HonorBoardEntry[] = [
-  {
-    id: '1',
-    name: 'محمد أحمد',
-    level: 'المستوى الخامس',
-    achievement: 'حفظ جزء عم كاملاً',
-    certificates: [
-      '/certificates/certificate-1.jpg',
-      '/certificates/certificate-2.jpg',
-    ],
-  },
-  {
-    id: '2',
-    name: 'فاطمة خالد',
-    level: 'المستوى الثالث',
-    achievement: 'إتقان أحكام التجويد الأساسية',
-    certificates: [
-      '/certificates/certificate-3.jpg',
-    ],
-  },
-]
-
-const defaultStudents: any[] = [
-  {
-    id: '1',
-    name: 'أحمد محمد علي',
-    email: 'ahmed.mohamed@example.com',
-    phone: '0501234567',
-    age: 25,
-    gender: 'ذكر',
-    package: 'الباقة المميزة',
-    message: 'أريد البدء في حفظ القرآن الكريم',
-  },
-  {
-    id: '2',
-    name: 'فاطمة أحمد خالد',
-    email: 'fatima.ahmed@example.com',
-    phone: '0512345678',
-    age: 30,
-    gender: 'أنثى',
-    package: 'الباقة المتوسطة',
-    message: 'أريد تعلم أحكام التجويد',
-  },
-  {
-    id: '3',
-    name: 'محمد خالد حسن',
-    email: 'mohamed.khalid@example.com',
-    phone: '0523456789',
-    age: 15,
-    gender: 'ذكر',
-    package: 'الباقة الأساسية',
-    message: 'أريد تأسيس قراءة القرآن',
-  },
-  {
-    id: '4',
-    name: 'سارة علي محمود',
-    email: 'sara.ali@example.com',
-    phone: '0534567890',
-    age: 22,
-    gender: 'أنثى',
-    package: 'الباقة المميزة',
-    message: 'أريد تحسين تلاوة القرآن',
-  },
-  {
-    id: '5',
-    name: 'خالد عبدالله',
-    email: 'khalid.abdullah@example.com',
-    phone: '0545678901',
-    age: 28,
-    gender: 'ذكر',
-    package: 'الباقة المتوسطة',
-    message: 'أريد حفظ جزء تبارك',
-  },
-  {
-    id: '6',
-    name: 'نورا محمد',
-    email: 'nora.mohamed@example.com',
-    phone: '0556789012',
-    age: 18,
-    gender: 'أنثى',
-    package: 'الباقة الأساسية',
-    message: 'أريد البدء من الصفر',
-  },
-]
 
 export const useAdminStore = create<AdminState>()(
   persist(
@@ -251,144 +150,716 @@ export const useAdminStore = create<AdminState>()(
         isAuthenticated: false,
         username: '',
       },
-      login: (username: string, password: string) => {
-        if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+      isLoading: false,
+      error: null,
+
+      login: async (username: string, password: string) => {
+        set({ isLoading: true, error: null })
+        try {
+          const response = await authAPI.login({ username, password })
           set({
             admin: {
               isAuthenticated: true,
-              username,
+              username: response.user.username,
+              user: response.user,
             },
+            isLoading: false,
+            error: null,
           })
           return true
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تسجيل الدخول',
+            admin: {
+              isAuthenticated: false,
+              username: '',
+            },
+          })
+          return false
         }
-        return false
       },
-      logout: () => {
+
+      logout: async () => {
+        set({ isLoading: true })
+        try {
+          await authAPI.logout()
+        } catch (error) {
+          console.error('Logout error:', error)
+        } finally {
+          set({
+            admin: {
+              isAuthenticated: false,
+              username: '',
+              user: undefined,
+            },
+            isLoading: false,
+          })
+        }
+      },
+
+      checkAuth: async () => {
+        try {
+          const user = await authAPI.getCurrentUser()
+          set({
+            admin: {
+              isAuthenticated: true,
+              username: user.username,
+              user,
+            },
+          })
+        } catch (error) {
         set({
           admin: {
             isAuthenticated: false,
             username: '',
+              user: undefined,
           },
         })
+        }
       },
 
       // Students
-      students: defaultStudents,
-      addStudent: (student) =>
-        set((state) => {
-          // Check if student already exists to avoid duplicates
-          const exists = state.students.find((s) => s.email === student.email)
-          if (exists) return state
-          return {
-            students: [...state.students, { ...student, id: Date.now().toString() }],
-          }
-        }),
-      updateStudent: (id, student) =>
-        set((state) => ({
-          students: state.students.map((s) => (s.id === id ? { ...s, ...student } : s)),
-        })),
-      deleteStudent: (id) =>
-        set((state) => ({
-          students: state.students.filter((s) => s.id !== id),
-        })),
+      students: [],
+      studentsMeta: null,
+      isLoadingStudents: false,
+      fetchStudents: async (filters = {}) => {
+        set({ isLoadingStudents: true, error: null })
+        try {
+          const locale = getCurrentLocale()
+          const response = await studentsAPI.listStudents(filters, locale)
+          set({
+            students: response.students || [],
+            studentsMeta: response.pagination ? {
+              current_page: response.pagination.current_page || 1,
+              total: response.pagination.total || 0,
+              last_page: response.pagination.total_pages || 1,
+            } : null,
+            isLoadingStudents: false,
+          })
+        } catch (error: any) {
+          set({
+            isLoadingStudents: false,
+            error: error.message || 'فشل تحميل الطلاب',
+          })
+        }
+      },
+      addStudent: async (student) => {
+        set({ isLoading: true, error: null })
+        try {
+          await studentsAPI.createStudent(student)
+          await get().fetchStudents()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل إضافة الطالب',
+          })
+          throw error
+        }
+      },
+      updateStudent: async (id, student) => {
+        set({ isLoading: true, error: null })
+        try {
+          await studentsAPI.updateStudent(id, student)
+          await get().fetchStudents()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تحديث الطالب',
+          })
+          throw error
+        }
+      },
+      deleteStudent: async (id) => {
+        set({ isLoading: true, error: null })
+        try {
+          await studentsAPI.deleteStudent(id)
+          await get().fetchStudents()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل حذف الطالب',
+          })
+          throw error
+        }
+      },
+      getStudent: async (id) => {
+        set({ isLoading: true, error: null })
+        try {
+          const locale = getCurrentLocale()
+          const student = await studentsAPI.getStudent(id, locale)
+          set({ isLoading: false })
+          return student
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تحميل بيانات الطالب',
+          })
+          throw error
+        }
+      },
+
+      // Student Sessions
+      sessions: [],
+      sessionsMeta: null,
+      isLoadingSessions: false,
+      fetchSessions: async (filters = {}) => {
+        set({ isLoadingSessions: true, error: null })
+        try {
+          const locale = getCurrentLocale()
+          const response = await sessionsAPI.listSessions(filters, locale)
+          set({
+            sessions: response.sessions || [],
+            sessionsMeta: response.pagination ? {
+              current_page: response.pagination.current_page || 1,
+              total: response.pagination.total || 0,
+              last_page: response.pagination.total_pages || 1,
+            } : null,
+            isLoadingSessions: false,
+          })
+        } catch (error: any) {
+          set({
+            isLoadingSessions: false,
+            error: error.message || 'فشل تحميل الحصص',
+          })
+        }
+      },
+      getSession: async (id) => {
+        set({ isLoading: true, error: null })
+        try {
+          const session = await sessionsAPI.getSession(id)
+          set({ isLoading: false })
+          return session
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تحميل بيانات الحصة',
+          })
+          throw error
+        }
+      },
+      addSession: async (session) => {
+        set({ isLoading: true, error: null })
+        try {
+          await sessionsAPI.createSession(session)
+          await get().fetchSessions()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل إضافة الحصة',
+          })
+          throw error
+        }
+      },
+      updateSession: async (id, session) => {
+        set({ isLoading: true, error: null })
+        try {
+          await sessionsAPI.updateSession(id, session)
+          await get().fetchSessions()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تحديث الحصة',
+          })
+          throw error
+        }
+      },
+      completeSession: async (id, notes) => {
+        set({ isLoading: true, error: null })
+        try {
+          await sessionsAPI.completeSession(id, notes)
+          await get().fetchSessions()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تسجيل إتمام الحصة',
+          })
+          throw error
+        }
+      },
+      deleteSession: async (id) => {
+        set({ isLoading: true, error: null })
+        try {
+          await sessionsAPI.deleteSession(id)
+          await get().fetchSessions()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل حذف الحصة',
+          })
+          throw error
+        }
+      },
 
       // Teachers
-      teachers: defaultTeachers,
-      addTeacher: (teacher) =>
-        set((state) => ({
-          teachers: [...state.teachers, { ...teacher, id: Date.now().toString() }],
-        })),
-      updateTeacher: (id, teacher) =>
-        set((state) => ({
-          teachers: state.teachers.map((t) => (t.id === id ? { ...t, ...teacher } : t)),
-        })),
-      deleteTeacher: (id) =>
-        set((state) => ({
-          teachers: state.teachers.filter((t) => t.id !== id),
-        })),
+      teachers: [],
+      teachersMeta: null,
+      isLoadingTeachers: false,
+      fetchTeachers: async (page = 1) => {
+        set({ isLoadingTeachers: true, error: null })
+        try {
+          const locale = getCurrentLocale()
+          const response = await teachersAPI.listTeachers(page, 15, locale)
+          set({
+            teachers: response.teachers || [],
+            teachersMeta: response.pagination ? {
+              current_page: response.pagination.current_page || 1,
+              total: response.pagination.total || 0,
+              last_page: response.pagination.total_pages || 1,
+            } : null,
+            isLoadingTeachers: false,
+          })
+        } catch (error: any) {
+          set({
+            isLoadingTeachers: false,
+            error: error.message || 'فشل تحميل المعلمين',
+          })
+        }
+      },
+      getTeacher: async (id) => {
+        set({ isLoading: true, error: null })
+        try {
+          const teacher = await teachersAPI.getTeacher(id)
+          set({ isLoading: false })
+          return teacher
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تحميل بيانات المعلم',
+          })
+          throw error
+        }
+      },
+      addTeacher: async (teacher) => {
+        set({ isLoading: true, error: null })
+        try {
+          await teachersAPI.createTeacher(teacher)
+          await get().fetchTeachers()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل إضافة المعلم',
+          })
+          throw error
+        }
+      },
+      updateTeacher: async (id, teacher) => {
+        set({ isLoading: true, error: null })
+        try {
+          await teachersAPI.updateTeacher(id, teacher)
+          await get().fetchTeachers()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تحديث المعلم',
+          })
+          throw error
+        }
+      },
+      deleteTeacher: async (id) => {
+        set({ isLoading: true, error: null })
+        try {
+          await teachersAPI.deleteTeacher(id)
+          await get().fetchTeachers()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل حذف المعلم',
+          })
+          throw error
+        }
+      },
 
       // Packages
-      packages: defaultPackages,
-      addPackage: (pkg) =>
-        set((state) => ({
-          packages: [...state.packages, { ...pkg, id: Date.now().toString() }],
-        })),
-      updatePackage: (id, pkg) =>
-        set((state) => ({
-          packages: state.packages.map((p) => (p.id === id ? { ...p, ...pkg } : p)),
-        })),
-      deletePackage: (id) =>
-        set((state) => ({
-          packages: state.packages.filter((p) => p.id !== id),
-        })),
+      packages: [],
+      packagesMeta: null,
+      isLoadingPackages: false,
+      fetchPackages: async (isPopular) => {
+        set({ isLoadingPackages: true, error: null })
+        try {
+          const locale = getCurrentLocale()
+          const response = await packagesAPI.listPackages(isPopular, 15, locale)
+          set({
+            packages: response.packages || [],
+            packagesMeta: response.pagination ? {
+              current_page: response.pagination.current_page || 1,
+              total: response.pagination.total || 0,
+              last_page: response.pagination.total_pages || 1,
+            } : null,
+            isLoadingPackages: false,
+          })
+        } catch (error: any) {
+          set({
+            isLoadingPackages: false,
+            error: error.message || 'فشل تحميل الباقات',
+          })
+        }
+      },
+      addPackage: async (pkg) => {
+        set({ isLoading: true, error: null })
+        try {
+          await packagesAPI.createPackage(pkg)
+          await get().fetchPackages()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل إضافة الباقة',
+          })
+          throw error
+        }
+      },
+      updatePackage: async (id, pkg) => {
+        set({ isLoading: true, error: null })
+        try {
+          await packagesAPI.updatePackage(id, pkg)
+          await get().fetchPackages()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تحديث الباقة',
+          })
+          throw error
+        }
+      },
+      deletePackage: async (id) => {
+        set({ isLoading: true, error: null })
+        try {
+          await packagesAPI.deletePackage(id)
+          await get().fetchPackages()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل حذف الباقة',
+          })
+          throw error
+        }
+      },
+      getPackage: async (id) => {
+        set({ isLoading: true, error: null })
+        try {
+          const pkg = await packagesAPI.getPackage(id)
+          set({ isLoading: false })
+          return pkg
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تحميل بيانات الباقة',
+          })
+          throw error
+        }
+      },
 
-      // Testimonials
-      testimonials: defaultTestimonials,
-      addTestimonial: (testimonial) =>
-        set((state) => ({
-          testimonials: [...state.testimonials, { ...testimonial, id: Date.now().toString() }],
-        })),
-      updateTestimonial: (id, testimonial) =>
-        set((state) => ({
-          testimonials: state.testimonials.map((t) =>
-            t.id === id ? { ...t, ...testimonial } : t
-          ),
-        })),
-      deleteTestimonial: (id) =>
-        set((state) => ({
-          testimonials: state.testimonials.filter((t) => t.id !== id),
-        })),
+      // Reviews (Testimonials)
+      reviews: [],
+      reviewsMeta: null,
+      isLoadingReviews: false,
+      fetchReviews: async (filters = {}) => {
+        set({ isLoadingReviews: true, error: null })
+        try {
+          const locale = getCurrentLocale()
+          const response = await reviewsAPI.listReviews(filters, locale)
+          set({
+            reviews: response.reviews || [],
+            reviewsMeta: response.pagination ? {
+              current_page: response.pagination.current_page || 1,
+              total: response.pagination.total || 0,
+              last_page: response.pagination.total_pages || 1,
+            } : null,
+            isLoadingReviews: false,
+          })
+        } catch (error: any) {
+          set({
+            isLoadingReviews: false,
+            error: error.message || 'فشل تحميل الآراء',
+          })
+        }
+      },
+      addReview: async (review) => {
+        set({ isLoading: true, error: null })
+        try {
+          await reviewsAPI.createReview(review)
+          await get().fetchReviews()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل إضافة الرأي',
+          })
+          throw error
+        }
+      },
+      updateReview: async (id, review) => {
+        set({ isLoading: true, error: null })
+        try {
+          await reviewsAPI.updateReview(id, review)
+          await get().fetchReviews()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تحديث الرأي',
+          })
+          throw error
+        }
+      },
+      deleteReview: async (id) => {
+        set({ isLoading: true, error: null })
+        try {
+          await reviewsAPI.deleteReview(id)
+          await get().fetchReviews()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل حذف الرأي',
+          })
+          throw error
+        }
+      },
+      getReview: async (id) => {
+        set({ isLoading: true, error: null })
+        try {
+          const review = await reviewsAPI.getReview(id)
+          set({ isLoading: false })
+          return review
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تحميل بيانات الرأي',
+          })
+          throw error
+        }
+      },
 
       // Honor Board
-      honorBoard: defaultHonorBoard,
-      addHonorEntry: (entry) =>
-        set((state) => ({
-          honorBoard: [...state.honorBoard, { ...entry, id: Date.now().toString() }],
-        })),
-      updateHonorEntry: (id, entry) =>
-        set((state) => ({
-          honorBoard: state.honorBoard.map((e) => (e.id === id ? { ...e, ...entry } : e)),
-        })),
-      deleteHonorEntry: (id) =>
-        set((state) => ({
-          honorBoard: state.honorBoard.filter((e) => e.id !== id),
-        })),
+      honorBoard: [],
+      honorBoardMeta: null,
+      isLoadingHonorBoard: false,
+      fetchHonorBoard: async (studentId) => {
+        set({ isLoadingHonorBoard: true, error: null })
+        try {
+          const locale = getCurrentLocale()
+          const response = await honorBoardsAPI.listHonorBoards(studentId, 15, locale)
+          set({
+            honorBoard: response.honor_boards || [],
+            honorBoardMeta: response.pagination ? {
+              current_page: response.pagination.current_page || 1,
+              total: response.pagination.total || 0,
+              last_page: response.pagination.total_pages || 1,
+            } : null,
+            isLoadingHonorBoard: false,
+          })
+        } catch (error: any) {
+          set({
+            isLoadingHonorBoard: false,
+            error: error.message || 'فشل تحميل لوحة الشرف',
+          })
+        }
+      },
+      addHonorEntry: async (entry) => {
+        set({ isLoading: true, error: null })
+        try {
+          await honorBoardsAPI.createHonorBoard(entry)
+          await get().fetchHonorBoard()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل إضافة إدخال',
+          })
+          throw error
+        }
+      },
+      updateHonorEntry: async (id, entry) => {
+        set({ isLoading: true, error: null })
+        try {
+          await honorBoardsAPI.updateHonorBoard(id, entry)
+          await get().fetchHonorBoard()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تحديث الإدخال',
+          })
+          throw error
+        }
+      },
+      deleteHonorEntry: async (id) => {
+        set({ isLoading: true, error: null })
+        try {
+          await honorBoardsAPI.deleteHonorBoard(id)
+          await get().fetchHonorBoard()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل حذف الإدخال',
+          })
+          throw error
+        }
+      },
+      getHonorEntry: async (id) => {
+        set({ isLoading: true, error: null })
+        try {
+          const entry = await honorBoardsAPI.getHonorBoard(id)
+          set({ isLoading: false })
+          return entry
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تحميل بيانات الإدخال',
+          })
+          throw error
+        }
+      },
+
+      // Features
+      features: [],
+      featuresMeta: null,
+      isLoadingFeatures: false,
+      fetchFeatures: async (filters = {}) => {
+        set({ isLoadingFeatures: true, error: null })
+        try {
+          const locale = getCurrentLocale()
+          const response = await featuresAPI.listFeatures(filters, locale)
+          set({
+            features: response.features || [],
+            featuresMeta: response.pagination ? {
+              current_page: response.pagination.current_page || 1,
+              total: response.pagination.total || 0,
+              last_page: response.pagination.total_pages || 1,
+            } : null,
+            isLoadingFeatures: false,
+          })
+        } catch (error: any) {
+          set({
+            isLoadingFeatures: false,
+            error: error.message || 'فشل تحميل المميزات',
+          })
+        }
+      },
+      getFeature: async (id) => {
+        set({ isLoading: true, error: null })
+        try {
+          const locale = getCurrentLocale()
+          const feature = await featuresAPI.getFeature(id, locale)
+          set({ isLoading: false })
+          return feature
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تحميل بيانات الميزة',
+          })
+          throw error
+        }
+      },
+      addFeature: async (feature) => {
+        set({ isLoading: true, error: null })
+        try {
+          await featuresAPI.createFeature(feature)
+          await get().fetchFeatures()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل إضافة الميزة',
+          })
+          throw error
+        }
+      },
+      updateFeature: async (id, feature) => {
+        set({ isLoading: true, error: null })
+        try {
+          await featuresAPI.updateFeature(id, feature)
+          await get().fetchFeatures()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تحديث الميزة',
+          })
+          throw error
+        }
+      },
+      deleteFeature: async (id) => {
+        set({ isLoading: true, error: null })
+        try {
+          await featuresAPI.deleteFeature(id)
+          await get().fetchFeatures()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل حذف الميزة',
+          })
+          throw error
+        }
+      },
+
+      // Teacher Salary & Payments
+      getTeacherSalary: async (teacherId, month) => {
+        set({ isLoading: true, error: null })
+        try {
+          const locale = getCurrentLocale()
+          const response = await teacherSalaryAPI.getTeacherSalary(teacherId, month, locale)
+          set({ isLoading: false })
+          return response
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تحميل حساب الراتب',
+          })
+          throw error
+        }
+      },
+      markPaymentAsPaid: async (teacherId, data) => {
+        set({ isLoading: true, error: null })
+        try {
+          await teacherSalaryAPI.markPaymentAsPaid(teacherId, data)
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تسجيل السداد',
+          })
+          throw error
+        }
+      },
+      getTeacherPayments: async (teacherId, page = 1) => {
+        set({ isLoading: true, error: null })
+        try {
+          const locale = getCurrentLocale()
+          const response = await teacherSalaryAPI.getTeacherPayments(teacherId, page, 15, locale)
+          set({ isLoading: false })
+          return response
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تحميل سجل المدفوعات',
+          })
+          throw error
+        }
+      },
     }),
     {
       name: 'admin-storage',
       storage: createJSONStorage(() => localStorage),
-      merge: (persistedState: any, currentState: AdminState) => {
-        // Merge persisted state with current state, but use defaults if arrays are empty
-        return {
-          ...currentState,
-          ...persistedState,
-          // If persisted students is empty or doesn't exist, use defaults
-          students:
-            persistedState?.students && persistedState.students.length > 0
-              ? persistedState.students
-              : currentState.students,
-          // If persisted teachers is empty or doesn't exist, use defaults
-          teachers:
-            persistedState?.teachers && persistedState.teachers.length > 0
-              ? persistedState.teachers
-              : currentState.teachers,
-          // If persisted packages is empty or doesn't exist, use defaults
-          packages:
-            persistedState?.packages && persistedState.packages.length > 0
-              ? persistedState.packages
-              : currentState.packages,
-          // If persisted testimonials is empty or doesn't exist, use defaults
-          testimonials:
-            persistedState?.testimonials && persistedState.testimonials.length > 0
-              ? persistedState.testimonials
-              : currentState.testimonials,
-          // If persisted honorBoard is empty or doesn't exist, use defaults
-          honorBoard:
-            persistedState?.honorBoard && persistedState.honorBoard.length > 0
-              ? persistedState.honorBoard
-              : currentState.honorBoard,
-        }
-      },
+      partialize: (state) => ({
+        admin: state.admin,
+      }),
     }
   )
 )

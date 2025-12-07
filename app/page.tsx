@@ -8,7 +8,6 @@ import TeachersList from '@/components/teachers/TeachersList'
 import TestimonialsList from '@/components/testimonials/TestimonialsList'
 import AnimatedSection from '@/components/home/AnimatedSection'
 import SectionWrapper from '@/components/home/SectionWrapper'
-import { getTranslations } from '@/lib/translations'
 
 export const metadata: Metadata = {
   title: 'أكاديمية الحافظ | Al-Hafez Academy - تعليم القرآن الكريم',
@@ -31,8 +30,6 @@ export const metadata: Metadata = {
 }
 
 export default function Home() {
-  const t = getTranslations('ar')
-
   return (
     <main className="min-h-screen">
       <Navbar />
@@ -42,14 +39,8 @@ export default function Home() {
       {/* Packages Section */}
       <AnimatedSection id="packages" className="py-20 bg-white" delay={0.2}>
         <div className="container-custom">
-          <SectionWrapper delay={0.3}>
-            <div className="text-center mb-12">
-              <h2 className="section-title">{t.packages.title}</h2>
-              <p className="section-subtitle">{t.packages.subtitle}</p>
-            </div>
-          </SectionWrapper>
           <SectionWrapper delay={0.4}>
-            <PackagesList />
+            <PackagesList headingLevel="h2" />
           </SectionWrapper>
         </div>
       </AnimatedSection>
@@ -57,14 +48,8 @@ export default function Home() {
       {/* Teachers Section */}
       <AnimatedSection id="teachers" className="py-20 bg-white" delay={0.2}>
         <div className="container-custom">
-          <SectionWrapper delay={0.3}>
-            <div className="text-center mb-12">
-              <h2 className="section-title">{t.teachers.title}</h2>
-              <p className="section-subtitle">{t.teachers.subtitle}</p>
-            </div>
-          </SectionWrapper>
           <SectionWrapper delay={0.4}>
-            <TeachersList />
+            <TeachersList headingLevel="h2" />
           </SectionWrapper>
         </div>
       </AnimatedSection>
@@ -72,14 +57,8 @@ export default function Home() {
       {/* Testimonials Section */}
       <AnimatedSection id="testimonials" className="py-20 bg-white" delay={0.2}>
         <div className="container-custom">
-          <SectionWrapper delay={0.3}>
-            <div className="text-center mb-12">
-              <h2 className="section-title">{t.testimonials.title}</h2>
-              <p className="section-subtitle">{t.testimonials.subtitle}</p>
-            </div>
-          </SectionWrapper>
           <SectionWrapper delay={0.4}>
-            <TestimonialsList />
+            <TestimonialsList headingLevel="h2" />
           </SectionWrapper>
         </div>
       </AnimatedSection>
