@@ -26,7 +26,7 @@ export default function TeacherSalaryPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [paymentForm, setPaymentForm] = useState({
-    payment_proof_image: '',
+    payment_proof_image: null as File | null,
     notes: '',
   })
 
@@ -92,7 +92,7 @@ export default function TeacherSalaryPage() {
       return
     }
     if (!paymentForm.payment_proof_image) {
-      alert('يرجى إدخال رابط صورة إثبات الدفع')
+      alert('يرجى اختيار صورة إثبات الدفع')
       return
     }
     setIsLoading(true)
@@ -104,7 +104,7 @@ export default function TeacherSalaryPage() {
       })
       alert('تم تسجيل السداد بنجاح')
       setShowPaymentForm(false)
-      setPaymentForm({ payment_proof_image: '', notes: '' })
+      setPaymentForm({ payment_proof_image: null, notes: '' })
       // Refresh salary data
       if (selectedTeacher && selectedMonth) {
         const data = await getTeacherSalary(selectedTeacher, selectedMonth)
@@ -389,15 +389,15 @@ export default function TeacherSalaryPage() {
                     ) : (
                       <form onSubmit={handleMarkAsPaid} className="mt-4 space-y-4">
                         <div>
-                          <label className="block text-primary-900 font-semibold mb-2 text-right">رابط صورة إثبات الدفع *</label>
+                          <label className="block text-primary-900 font-semibold mb-2 text-right">صورة إثبات الدفع *</label>
                           <input
-                            type="url"
-                            value={paymentForm.payment_proof_image}
-                            onChange={(e) => setPaymentForm({ ...paymentForm, payment_proof_image: e.target.value })}
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => setPaymentForm({ ...paymentForm, payment_proof_image: e.target.files?.[0] || null })}
                             className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
-                            placeholder="https://example.com/payment-proof.jpg"
                             required
                           />
+                          <p className="text-xs text-primary-600 mt-1">صورة إثبات الدفع (jpeg, png, jpg, gif, الحد الأقصى: 5MB)</p>
                         </div>
                         <div>
                           <label className="block text-primary-900 font-semibold mb-2 text-right">ملاحظات</label>
@@ -422,7 +422,7 @@ export default function TeacherSalaryPage() {
                             type="button"
                             onClick={() => {
                               setShowPaymentForm(false)
-                              setPaymentForm({ payment_proof_image: '', notes: '' })
+                              setPaymentForm({ payment_proof_image: null, notes: '' })
                             }}
                             className="flex-1 px-6 py-3 border-2 border-primary-300 text-primary-700 rounded-lg hover:bg-primary-50 transition-all"
                           >

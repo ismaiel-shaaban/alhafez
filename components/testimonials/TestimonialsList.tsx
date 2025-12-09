@@ -1,19 +1,26 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useTranslation } from '@/hooks/useTranslation'
 import { useWebsiteStore } from '@/store/useWebsiteStore'
-import { Star, Quote } from 'lucide-react'
+import { Star, Quote, ChevronLeft, ChevronRight } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { Swiper, SwiperSlide } from 'swiper/react'
+import { Navigation, Pagination, Autoplay } from 'swiper/modules'
+import 'swiper/css'
+import 'swiper/css/navigation'
+import 'swiper/css/pagination'
 
 interface TestimonialsListProps {
   showTitle?: boolean
   headingLevel?: 'h1' | 'h2'
+  carousel?: boolean // Enable carousel mode
 }
 
-export default function TestimonialsList({ showTitle = true, headingLevel = 'h1' }: TestimonialsListProps = {}) {
+export default function TestimonialsList({ showTitle = true, headingLevel = 'h1', carousel = false }: TestimonialsListProps = {}) {
   const { t } = useTranslation()
   const { reviews, isLoading, fetchWebsiteData } = useWebsiteStore()
+  const swiperRef = useRef<any>(null)
 
   useEffect(() => {
     fetchWebsiteData()
@@ -67,42 +74,195 @@ export default function TestimonialsList({ showTitle = true, headingLevel = 'h1'
           <p className="section-subtitle">{t('testimonials.subtitle')}</p>
         </div>
       )}
-      <motion.div
-        className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto"
-        variants={containerVariants}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: '-50px' }}
-      >
-      {reviews.map((review) => {
-        const reviewText = currentLocale === 'en' && review.review_en ? review.review_en : (review.review_ar || review.review)
-        const packageName = review.package?.name || '-'
-
-        return (
-          <motion.div
-            key={review.id}
-            variants={itemVariants}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-            whileHover={{ y: -8, scale: 1.02 }}
-            className="bg-white p-6 rounded-xl border-2 border-primary-200 hover:border-primary-400 transition-all duration-300 shadow-lg hover:shadow-2xl relative"
+      
+      {carousel ? (
+        <div className="relative max-w-6xl mx-auto">
+          <Swiper
+            modules={[Navigation, Pagination, Autoplay]}
+            spaceBetween={32}
+            slidesPerView={1}
+            slidesPerGroup={1}
+            navigation={{
+              nextEl: '.swiper-button-next-custom',
+              prevEl: '.swiper-button-prev-custom',
+            }}
+            pagination={{
+              clickable: true,
+              el: '.swiper-pagination-custom',
+              bulletClass: 'swiper-pagination-bullet-custom',
+              bulletActiveClass: 'swiper-pagination-bullet-active-custom',
+            }}
+            autoplay={{
+              delay: 5000,
+              disableOnInteraction: false,
+              pauseOnMouseEnter: true,
+            }}
+            breakpoints={{
+              640: {
+                slidesPerView: 1,
+                spaceBetween: 24,
+              },
+              768: {
+                slidesPerView: 2,
+                spaceBetween: 32,
+              },
+              1024: {
+                slidesPerView: 3,
+                spaceBetween: 32,
+              },
+            }}
+            loop={reviews.length > 3}
+            className="!pb-12"
+            dir={currentLocale === 'ar' ? 'rtl' : 'ltr'}
+            onSwiper={(swiper) => {
+              swiperRef.current = swiper
+            }}
           >
-            <div className="absolute top-4 left-4 text-primary-300/20">
-              <Quote className="w-12 h-12" />
-            </div>
-            <div className="flex items-center gap-1 mb-4 mt-2">
-              {[...Array(review.rating)].map((_, i) => (
-                <Star key={i} className="w-5 h-5 fill-accent-gold text-accent-gold" />
-              ))}
-            </div>
-            <p className="text-primary-700 mb-4 leading-relaxed relative z-10">{reviewText}</p>
-            <div className="border-t border-primary-200 pt-4">
-              <h4 className="font-bold text-primary-900 mb-1">{review.student?.name || 'طالب'}</h4>
-              <p className="text-sm text-primary-600">{packageName}</p>
-            </div>
-          </motion.div>
-        )
-      })}
-      </motion.div>
+            {reviews.map((review) => {
+              const reviewText = currentLocale === 'en' && review.review_en ? review.review_en : (review.review_ar || review.review)
+              const packageName = review.package?.name || '-'
+
+              return (
+                <SwiperSlide key={review.id} className="!h-auto">
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    whileHover={{ y: -8, scale: 1.02 }}
+                    className="bg-white p-6 rounded-xl border-2 border-primary-200 hover:border-primary-400 transition-all duration-300 shadow-lg hover:shadow-2xl relative h-full flex flex-col"
+                  >
+                    <div className="absolute top-4 left-4 text-primary-300/20">
+                      <Quote className="w-12 h-12" />
+                    </div>
+                    
+                    {/* Media File Display */}
+                    {review.media_file && (
+                      <div className="mb-4 rounded-lg overflow-hidden">
+                        {/\.(mp4|mov|avi|webm)$/i.test(review.media_file) ? (
+                          <video
+                            src={review.media_file}
+                            className="w-full h-48 object-cover rounded-lg"
+                            controls
+                            onError={(e) => {
+                              const target = e.target as HTMLVideoElement
+                              target.style.display = 'none'
+                            }}
+                          />
+                        ) : /\.(jpeg|jpg|png|gif|webp)$/i.test(review.media_file) ? (
+                          <img
+                            src={review.media_file}
+                            alt="Review media"
+                            className="w-full h-48 object-cover rounded-lg"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.style.display = 'none'
+                            }}
+                          />
+                        ) : null}
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-1 mb-4 mt-2">
+                      {[...Array(review.rating)].map((_, i) => (
+                        <Star key={i} className="w-5 h-5 fill-accent-gold text-accent-gold" />
+                      ))}
+                    </div>
+                    <p className="text-primary-700 mb-4 leading-relaxed relative z-10 flex-grow">{reviewText}</p>
+                    <div className="border-t border-primary-200 pt-4 mt-auto">
+                      <h4 className="font-bold text-primary-900 mb-1">{review.student?.name || 'طالب'}</h4>
+                      <p className="text-sm text-primary-600">{packageName}</p>
+                    </div>
+                  </motion.div>
+                </SwiperSlide>
+              )
+            })}
+          </Swiper>
+
+          {/* Custom Navigation Buttons */}
+          <button
+            onClick={() => swiperRef.current?.slidePrev()}
+            className="swiper-button-prev-custom absolute right-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-white rounded-full p-3 shadow-lg hover:shadow-xl transition-all border-2 border-primary-200 hover:border-primary-400 z-10"
+            aria-label="Previous"
+          >
+            <ChevronRight className="w-6 h-6 text-primary-600" />
+          </button>
+          <button
+            onClick={() => swiperRef.current?.slideNext()}
+            className="swiper-button-next-custom absolute left-0 top-1/2 -translate-y-1/2 translate-x-4 bg-white rounded-full p-3 shadow-lg hover:shadow-xl transition-all border-2 border-primary-200 hover:border-primary-400 z-10"
+            aria-label="Next"
+          >
+            <ChevronLeft className="w-6 h-6 text-primary-600" />
+          </button>
+
+          {/* Custom Pagination */}
+          <div className="swiper-pagination-custom flex items-center justify-center gap-2 mt-8"></div>
+        </div>
+      ) : (
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto"
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-50px' }}
+        >
+          {reviews.map((review) => {
+            const reviewText = currentLocale === 'en' && review.review_en ? review.review_en : (review.review_ar || review.review)
+            const packageName = review.package?.name || '-'
+
+              return (
+              <motion.div
+                key={review.id}
+                variants={itemVariants}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+                whileHover={{ y: -8, scale: 1.02 }}
+                className="bg-white p-6 rounded-xl border-2 border-primary-200 hover:border-primary-400 transition-all duration-300 shadow-lg hover:shadow-2xl relative h-full flex flex-col"
+              >
+                <div className="absolute top-4 left-4 text-primary-300/20">
+                  <Quote className="w-12 h-12" />
+                </div>
+                
+                {/* Media File Display */}
+                {review.media_file && (
+                  <div className="mb-4 rounded-lg overflow-hidden">
+                    {/\.(mp4|mov|avi|webm)$/i.test(review.media_file) ? (
+                      <video
+                        src={review.media_file}
+                        className="w-full h-48 object-cover rounded-lg"
+                        controls
+                        onError={(e) => {
+                          const target = e.target as HTMLVideoElement
+                          target.style.display = 'none'
+                        }}
+                      />
+                    ) : /\.(jpeg|jpg|png|gif|webp)$/i.test(review.media_file) ? (
+                      <img
+                        src={review.media_file}
+                        alt="Review media"
+                        className="w-full h-48 object-cover rounded-lg"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          target.style.display = 'none'
+                        }}
+                      />
+                    ) : null}
+                  </div>
+                )}
+                
+                <div className="flex items-center gap-1 mb-4 mt-2">
+                  {[...Array(review.rating)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 fill-accent-gold text-accent-gold" />
+                  ))}
+                </div>
+                <p className="text-primary-700 mb-4 leading-relaxed relative z-10 flex-grow">{reviewText}</p>
+                <div className="border-t border-primary-200 pt-4 mt-auto">
+                  <h4 className="font-bold text-primary-900 mb-1">{review.student?.name || 'طالب'}</h4>
+                  <p className="text-sm text-primary-600">{packageName}</p>
+                </div>
+              </motion.div>
+            )
+          })}
+        </motion.div>
+      )}
     </>
   )
 }

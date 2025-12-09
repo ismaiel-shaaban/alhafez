@@ -42,6 +42,7 @@ export interface WebsiteTeacher {
   specialization_ar: string
   specialization_en?: string
   experience_years: number
+  image?: string // Teacher profile image URL
   created_at?: string
 }
 
@@ -61,6 +62,7 @@ export interface WebsiteReview {
   review: string
   review_ar: string
   review_en?: string
+  media_file?: string // Media file URL (image or video)
   created_at?: string
 }
 

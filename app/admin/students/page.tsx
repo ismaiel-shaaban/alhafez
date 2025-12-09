@@ -6,13 +6,13 @@ import { Plus, Edit, Trash2, Search, X, Eye, Calendar, CheckCircle, Clock, Filte
 import { motion, AnimatePresence } from 'framer-motion'
 
 const DAYS_OF_WEEK = [
-  { value: 'saturday', label: 'السبت' },
-  { value: 'sunday', label: 'الأحد' },
-  { value: 'monday', label: 'الإثنين' },
-  { value: 'tuesday', label: 'الثلاثاء' },
-  { value: 'wednesday', label: 'الأربعاء' },
-  { value: 'thursday', label: 'الخميس' },
-  { value: 'friday', label: 'الجمعة' },
+  { value: 'saturday', label: 'السبت', arName: 'السبت' },
+  { value: 'sunday', label: 'الأحد', arName: 'الأحد' },
+  { value: 'monday', label: 'الإثنين', arName: 'الإثنين' },
+  { value: 'tuesday', label: 'الثلاثاء', arName: 'الثلاثاء' },
+  { value: 'wednesday', label: 'الأربعاء', arName: 'الأربعاء' },
+  { value: 'thursday', label: 'الخميس', arName: 'الخميس' },
+  { value: 'friday', label: 'الجمعة', arName: 'الجمعة' },
 ]
 
 export default function StudentsPage() {
@@ -40,6 +40,7 @@ export default function StudentsPage() {
   
   // Filters
   const [filters, setFilters] = useState({
+    type: '' as 'website' | 'admin' | '',
     package_id: '',
     gender: '' as 'male' | 'female' | '',
     teacher_id: '',
@@ -62,9 +63,12 @@ export default function StudentsPage() {
     monthly_sessions: '',
     weekly_sessions: '',
     weekly_days: [] as string[],
+    weekly_schedule: {} as Record<string, string>, // Object with Arabic day names as keys and times as values
+    useWeeklySchedule: false, // Toggle between weekly_days/hour and weekly_schedule
     session_duration: '',
     hourly_rate: '',
     notes: '',
+    password: '',
   })
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -82,9 +86,12 @@ export default function StudentsPage() {
     monthly_sessions: '',
     weekly_sessions: '',
     weekly_days: [] as string[],
+    weekly_schedule: {} as Record<string, string>, // Object with Arabic day names as keys and times as values
+    useWeeklySchedule: false, // Toggle between weekly_days/hour and weekly_schedule
     session_duration: '',
     hourly_rate: '',
     notes: '',
+    password: '',
   })
 
   // Session modals
@@ -110,12 +117,13 @@ export default function StudentsPage() {
   // Apply filters when they change
   useEffect(() => {
     const apiFilters: any = {}
+    if (filters.type) apiFilters.type = filters.type
     if (filters.package_id) apiFilters.package_id = parseInt(filters.package_id)
     if (filters.gender) apiFilters.gender = filters.gender
     if (filters.teacher_id) apiFilters.teacher_id = parseInt(filters.teacher_id)
     
     fetchStudents(apiFilters)
-  }, [filters.package_id, filters.gender, filters.teacher_id, fetchStudents])
+  }, [filters.type, filters.package_id, filters.gender, filters.teacher_id, fetchStudents])
 
   // Filter students by search term (client-side for name/email)
   const filteredStudents = students.filter((student) => {
@@ -123,7 +131,7 @@ export default function StudentsPage() {
     const search = filters.search.toLowerCase()
     return (
       student.name.toLowerCase().includes(search) ||
-      student.email.toLowerCase().includes(search) ||
+      (student.email && student.email.toLowerCase().includes(search)) ||
       student.phone.includes(search)
     )
   })
@@ -143,6 +151,8 @@ export default function StudentsPage() {
 
   const handleEdit = (student: any) => {
     setEditingId(student.id)
+    // Check if student has weekly_schedule (takes precedence)
+    const hasWeeklySchedule = student.weekly_schedule && typeof student.weekly_schedule === 'object' && Object.keys(student.weekly_schedule).length > 0
     setEditForm({
       name: student.name || '',
       email: student.email || '',
@@ -155,9 +165,12 @@ export default function StudentsPage() {
       monthly_sessions: student.monthly_sessions?.toString() || '',
       weekly_sessions: student.weekly_sessions?.toString() || '',
       weekly_days: Array.isArray(student.weekly_days) ? [...student.weekly_days] : [],
+      weekly_schedule: hasWeeklySchedule ? { ...student.weekly_schedule } : {},
+      useWeeklySchedule: hasWeeklySchedule,
       session_duration: student.session_duration?.toString() || '',
       hourly_rate: student.hourly_rate?.toString() || '',
       notes: student.notes || '',
+      password: '', // Don't populate password field for security
     })
     setShowEditModal(true)
   }
@@ -167,22 +180,33 @@ export default function StudentsPage() {
     if (editingId) {
       setIsSubmitting(true)
       try {
-        await updateStudent(editingId, {
+        // Build request data - weekly_schedule takes precedence over hour and weekly_days
+        const updateData: any = {
           name: editForm.name,
-          email: editForm.email,
+          email: editForm.email || undefined, // Optional
           phone: editForm.phone,
-          age: parseInt(editForm.age) || 0,
+          age: editForm.age ? parseInt(editForm.age) : undefined, // Optional
           gender: editForm.gender as 'male' | 'female',
           package_id: editForm.package_id ? parseInt(editForm.package_id) : undefined,
           teacher_id: editForm.teacher_id ? parseInt(editForm.teacher_id) : undefined,
-          hour: editForm.hour || undefined,
           monthly_sessions: editForm.monthly_sessions ? parseInt(editForm.monthly_sessions) : undefined,
           weekly_sessions: editForm.weekly_sessions ? parseInt(editForm.weekly_sessions) : undefined,
-          weekly_days: editForm.weekly_days.length > 0 ? editForm.weekly_days : undefined,
           session_duration: editForm.session_duration ? parseInt(editForm.session_duration) : undefined,
           hourly_rate: editForm.hourly_rate ? parseFloat(editForm.hourly_rate) : undefined,
           notes: editForm.notes || undefined,
-        })
+          password: editForm.password || undefined, // Optional, min: 6 characters
+        }
+
+        // If using weekly_schedule, send it (takes precedence)
+        if (editForm.useWeeklySchedule && Object.keys(editForm.weekly_schedule).length > 0) {
+          updateData.weekly_schedule = editForm.weekly_schedule
+        } else {
+          // Otherwise, use hour and weekly_days
+          if (editForm.hour) updateData.hour = editForm.hour
+          if (editForm.weekly_days.length > 0) updateData.weekly_days = editForm.weekly_days
+        }
+
+        await updateStudent(editingId, updateData)
         setEditingId(null)
         setEditForm({
           name: '',
@@ -196,9 +220,12 @@ export default function StudentsPage() {
           monthly_sessions: '',
           weekly_sessions: '',
           weekly_days: [],
+          weekly_schedule: {},
+          useWeeklySchedule: false,
           session_duration: '',
           hourly_rate: '',
           notes: '',
+          password: '',
         })
         setShowEditModal(false)
       } catch (error: any) {
@@ -212,22 +239,25 @@ export default function StudentsPage() {
   const handleCloseEditModal = () => {
     setShowEditModal(false)
     setEditingId(null)
-    setEditForm({
-      name: '',
-      email: '',
-      phone: '',
-      age: '',
-      gender: '' as 'male' | 'female' | '',
-      package_id: '',
-      teacher_id: '',
-      hour: '',
-      monthly_sessions: '',
-      weekly_sessions: '',
-      weekly_days: [],
-      session_duration: '',
-      hourly_rate: '',
-      notes: '',
-    })
+      setEditForm({
+        name: '',
+        email: '',
+        phone: '',
+        age: '',
+        gender: '' as 'male' | 'female' | '',
+        package_id: '',
+        teacher_id: '',
+        hour: '',
+        monthly_sessions: '',
+        weekly_sessions: '',
+        weekly_days: [],
+        weekly_schedule: {},
+        useWeeklySchedule: false,
+        session_duration: '',
+        hourly_rate: '',
+        notes: '',
+        password: '',
+      })
   }
 
   const handleDelete = async (id: number) => {
@@ -244,22 +274,33 @@ export default function StudentsPage() {
     e.preventDefault()
     setIsSubmitting(true)
     try {
-      await addStudent({
+      // Build request data - weekly_schedule takes precedence over hour and weekly_days
+      const createData: any = {
         name: newStudent.name,
-        email: newStudent.email,
+        email: newStudent.email || undefined, // Optional, unique
         phone: newStudent.phone,
-        age: parseInt(newStudent.age) || 0,
+        age: newStudent.age ? parseInt(newStudent.age) : undefined, // Optional, 1-120
         gender: newStudent.gender as 'male' | 'female',
         package_id: newStudent.package_id ? parseInt(newStudent.package_id) : undefined,
         teacher_id: newStudent.teacher_id ? parseInt(newStudent.teacher_id) : undefined,
-        hour: newStudent.hour || undefined,
         monthly_sessions: newStudent.monthly_sessions ? parseInt(newStudent.monthly_sessions) : undefined,
         weekly_sessions: newStudent.weekly_sessions ? parseInt(newStudent.weekly_sessions) : undefined,
-        weekly_days: newStudent.weekly_days.length > 0 ? newStudent.weekly_days : undefined,
         session_duration: newStudent.session_duration ? parseInt(newStudent.session_duration) : undefined,
         hourly_rate: newStudent.hourly_rate ? parseFloat(newStudent.hourly_rate) : undefined,
         notes: newStudent.notes || undefined,
-      })
+        password: newStudent.password || undefined, // Optional, min: 6 characters
+      }
+
+      // If using weekly_schedule, send it (takes precedence)
+      if (newStudent.useWeeklySchedule && Object.keys(newStudent.weekly_schedule).length > 0) {
+        createData.weekly_schedule = newStudent.weekly_schedule
+      } else {
+        // Otherwise, use hour and weekly_days
+        if (newStudent.hour) createData.hour = newStudent.hour
+        if (newStudent.weekly_days.length > 0) createData.weekly_days = newStudent.weekly_days
+      }
+
+      await addStudent(createData)
       setNewStudent({
         name: '',
         email: '',
@@ -272,9 +313,12 @@ export default function StudentsPage() {
         monthly_sessions: '',
         weekly_sessions: '',
         weekly_days: [],
+        weekly_schedule: {},
+        useWeeklySchedule: false,
         session_duration: '',
         hourly_rate: '',
         notes: '',
+        password: '',
       })
       setShowAddModal(false)
     } catch (error: any) {
@@ -380,7 +424,7 @@ export default function StudentsPage() {
           <Filter className="w-5 h-5 text-primary-600" />
           <h3 className="text-lg font-semibold text-primary-900">فلترة الطلاب</h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
             <label className="block text-primary-900 font-semibold mb-2 text-right">البحث</label>
             <div className="relative">
@@ -394,6 +438,19 @@ export default function StudentsPage() {
                 dir="rtl"
               />
             </div>
+          </div>
+          <div>
+            <label className="block text-primary-900 font-semibold mb-2 text-right">نوع التسجيل</label>
+            <select
+              value={filters.type}
+              onChange={(e) => setFilters({ ...filters, type: e.target.value as 'website' | 'admin' | '' })}
+              className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+              dir="rtl"
+            >
+              <option value="">جميع الأنواع</option>
+              <option value="website">من الموقع</option>
+              <option value="admin">من الإدارة</option>
+            </select>
           </div>
           <div>
             <label className="block text-primary-900 font-semibold mb-2 text-right">الباقة</label>
@@ -597,15 +654,31 @@ export default function StudentsPage() {
                     <p className="text-primary-900">{viewedStudent.weekly_sessions || '-'}</p>
                   </div>
                   <div>
-                    <label className="block text-primary-600 text-sm mb-1">أيام الأسبوع</label>
-                    <p className="text-primary-900">
-                      {Array.isArray(viewedStudent.weekly_days) && viewedStudent.weekly_days.length > 0
-                        ? viewedStudent.weekly_days.map((day: string) => {
-                            const dayObj = DAYS_OF_WEEK.find(d => d.value === day)
-                            return dayObj?.label
-                          }).filter(Boolean).join('، ')
-                        : '-'}
-                    </p>
+                    <label className="block text-primary-600 text-sm mb-1">جدول الأسبوع</label>
+                    {viewedStudent.weekly_schedule && typeof viewedStudent.weekly_schedule === 'object' && Object.keys(viewedStudent.weekly_schedule).length > 0 ? (
+                      <div className="space-y-2">
+                        {Object.entries(viewedStudent.weekly_schedule).map(([day, time]) => (
+                          <p key={day} className="text-primary-900">
+                            <span className="font-medium">{day}:</span> {time as string}
+                          </p>
+                        ))}
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-primary-900 mb-2">
+                          <span className="font-medium">الوقت الافتراضي:</span> {viewedStudent.hour || '-'}
+                        </p>
+                        <p className="text-primary-900">
+                          <span className="font-medium">الأيام:</span>{' '}
+                          {Array.isArray(viewedStudent.weekly_days) && viewedStudent.weekly_days.length > 0
+                            ? viewedStudent.weekly_days.map((day: string) => {
+                                const dayObj = DAYS_OF_WEEK.find(d => d.value === day)
+                                return dayObj?.label
+                              }).filter(Boolean).join('، ')
+                            : '-'}
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-primary-600 text-sm mb-1">مدة الحصة (دقيقة)</label>
@@ -901,14 +974,13 @@ export default function StudentsPage() {
                   </div>
                   <div>
                     <label className="block text-primary-900 font-semibold mb-2 text-right">
-                      البريد الإلكتروني
+                      البريد الإلكتروني (اختياري)
                     </label>
                     <input
                       type="email"
                       value={newStudent.email}
                       onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
                       className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
-                      required
                     />
                   </div>
                   <div>
@@ -924,7 +996,7 @@ export default function StudentsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-primary-900 font-semibold mb-2 text-right">العمر</label>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">العمر (اختياري)</label>
                     <input
                       type="number"
                       value={newStudent.age}
@@ -933,7 +1005,6 @@ export default function StudentsPage() {
                       dir="rtl"
                       min="1"
                       max="120"
-                      required
                     />
                   </div>
                   <div>
@@ -1040,32 +1111,96 @@ export default function StudentsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-primary-900 font-semibold mb-2 text-right">أيام الأسبوع</label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {DAYS_OF_WEEK.map((day) => (
-                      <label key={day.value} className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={newStudent.weekly_days.includes(day.value)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setNewStudent({
-                                ...newStudent,
-                                weekly_days: [...newStudent.weekly_days, day.value],
-                              })
-                            } else {
-                              setNewStudent({
-                                ...newStudent,
-                                weekly_days: newStudent.weekly_days.filter((d) => d !== day.value),
-                              })
-                            }
-                          }}
-                          className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
-                        />
-                        <span className="text-primary-700">{day.label}</span>
-                      </label>
-                    ))}
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="block text-primary-900 font-semibold">جدول الأسبوع</label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newStudent.useWeeklySchedule}
+                        onChange={(e) => setNewStudent({ ...newStudent, useWeeklySchedule: e.target.checked })}
+                        className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                      />
+                      <span className="text-primary-700 text-sm">استخدام جدول متقدم (وقت مختلف لكل يوم)</span>
+                    </label>
                   </div>
+                  
+                  {newStudent.useWeeklySchedule ? (
+                    <div className="space-y-3 p-4 bg-primary-50 rounded-lg border-2 border-primary-200">
+                      <p className="text-sm text-primary-600 mb-3">حدد وقت الحصة لكل يوم (اختياري)</p>
+                      {DAYS_OF_WEEK.map((day) => (
+                        <div key={day.value} className="flex items-center gap-3">
+                          <label className="w-24 text-primary-700 font-medium">{day.label}</label>
+                          <input
+                            type="time"
+                            value={newStudent.weekly_schedule[day.arName] || ''}
+                            onChange={(e) => {
+                              const newSchedule = { ...newStudent.weekly_schedule }
+                              if (e.target.value) {
+                                newSchedule[day.arName] = e.target.value
+                              } else {
+                                delete newSchedule[day.arName]
+                              }
+                              setNewStudent({ ...newStudent, weekly_schedule: newSchedule })
+                            }}
+                            className="flex-1 px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                            placeholder="اختياري"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-primary-900 font-semibold mb-2 text-right">وقت الحصة الافتراضي</label>
+                        <input
+                          type="time"
+                          value={newStudent.hour}
+                          onChange={(e) => setNewStudent({ ...newStudent, hour: e.target.value })}
+                          className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                          placeholder="HH:mm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-primary-900 font-semibold mb-2 text-right">أيام الأسبوع</label>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          {DAYS_OF_WEEK.map((day) => (
+                            <label key={day.value} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={newStudent.weekly_days.includes(day.value)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setNewStudent({
+                                      ...newStudent,
+                                      weekly_days: [...newStudent.weekly_days, day.value],
+                                    })
+                                  } else {
+                                    setNewStudent({
+                                      ...newStudent,
+                                      weekly_days: newStudent.weekly_days.filter((d) => d !== day.value),
+                                    })
+                                  }
+                                }}
+                                className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                              />
+                              <span className="text-primary-700">{day.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">كلمة المرور (اختياري)</label>
+                  <input
+                    type="password"
+                    value={newStudent.password}
+                    onChange={(e) => setNewStudent({ ...newStudent, password: e.target.value })}
+                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                    placeholder="الحد الأدنى 6 أحرف"
+                    minLength={6}
+                  />
                 </div>
                 <div>
                   <label className="block text-primary-900 font-semibold mb-2 text-right">ملاحظات</label>
@@ -1144,14 +1279,13 @@ export default function StudentsPage() {
                   </div>
                   <div>
                     <label className="block text-primary-900 font-semibold mb-2 text-right">
-                      البريد الإلكتروني
+                      البريد الإلكتروني (اختياري)
                     </label>
                     <input
                       type="email"
                       value={editForm.email}
                       onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
                       className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
-                      required
                     />
                   </div>
                   <div>
@@ -1167,7 +1301,7 @@ export default function StudentsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-primary-900 font-semibold mb-2 text-right">العمر</label>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">العمر (اختياري)</label>
                     <input
                       type="number"
                       value={editForm.age}
@@ -1176,7 +1310,6 @@ export default function StudentsPage() {
                       dir="rtl"
                       min="1"
                       max="120"
-                      required
                     />
                   </div>
                   <div>
@@ -1283,32 +1416,96 @@ export default function StudentsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-primary-900 font-semibold mb-2 text-right">أيام الأسبوع</label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {DAYS_OF_WEEK.map((day) => (
-                      <label key={day.value} className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={editForm.weekly_days.includes(day.value)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setEditForm({
-                                ...editForm,
-                                weekly_days: [...editForm.weekly_days, day.value],
-                              })
-                            } else {
-                              setEditForm({
-                                ...editForm,
-                                weekly_days: editForm.weekly_days.filter((d) => d !== day.value),
-                              })
-                            }
-                          }}
-                          className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
-                        />
-                        <span className="text-primary-700">{day.label}</span>
-                      </label>
-                    ))}
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="block text-primary-900 font-semibold">جدول الأسبوع</label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editForm.useWeeklySchedule}
+                        onChange={(e) => setEditForm({ ...editForm, useWeeklySchedule: e.target.checked })}
+                        className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                      />
+                      <span className="text-primary-700 text-sm">استخدام جدول متقدم (وقت مختلف لكل يوم)</span>
+                    </label>
                   </div>
+                  
+                  {editForm.useWeeklySchedule ? (
+                    <div className="space-y-3 p-4 bg-primary-50 rounded-lg border-2 border-primary-200">
+                      <p className="text-sm text-primary-600 mb-3">حدد وقت الحصة لكل يوم (اختياري)</p>
+                      {DAYS_OF_WEEK.map((day) => (
+                        <div key={day.value} className="flex items-center gap-3">
+                          <label className="w-24 text-primary-700 font-medium">{day.label}</label>
+                          <input
+                            type="time"
+                            value={editForm.weekly_schedule[day.arName] || ''}
+                            onChange={(e) => {
+                              const newSchedule = { ...editForm.weekly_schedule }
+                              if (e.target.value) {
+                                newSchedule[day.arName] = e.target.value
+                              } else {
+                                delete newSchedule[day.arName]
+                              }
+                              setEditForm({ ...editForm, weekly_schedule: newSchedule })
+                            }}
+                            className="flex-1 px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                            placeholder="اختياري"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-primary-900 font-semibold mb-2 text-right">وقت الحصة الافتراضي</label>
+                        <input
+                          type="time"
+                          value={editForm.hour}
+                          onChange={(e) => setEditForm({ ...editForm, hour: e.target.value })}
+                          className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                          placeholder="HH:mm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-primary-900 font-semibold mb-2 text-right">أيام الأسبوع</label>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          {DAYS_OF_WEEK.map((day) => (
+                            <label key={day.value} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={editForm.weekly_days.includes(day.value)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setEditForm({
+                                      ...editForm,
+                                      weekly_days: [...editForm.weekly_days, day.value],
+                                    })
+                                  } else {
+                                    setEditForm({
+                                      ...editForm,
+                                      weekly_days: editForm.weekly_days.filter((d) => d !== day.value),
+                                    })
+                                  }
+                                }}
+                                className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                              />
+                              <span className="text-primary-700">{day.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">كلمة المرور (اختياري)</label>
+                  <input
+                    type="password"
+                    value={editForm.password}
+                    onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                    placeholder="اتركه فارغاً للحفاظ على كلمة المرور الحالية"
+                    minLength={6}
+                  />
                 </div>
                 <div>
                   <label className="block text-primary-900 font-semibold mb-2 text-right">ملاحظات</label>

@@ -58,7 +58,7 @@ export default function Home() {
       <AnimatedSection id="testimonials" className="py-20 bg-white" delay={0.2}>
         <div className="container-custom">
           <SectionWrapper delay={0.4}>
-            <TestimonialsList headingLevel="h2" />
+            <TestimonialsList headingLevel="h2" carousel={true} />
           </SectionWrapper>
         </div>
       </AnimatedSection>
