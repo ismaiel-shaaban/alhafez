@@ -2,12 +2,12 @@
 
 ## Base URL
 ```
-https://al-hafiz-academy.cloudy-digital.com/api
+http://al-hafiz-academy.cloudy-digital.com/api
 ```
 
 ## Authentication
 
-جميع الـ endpoints (عدا `/login`) تتطلب Bearer Token في الـ header:
+All endpoints (except `/login`) require Bearer Token in the header:
 ```
 Authorization: Bearer {token}
 ```
@@ -45,12 +45,14 @@ Authorization: Bearer {token}
 
 ---
 
-## 1. Authentication Endpoints
+## 1. Authentication Endpoints (Dashboard APIs)
+
+**Note:** These APIs are for Dashboard only. For teachers, refer to Teacher APIs section.
 
 ### 1.1 Login
 **POST** `/api/login`
 
-**Description:** تسجيل الدخول باستخدام username و password
+**Description:** Dashboard login using username and password
 
 **Request Headers:**
 ```
@@ -70,7 +72,7 @@ Accept: application/json
 ```json
 {
     "status": true,
-    "message": "تم تسجيل الدخول بنجاح",
+    "message": "Login successful",
     "data": {
         "user": {
             "id": 1,
@@ -80,13 +82,22 @@ Accept: application/json
             "teacher": {
                 "id": 1,
                 "name": "أحمد محمد",
-                "specialization": "القرآن الكريم"
+                "name_ar": "أحمد محمد",
+                "name_en": "Ahmed Mohamed",
+                "specialization": "القرآن الكريم",
+                "specialization_ar": "القرآن الكريم",
+                "specialization_en": "Holy Quran",
+                "experience_years": 10,
+                "image": "http://domain.com/Admin/images/teachers/1234567890_abc123.jpg",
+                "created_at": "2024-01-01 00:00:00"
             }
         },
         "token": "1|xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     }
 }
 ```
+
+**Note:** The `teacher` field may be `null` if the user is not associated with a teacher.
 
 **Error Response (422) - Validation Error:**
 ```json
@@ -102,7 +113,7 @@ Accept: application/json
 {
     "status": false,
     "number": "E029",
-    "message": "بيانات الدخول غير صحيحة"
+    "message": "Invalid credentials"
 }
 ```
 
@@ -111,7 +122,7 @@ Accept: application/json
 ### 1.2 Logout
 **POST** `/api/logout`
 
-**Description:** تسجيل الخروج وإلغاء الـ token الحالي
+**Description:** Dashboard logout and revoke current token
 
 **Request Headers:**
 ```
@@ -124,7 +135,7 @@ Accept: application/json
 {
     "status": true,
     "number": 1,
-    "message": "تم تسجيل الخروج بنجاح"
+    "message": "Logout successful"
 }
 ```
 
@@ -142,7 +153,7 @@ Accept: application/json
 ### 1.3 Get Current User
 **GET** `/api/user`
 
-**Description:** الحصول على معلومات المستخدم الحالي
+**Description:** Get current user information in the dashboard
 
 **Request Headers:**
 ```
@@ -155,7 +166,7 @@ lang: ar (optional: ar or en)
 ```json
 {
     "status": true,
-    "message": "تم جلب بيانات المستخدم بنجاح",
+    "message": "User data retrieved successfully",
     "user": {
         "id": 1,
         "name": "Admin",
@@ -164,11 +175,20 @@ lang: ar (optional: ar or en)
         "teacher": {
             "id": 1,
             "name": "أحمد محمد",
-            "specialization": "القرآن الكريم"
+            "name_ar": "أحمد محمد",
+            "name_en": "Ahmed Mohamed",
+            "specialization": "القرآن الكريم",
+            "specialization_ar": "القرآن الكريم",
+            "specialization_en": "Holy Quran",
+            "experience_years": 10,
+            "image": "http://domain.com/Admin/images/teachers/1234567890_abc123.jpg",
+            "created_at": "2024-01-01 00:00:00"
         }
     }
 }
 ```
+
+**Note:** The `teacher` field may be `null` if the user is not associated with a teacher.
 
 **Error Response (401):**
 ```json
@@ -181,12 +201,12 @@ lang: ar (optional: ar or en)
 
 ---
 
-## 2. Students (الطلاب)
+## 2. Students
 
 ### 2.1 List Students
 **GET** `/api/students`
 
-**Description:** الحصول على قائمة الطلاب مع إمكانية الفلترة
+**Description:** Get list of students with filtering options
 
 **Request Headers:**
 ```
@@ -196,6 +216,7 @@ lang: ar (optional)
 ```
 
 **Query Parameters:**
+- `type` (optional) - Filter by registration type: `website` or `admin`
 - `package_id` (optional) - Filter by package ID
 - `gender` (optional) - Filter by gender: `male` or `female`
 - `teacher_id` (optional) - Filter by teacher ID
@@ -211,11 +232,12 @@ GET /api/students?gender=male&per_page=10&page=1
 ```json
 {
     "status": true,
-    "message": "تم جلب الطلاب بنجاح",
+    "message": "Students retrieved successfully",
     "data": {
         "students": [
             {
                 "id": 1,
+                "type": "admin",
                 "name": "محمد أحمد",
                 "email": "mohamed@example.com",
                 "phone": "01012345678",
@@ -235,11 +257,16 @@ GET /api/students?gender=male&per_page=10&page=1
                 "teacher_id": 1,
                 "hour": "10:00",
                 "monthly_sessions": 8,
-                "weekly_sessions": 8,
+                "weekly_sessions": 2,
                 "weekly_days": ["saturday", "tuesday"],
+                "weekly_schedule": {
+                    "السبت": "17:00",
+                    "الثلاثاء": "14:00"
+                },
                 "session_duration": 60,
                 "hourly_rate": 100.00,
                 "notes": "طالب مجتهد",
+                "subscriptions": [],
                 "created_at": "2024-01-01 00:00:00"
             }
         ],
@@ -267,7 +294,7 @@ GET /api/students?gender=male&per_page=10&page=1
 ### 2.2 Create Student
 **POST** `/api/students`
 
-**Description:** إضافة طالب جديد. إذا تم توفير بيانات الاشتراك، سيتم إنشاء الحصص تلقائياً.
+**Description:** Add a new student. If subscription data is provided, sessions will be created automatically.
 
 **Request Headers:**
 ```
@@ -288,35 +315,44 @@ Accept: application/json
     "teacher_id": 1,
     "hour": "10:00",
     "monthly_sessions": 8,
-    "weekly_sessions": 8,
+    "weekly_sessions": 2,
     "weekly_days": ["saturday", "tuesday"],
+    "weekly_schedule": {
+        "السبت": "17:00",
+        "الثلاثاء": "14:00"
+    },
     "session_duration": 60,
     "hourly_rate": 100.00,
-    "notes": "طالب مجتهد"
+    "notes": "طالب مجتهد",
+    "password": "password123"
 }
 ```
 
 **Field Descriptions:**
-- `name` (required): اسم الطالب
-- `email` (required, unique): البريد الإلكتروني
-- `phone` (required): رقم الهاتف
-- `age` (required): العمر (1-120)
-- `gender` (required): الجنس (`male` or `female`)
-- `package_id` (optional): معرف الباقة
-- `teacher_id` (optional): معرف المعلم
-- `hour` (optional): وقت الحصة (format: HH:mm)
-- `monthly_sessions` (optional): عدد الحصص الشهرية
-- `weekly_sessions` (optional): عدد الحصص الأسبوعية
-- `weekly_days` (optional): أيام الأسبوع (array: ["saturday", "tuesday"] or ["السبت", "الثلاثاء"])
-- `session_duration` (optional): مدة الحصة بالدقائق
-- `hourly_rate` (optional): سعر الساعة الذي سيحصل عليه المعلم (numeric, min: 0)
-- `notes` (optional): ملاحظات
+- `name` (required): Student name
+- `email` (optional, unique): Email address
+- `phone` (required): Phone number
+- `age` (optional): Age (1-120)
+- `gender` (required): Gender (`male` or `female`)
+- `package_id` (optional): Package ID
+- `teacher_id` (optional): Teacher ID
+- `hour` (optional): Default session time (format: HH:mm) - used if `weekly_schedule` is not provided
+- `monthly_sessions` (optional): Number of monthly sessions
+- `weekly_sessions` (optional): Number of weekly sessions
+- `weekly_days` (optional): Days of the week (array: ["saturday", "tuesday"]) - used if `weekly_schedule` is not provided
+- `weekly_schedule` (optional): Weekly schedule with specific times per day (JSON object: `{"السبت": "17:00", "الثلاثاء": "14:00"}`). Each day can have a specific time. This takes precedence over `hour` and `weekly_days`.
+- `session_duration` (optional): Session duration in minutes
+- `hourly_rate` (optional): Hourly rate for the teacher (numeric, min: 0)
+- `notes` (optional): Notes
+- `password` (optional): Password for student login (min: 6 characters). Password will be automatically hashed.
+
+**Note:** When a student is created from the dashboard, the `type` is automatically set to `admin`. If a student registered from the website is later modified by the administration, their `type` changes to `admin`.
 
 **Success Response (200):**
 ```json
 {
     "status": true,
-    "message": "تم إنشاء الطالب بنجاح",
+    "message": "Student created successfully",
     "data": {
         "id": 1,
         "name": "محمد أحمد",
@@ -371,7 +407,7 @@ Accept: application/json
 ### 2.3 Get Student
 **GET** `/api/students/{id}`
 
-**Description:** الحصول على تفاصيل طالب محدد
+**Description:** Get details of a specific student
 
 **Request Headers:**
 ```
@@ -384,7 +420,7 @@ lang: ar (optional)
 ```json
 {
     "status": true,
-    "message": "تم جلب الطالب بنجاح",
+    "message": "Student retrieved successfully",
     "data": {
         "id": 1,
         "name": "محمد أحمد",
@@ -430,7 +466,7 @@ lang: ar (optional)
 ### 2.4 Update Student
 **PUT** `/api/students/{id}`
 
-**Description:** تحديث بيانات طالب. إذا تم تحديث بيانات الاشتراك، سيتم إعادة إنشاء الحصص المستقبلية غير المكتملة.
+**Description:** Update student data. If subscription data is updated, incomplete future sessions will be recreated.
 
 **Request Headers:**
 ```
@@ -439,7 +475,7 @@ Content-Type: application/json
 Accept: application/json
 ```
 
-**Request Body:** (جميع الحقول اختيارية)
+**Request Body:** (all fields are optional)
 ```json
 {
     "name": "محمد أحمد محمود",
@@ -448,15 +484,20 @@ Accept: application/json
     "hour": "14:00",
     "monthly_sessions": 12,
     "weekly_sessions": 6,
-    "weekly_days": ["sunday", "wednesday"]
+    "weekly_days": ["sunday", "wednesday"],
+    "password": "newpassword123"
 }
 ```
+
+**Field Descriptions:**
+- All fields from Create Student are available
+- `password` (optional): New password for student login (min: 6 characters). Password will be automatically hashed.
 
 **Success Response (200):**
 ```json
 {
     "status": true,
-    "message": "تم تحديث الطالب بنجاح",
+    "message": "Student updated successfully",
     "data": {
         "id": 1,
         "name": "محمد أحمد محمود",
@@ -511,7 +552,7 @@ Accept: application/json
 ### 2.5 Delete Student
 **DELETE** `/api/students/{id}`
 
-**Description:** حذف طالب. سيتم حذف جميع الحصص المرتبطة به.
+**Description:** Delete a student. All associated sessions will be deleted.
 
 **Request Headers:**
 ```
@@ -524,7 +565,7 @@ Accept: application/json
 {
     "status": true,
     "number": 1,
-    "message": "تم حذف الطالب بنجاح"
+    "message": "Student deleted successfully"
 }
 ```
 
@@ -539,12 +580,12 @@ Accept: application/json
 
 ---
 
-## 3. Student Sessions (الحصص)
+## 3. Student Sessions
 
 ### 3.1 List Sessions
 **GET** `/api/student-sessions`
 
-**Description:** الحصول على قائمة الحصص مع إمكانية الفلترة
+**Description:** Get list of sessions with filtering options
 
 **Request Headers:**
 ```
@@ -572,7 +613,7 @@ GET /api/student-sessions?student_id=1&is_completed=false&date_from=2024-01-01
 ```json
 {
     "status": true,
-    "message": "تم جلب الحصص بنجاح",
+    "message": "Sessions retrieved successfully",
     "data": {
         "sessions": [
             {
@@ -612,7 +653,7 @@ GET /api/student-sessions?student_id=1&is_completed=false&date_from=2024-01-01
 ### 3.2 Create Session
 **POST** `/api/student-sessions`
 
-**Description:** إنشاء حصة يدوياً (عادة ما يتم إنشاء الحصص تلقائياً عند إضافة/تحديث اشتراك الطالب)
+**Description:** Create a session manually (sessions are usually created automatically when adding/updating student subscription)
 
 **Request Headers:**
 ```
@@ -634,18 +675,18 @@ Accept: application/json
 ```
 
 **Field Descriptions:**
-- `student_id` (required): معرف الطالب
-- `teacher_id` (optional): معرف المعلم
-- `session_date` (required): تاريخ الحصة (YYYY-MM-DD)
-- `session_time` (required): وقت الحصة (HH:mm)
-- `day_of_week` (required): يوم الأسبوع (`saturday`, `sunday`, `monday`, `tuesday`, `wednesday`, `thursday`, `friday`)
-- `notes` (optional): ملاحظات
+- `student_id` (required): Student ID
+- `teacher_id` (optional): Teacher ID
+- `session_date` (required): Session date (YYYY-MM-DD)
+- `session_time` (required): Session time (HH:mm)
+- `day_of_week` (required): Day of the week (`saturday`, `sunday`, `monday`, `tuesday`, `wednesday`, `thursday`, `friday`)
+- `notes` (optional): Notes
 
 **Success Response (200):**
 ```json
 {
     "status": true,
-    "message": "تم إنشاء الحصة بنجاح",
+    "message": "Session created successfully",
     "data": {
         "id": 1,
         "student": {
@@ -684,13 +725,13 @@ Accept: application/json
 ### 3.3 Get Session
 **GET** `/api/student-sessions/{id}`
 
-**Description:** الحصول على تفاصيل حصة محددة
+**Description:** Get details of a specific session
 
 **Success Response (200):**
 ```json
 {
     "status": true,
-    "message": "تم جلب الحصة بنجاح",
+    "message": "Session retrieved successfully",
     "data": {
         "id": 1,
         "student": {
@@ -720,9 +761,9 @@ Accept: application/json
 ### 3.4 Update Session
 **PUT** `/api/student-sessions/{id}`
 
-**Description:** تحديث بيانات حصة. إذا تم تحديد `is_completed` كـ `true`، سيتم تعيين `completed_at` تلقائياً.
+**Description:** Update session data. If `is_completed` is set to `true`, `completed_at` will be set automatically.
 
-**Request Body:** (جميع الحقول اختيارية)
+**Request Body:** (all fields are optional)
 ```json
 {
     "session_date": "2024-01-16",
@@ -736,7 +777,7 @@ Accept: application/json
 ```json
 {
     "status": true,
-    "message": "تم تحديث الحصة بنجاح",
+    "message": "Session updated successfully",
     "data": {
         "id": 1,
         "student": {
@@ -766,7 +807,7 @@ Accept: application/json
 ### 3.5 Mark Session as Completed
 **POST** `/api/student-sessions/{session}/complete`
 
-**Description:** تسجيل إتمام الحصة. يقوم تلقائياً بتعيين `is_completed` و `completed_at`.
+**Description:** Mark session as completed. Automatically sets `is_completed` and `completed_at`.
 
 **Request Body:**
 ```json
@@ -779,7 +820,7 @@ Accept: application/json
 ```json
 {
     "status": true,
-    "message": "تم تسجيل إتمام الحصة بنجاح",
+    "message": "Session marked as completed successfully",
     "data": {
         "id": 1,
         "student": {
@@ -814,18 +855,18 @@ Accept: application/json
 {
     "status": true,
     "number": 1,
-    "message": "تم حذف الحصة بنجاح"
+    "message": "Session deleted successfully"
 }
 ```
 
 ---
 
-## 4. Teachers (المعلمين)
+## 4. Teachers
 
 ### 4.1 List Teachers
 **GET** `/api/teachers`
 
-**Description:** الحصول على قائمة المعلمين
+**Description:** Get list of teachers
 
 **Query Parameters:**
 - `per_page` (optional) - Results per page (default: 15)
@@ -835,7 +876,7 @@ Accept: application/json
 ```json
 {
     "status": true,
-    "message": "تم جلب المعلمين بنجاح",
+    "message": "Teachers retrieved successfully",
     "data": {
         "teachers": [
             {
@@ -847,6 +888,7 @@ Accept: application/json
                 "specialization_ar": "القرآن الكريم",
                 "specialization_en": "Holy Quran",
                 "experience_years": 10,
+                "image": "http://domain.com/Admin/images/teachers/1234567890_abc123.jpg",
                 "created_at": "2024-01-01 00:00:00"
             }
         ],
@@ -872,22 +914,32 @@ Accept: application/json
     "name_en": "Ahmed Mohamed",
     "specialization": "القرآن الكريم",
     "specialization_en": "Holy Quran",
-    "experience_years": 10
+    "experience_years": 10,
+    "image": "file",
+    "phone": "01012345678",
+    "email": "ahmed@example.com",
+    "password": "password123"
 }
 ```
 
+**Request Type:** `multipart/form-data` (for image upload)
+
 **Field Descriptions:**
-- `name` (required): الاسم بالعربية
-- `name_en` (optional): الاسم بالإنجليزية
-- `specialization` (required): التخصص بالعربية
-- `specialization_en` (optional): التخصص بالإنجليزية
-- `experience_years` (required): سنوات الخبرة (min: 0)
+- `name` (required): Name in Arabic
+- `name_en` (optional): Name in English
+- `specialization` (required): Specialization in Arabic
+- `specialization_en` (optional): Specialization in English
+- `experience_years` (required): Years of experience (min: 0)
+- `image` (optional): Teacher profile image (image file: jpeg, png, jpg, gif, max: 5MB)
+- `phone` (optional): Phone number for teacher login
+- `email` (optional): Email address for teacher account
+- `password` (optional): Password for teacher login (min: 6 characters). If provided along with `phone` or `email`, a User account will be automatically created/updated for the teacher. Password will be automatically hashed.
 
 **Success Response (200):**
 ```json
 {
     "status": true,
-    "message": "تم إنشاء المعلم بنجاح",
+    "message": "Teacher created successfully",
     "data": {
         "id": 1,
         "name": "أحمد محمد",
@@ -897,6 +949,7 @@ Accept: application/json
         "specialization_ar": "القرآن الكريم",
         "specialization_en": "Holy Quran",
         "experience_years": 10,
+        "image": "http://domain.com/Admin/images/teachers/1234567890_abc123.jpg",
         "created_at": "2024-01-01 00:00:00"
     }
 }
@@ -920,7 +973,7 @@ Accept: application/json
 ```json
 {
     "status": true,
-    "message": "تم جلب المعلم بنجاح",
+    "message": "Teacher retrieved successfully",
     "data": {
         "id": 1,
         "name": "أحمد محمد",
@@ -930,6 +983,7 @@ Accept: application/json
         "specialization_ar": "القرآن الكريم",
         "specialization_en": "Holy Quran",
         "experience_years": 10,
+        "image": "http://domain.com/Admin/images/teachers/1234567890_abc123.jpg",
         "created_at": "2024-01-01 00:00:00"
     }
 }
@@ -940,20 +994,37 @@ Accept: application/json
 ### 4.4 Update Teacher
 **PUT** `/api/teachers/{id}`
 
-**Request Body:** (جميع الحقول اختيارية)
+**Request Body:** (all fields are optional)
 ```json
 {
     "name": "أحمد محمد محمود",
     "specialization": "القرآن الكريم والتجويد",
-    "experience_years": 12
+    "experience_years": 12,
+    "image": "file",
+    "phone": "01012345678",
+    "email": "ahmed@example.com",
+    "password": "newpassword123"
 }
 ```
+
+**Request Type:** `multipart/form-data` (for image upload)
+
+**Field Descriptions:**
+- `name` (optional): Name in Arabic
+- `name_en` (optional): Name in English
+- `specialization` (optional): Specialization in Arabic
+- `specialization_en` (optional): Specialization in English
+- `experience_years` (optional): Years of experience (min: 0)
+- `image` (optional): Teacher profile image (image file: jpeg, png, jpg, gif, max: 5MB)
+- `phone` (optional): Phone number for teacher login. If provided, the associated User account will be updated or created.
+- `email` (optional): Email address for teacher account. If provided, the associated User account will be updated or created.
+- `password` (optional): New password for teacher login (min: 6 characters). If provided along with `phone` or `email`, the associated User account will be updated or created. Password will be automatically hashed.
 
 **Success Response (200):**
 ```json
 {
     "status": true,
-    "message": "تم تحديث المعلم بنجاح",
+    "message": "Teacher updated successfully",
     "data": {
         "id": 1,
         "name": "أحمد محمد محمود",
@@ -963,6 +1034,7 @@ Accept: application/json
         "specialization_ar": "القرآن الكريم والتجويد",
         "specialization_en": "Holy Quran",
         "experience_years": 12,
+        "image": "http://domain.com/Admin/images/teachers/1234567890_abc123.jpg",
         "created_at": "2024-01-01 00:00:00"
     }
 }
@@ -978,13 +1050,13 @@ Accept: application/json
 {
     "status": true,
     "number": 1,
-    "message": "تم حذف المعلم بنجاح"
+    "message": "Teacher deleted successfully"
 }
 ```
 
 ---
 
-## 5. Packages (الباقات)
+## 5. Packages
 
 ### 5.1 List Packages
 **GET** `/api/packages`
@@ -998,7 +1070,7 @@ Accept: application/json
 ```json
 {
     "status": true,
-    "message": "تم جلب الباقات بنجاح",
+    "message": "Packages retrieved successfully",
     "data": {
         "packages": [
             {
@@ -1068,20 +1140,20 @@ Accept: application/json
 ```
 
 **Field Descriptions:**
-- `name` (required): اسم الباقة بالعربية
-- `name_en` (optional): اسم الباقة بالإنجليزية
-- `price` (required): السعر (numeric, min: 0)
-- `price_ar` (optional): السعر بالعربية (نص، مثال: "500 جنيه")
-- `price_en` (optional): السعر بالإنجليزية (نص، مثال: "500 EGP")
-- `features` (required): قائمة المميزات بالعربية (array)
-- `features_en` (optional): قائمة المميزات بالإنجليزية (array)
-- `is_popular` (optional): هل الباقة شائعة (boolean, default: false)
+- `name` (required): Package name in Arabic
+- `name_en` (optional): Package name in English
+- `price` (required): Price (numeric, min: 0)
+- `price_ar` (optional): Price in Arabic (text, example: "500 EGP")
+- `price_en` (optional): Price in English (text, example: "500 EGP")
+- `features` (required): List of features in Arabic (array)
+- `features_en` (optional): List of features in English (array)
+- `is_popular` (optional): Is package popular (boolean, default: false)
 
 **Success Response (200):**
 ```json
 {
     "status": true,
-    "message": "تم إنشاء الباقة بنجاح",
+    "message": "Package created successfully",
     "data": {
         "id": 1,
         "name": "الباقة الأساسية",
@@ -1131,7 +1203,7 @@ Accept: application/json
 ```json
 {
     "status": true,
-    "message": "تم جلب الباقة بنجاح",
+    "message": "Package retrieved successfully",
     "data": {
         "id": 1,
         "name": "الباقة الأساسية",
@@ -1168,7 +1240,7 @@ Accept: application/json
 ### 5.4 Update Package
 **PUT** `/api/packages/{id}`
 
-**Request Body:** (جميع الحقول اختيارية)
+**Request Body:** (all fields are optional)
 ```json
 {
     "price": 600.00,
@@ -1180,7 +1252,7 @@ Accept: application/json
 ```json
 {
     "status": true,
-    "message": "تم تحديث الباقة بنجاح",
+    "message": "Package updated successfully",
     "data": {
         "id": 1,
         "name": "الباقة الأساسية",
@@ -1214,18 +1286,19 @@ Accept: application/json
 {
     "status": true,
     "number": 1,
-    "message": "تم حذف الباقة بنجاح"
+    "message": "Package deleted successfully"
 }
 ```
 
 ---
 
-## 6. Student Reviews (آراء الطلاب)
+## 6. Student Reviews
 
 ### 6.1 List Reviews
 **GET** `/api/reviews`
 
 **Query Parameters:**
+- `type` (optional) - Filter by type: `review` or `rating`
 - `rating` (optional) - Filter by rating: 1, 2, 3, 4, or 5
 - `package_id` (optional) - Filter by package ID
 - `student_id` (optional) - Filter by student ID
@@ -1236,11 +1309,12 @@ Accept: application/json
 ```json
 {
     "status": true,
-    "message": "تم جلب الآراء بنجاح",
+    "message": "Reviews retrieved successfully",
     "data": {
         "reviews": [
             {
                 "id": 1,
+                "type": "review",
                 "student": {
                     "id": 1,
                     "name": "محمد أحمد"
@@ -1255,6 +1329,7 @@ Accept: application/json
                 "review": "تجربة رائعة، المعلمون محترفون والمنهج ممتاز",
                 "review_ar": "تجربة رائعة، المعلمون محترفون والمنهج ممتاز",
                 "review_en": "Great experience, professional teachers and excellent curriculum",
+                "media_file": "http://domain.com/Admin/images/review-media/1234567890_abc123.jpg",
                 "created_at": "2024-01-01 00:00:00"
             }
         ],
@@ -1273,29 +1348,35 @@ Accept: application/json
 ### 6.2 Create Review
 **POST** `/api/reviews`
 
+**Request Type:** `multipart/form-data` (for media file upload)
+
 **Request Body:**
 ```json
 {
+    "type": "review",
     "student_id": 1,
     "package_id": 1,
     "rating": 5,
     "review": "تجربة رائعة، المعلمون محترفون والمنهج ممتاز",
-    "review_en": "Great experience, professional teachers and excellent curriculum"
+    "review_en": "Great experience, professional teachers and excellent curriculum",
+    "media_file": "file"
 }
 ```
 
 **Field Descriptions:**
-- `student_id` (required): معرف الطالب
-- `package_id` (optional): معرف الباقة
-- `rating` (required): التقييم من 1 إلى 5
-- `review` (required): الرأي بالعربية
-- `review_en` (optional): الرأي بالإنجليزية
+- `type` (optional): Type of entry - `review` (default) or `rating`
+- `student_id` (optional): Student ID (nullable for public ratings)
+- `package_id` (optional): Package ID (nullable)
+- `rating` (required): Rating from 1 to 5
+- `review` (required): Review in Arabic
+- `review_en` (optional): Review in English
+- `media_file` (optional): Media file (image or video) - file upload (jpeg, png, jpg, gif, mp4, mov, max: 10MB)
 
 **Success Response (200):**
 ```json
 {
     "status": true,
-    "message": "تم إنشاء الرأي بنجاح",
+    "message": "Review created successfully",
     "data": {
         "id": 1,
         "student": {
@@ -1312,6 +1393,7 @@ Accept: application/json
         "review": "تجربة رائعة، المعلمون محترفون والمنهج ممتاز",
         "review_ar": "تجربة رائعة، المعلمون محترفون والمنهج ممتاز",
         "review_en": "Great experience, professional teachers and excellent curriculum",
+        "media_file": "http://domain.com/Admin/images/review-media/1234567890_abc123.jpg",
         "created_at": "2024-01-01 00:00:00"
     }
 }
@@ -1335,7 +1417,7 @@ Accept: application/json
 ```json
 {
     "status": true,
-    "message": "تم جلب الرأي بنجاح",
+    "message": "Review retrieved successfully",
     "data": {
         "id": 1,
         "student": {
@@ -1347,12 +1429,13 @@ Accept: application/json
             "id": 1,
             "name": "الباقة الأساسية"
         },
-        "package_id": 1,
-        "rating": 5,
-        "review": "تجربة رائعة، المعلمون محترفون والمنهج ممتاز",
-        "review_ar": "تجربة رائعة، المعلمون محترفون والمنهج ممتاز",
-        "review_en": "Great experience, professional teachers and excellent curriculum",
-        "created_at": "2024-01-01 00:00:00"
+                "package_id": 1,
+                "rating": 5,
+                "review": "تجربة رائعة، المعلمون محترفون والمنهج ممتاز",
+                "review_ar": "تجربة رائعة، المعلمون محترفون والمنهج ممتاز",
+                "review_en": "Great experience, professional teachers and excellent curriculum",
+                "media_file": "http://domain.com/Admin/images/review-media/1234567890_abc123.jpg",
+                "created_at": "2024-01-01 00:00:00"
     }
 }
 ```
@@ -1362,7 +1445,7 @@ Accept: application/json
 ### 6.4 Update Review
 **PUT** `/api/reviews/{id}`
 
-**Request Body:** (جميع الحقول اختيارية)
+**Request Body:** (all fields are optional)
 ```json
 {
     "rating": 4,
@@ -1374,7 +1457,7 @@ Accept: application/json
 ```json
 {
     "status": true,
-    "message": "تم تحديث الرأي بنجاح",
+    "message": "Review updated successfully",
     "data": {
         "id": 1,
         "student": {
@@ -1406,18 +1489,18 @@ Accept: application/json
 {
     "status": true,
     "number": 1,
-    "message": "تم حذف الرأي بنجاح"
+    "message": "Review deleted successfully"
 }
 ```
 
 ---
 
-## 7. Teacher Salary & Payments (حسابات المعلمين)
+## 7. Teacher Salary & Payments
 
 ### 7.1 Get Teacher Salary Calculation
 **GET** `/api/teachers/{teacher}/salary`
 
-**Description:** الحصول على حساب راتب المعلم لشهر معين. يعرض جميع الطلاب المسجلين للمعلم مع عدد الحصص المكتملة لكل طالب والقيمة المالية، بالإضافة إلى المجموع الكلي.
+**Description:** Get teacher salary calculation for a specific month. Displays all students assigned to the teacher with completed sessions count and financial value for each student, plus the total.
 
 **Request Headers:**
 ```
@@ -1427,7 +1510,7 @@ lang: ar (optional)
 ```
 
 **Query Parameters:**
-- `month` (required) - الشهر بصيغة YYYY-MM (مثال: 2024-01)
+- `month` (required) - Month in YYYY-MM format (example: 2024-01)
 
 **Example Request:**
 ```
@@ -1438,7 +1521,7 @@ GET /api/teachers/1/salary?month=2024-01
 ```json
 {
     "status": true,
-    "message": "تم جلب حساب الراتب بنجاح",
+    "message": "Salary calculation retrieved successfully",
     "data": {
         "teacher": {
             "id": 1,
@@ -1490,7 +1573,7 @@ GET /api/teachers/1/salary?month=2024-01
 }
 ```
 
-**Note:** إذا لم يتم تسجيل السداد بعد، `payment` سيكون `null`.
+**Note:** If payment has not been recorded yet, `payment` will be `null`.
 
 **Error Response (422):**
 ```json
@@ -1506,34 +1589,35 @@ GET /api/teachers/1/salary?month=2024-01
 ### 7.2 Mark Payment as Paid
 **POST** `/api/teachers/{teacher}/salary/pay`
 
-**Description:** تسجيل سداد راتب المعلم لشهر معين. يتم حساب المبلغ تلقائياً إذا لم يكن محدداً.
+**Description:** Record teacher salary payment for a specific month. Amount is calculated automatically if not specified.
 
 **Request Headers:**
 ```
 Authorization: Bearer {token}
-Content-Type: application/json
 Accept: application/json
 ```
+
+**Request Type:** `multipart/form-data` (for payment proof image upload)
 
 **Request Body:**
 ```json
 {
     "month": "2024-01",
-    "payment_proof_image": "https://example.com/payment-proof.jpg",
+    "payment_proof_image": "file",
     "notes": "تم التحويل بنجاح"
 }
 ```
 
 **Field Descriptions:**
-- `month` (required): الشهر بصيغة YYYY-MM
-- `payment_proof_image` (required): رابط صورة إثبات الدفع (URL)
-- `notes` (optional): ملاحظات
+- `month` (required): Month in YYYY-MM format
+- `payment_proof_image` (required): Payment proof image file (image file: jpeg, png, jpg, gif, max: 5MB)
+- `notes` (optional): Notes
 
 **Success Response (200):**
 ```json
 {
     "status": true,
-    "message": "تم تسجيل السداد بنجاح",
+    "message": "Payment recorded successfully",
     "data": {
         "id": 1,
         "teacher": {
@@ -1567,7 +1651,7 @@ Accept: application/json
 ### 7.3 Get Teacher Payments History
 **GET** `/api/teachers/{teacher}/payments`
 
-**Description:** الحصول على سجل جميع المدفوعات للمعلم مع pagination.
+**Description:** Get all payment records for a teacher with pagination.
 
 **Request Headers:**
 ```
@@ -1584,7 +1668,7 @@ lang: ar (optional)
 ```json
 {
     "status": true,
-    "message": "تم جلب سجل المدفوعات بنجاح",
+    "message": "Payment history retrieved successfully",
     "data": {
         "payments": [
             {
@@ -1616,7 +1700,7 @@ lang: ar (optional)
 
 ---
 
-## 8. Honor Boards (لوحة الشرف)
+## 8. Honor Boards
 
 ### 8.1 List Honor Boards
 **GET** `/api/honor-boards`
@@ -1630,7 +1714,7 @@ lang: ar (optional)
 ```json
 {
     "status": true,
-    "message": "تم جلب لوحة الشرف بنجاح",
+    "message": "Honor boards retrieved successfully",
     "data": {
         "honor_boards": [
             {
@@ -1668,6 +1752,8 @@ lang: ar (optional)
 ### 8.2 Create Honor Board Entry
 **POST** `/api/honor-boards`
 
+**Request Type:** `multipart/form-data` (for certificate images upload)
+
 **Request Body:**
 ```json
 {
@@ -1676,26 +1762,23 @@ lang: ar (optional)
     "level_en": "Advanced Level",
     "achievement": "إتمام حفظ القرآن الكريم كاملاً",
     "achievement_en": "Complete memorization of the Holy Quran",
-    "certificate_images": [
-        "https://example.com/certificates/cert1.jpg",
-        "https://example.com/certificates/cert2.jpg"
-    ]
+    "certificate_images": ["file1", "file2"]
 }
 ```
 
 **Field Descriptions:**
-- `student_id` (required): معرف الطالب
-- `level` (required): المستوى بالعربية
-- `level_en` (optional): المستوى بالإنجليزية
-- `achievement` (required): الإنجاز بالعربية
-- `achievement_en` (optional): الإنجاز بالإنجليزية
-- `certificate_images` (required): قائمة روابط صور الشهادات (array of URLs)
+- `student_id` (required): Student ID
+- `level` (required): Level in Arabic
+- `level_en` (optional): Level in English
+- `achievement` (required): Achievement in Arabic
+- `achievement_en` (optional): Achievement in English
+- `certificate_images` (required): Array of certificate image files (image files: jpeg, png, jpg, gif, max: 5MB each)
 
 **Success Response (200):**
 ```json
 {
     "status": true,
-    "message": "تم إنشاء سجل لوحة الشرف بنجاح",
+    "message": "Honor board entry created successfully",
     "data": {
         "id": 1,
         "student": {
@@ -1736,7 +1819,7 @@ lang: ar (optional)
 ```json
 {
     "status": true,
-    "message": "تم جلب سجل لوحة الشرف بنجاح",
+    "message": "Honor board entry retrieved successfully",
     "data": {
         "id": 1,
         "student": {
@@ -1764,19 +1847,29 @@ lang: ar (optional)
 ### 8.4 Update Honor Board Entry
 **PUT** `/api/honor-boards/{id}`
 
-**Request Body:** (جميع الحقول اختيارية)
+**Request Type:** `multipart/form-data` (for certificate images upload)
+
+**Request Body:** (all fields are optional)
 ```json
 {
     "level": "المستوى المتقدم جداً",
-    "achievement": "حفظ 20 جزء من القرآن الكريم"
+    "achievement": "حفظ 20 جزء من القرآن الكريم",
+    "certificate_images": ["file1", "file2"]
 }
 ```
+
+**Field Descriptions:**
+- `level` (optional): Level in Arabic
+- `level_en` (optional): Level in English
+- `achievement` (optional): Achievement in Arabic
+- `achievement_en` (optional): Achievement in English
+- `certificate_images` (optional): Array of certificate image files (image files: jpeg, png, jpg, gif, max: 5MB each)
 
 **Success Response (200):**
 ```json
 {
     "status": true,
-    "message": "تم تحديث سجل لوحة الشرف بنجاح",
+    "message": "Honor board entry updated successfully",
     "data": {
         "id": 1,
         "student": {
@@ -1809,18 +1902,299 @@ lang: ar (optional)
 {
     "status": true,
     "number": 1,
-    "message": "تم حذف سجل لوحة الشرف بنجاح"
+    "message": "Honor board entry deleted successfully"
 }
 ```
 
 ---
 
-## 9. Features (المميزات)
+## 9. Student Subscriptions
 
-### 9.1 List Features
+### 9.1 Get Student Subscriptions
+**GET** `/api/students/{student}/subscriptions`
+
+**Description:** Get all subscriptions for a specific student with statistics
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+lang: ar (optional)
+```
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Subscriptions retrieved successfully",
+    "data": {
+        "subscriptions": [
+            {
+                "id": 1,
+                "student_id": 1,
+                "subscription_code": "SUB-1-202401-01",
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-28",
+                "sessions_per_week": 2,
+                "is_paid": true,
+                "payment_receipt_image": "http://domain.com/Admin/images/subscription-receipts/1234567890_abc123.jpg",
+                "is_active": false,
+                "is_upcoming": false,
+                "is_expired": true,
+                "created_at": "2024-01-01 00:00:00",
+                "updated_at": "2024-01-01 00:00:00"
+            }
+        ],
+        "statistics": {
+            "total": 12,
+            "expired_unpaid": 2,
+            "expired_paid": 1,
+            "upcoming_count": 9
+        },
+        "upcoming": [
+            {
+                "id": 2,
+                "student_id": 1,
+                "subscription_code": "SUB-1-202402-02",
+                "start_date": "2024-02-01",
+                "end_date": "2024-02-28",
+                "sessions_per_week": 2,
+                "is_paid": false,
+                "payment_receipt_image": null,
+                "is_active": false,
+                "is_upcoming": true,
+                "is_expired": false,
+                "created_at": "2024-01-01 00:00:00",
+                "updated_at": "2024-01-01 00:00:00"
+            }
+        ]
+    }
+}
+```
+
+---
+
+### 9.2 Get Subscription Details
+**GET** `/api/student-subscriptions/{subscription}/details`
+
+**Description:** Get details of a specific subscription including all associated sessions
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+lang: ar (optional)
+```
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Subscription details retrieved successfully",
+    "data": {
+        "subscription": {
+            "id": 1,
+            "student_id": 1,
+            "subscription_code": "SUB-1-202401-01",
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-28",
+            "sessions_per_week": 2,
+            "is_paid": true,
+            "payment_receipt_image": "http://domain.com/Admin/images/subscription-receipts/1234567890_abc123.jpg",
+            "is_active": false,
+            "is_upcoming": false,
+            "is_expired": true,
+            "created_at": "2024-01-01 00:00:00",
+            "updated_at": "2024-01-01 00:00:00"
+        },
+        "sessions": [
+            {
+                "id": 1,
+                "student_id": 1,
+                "teacher_id": 1,
+                "session_date": "2024-01-06",
+                "session_time": "17:00",
+                "day_of_week": "saturday",
+                "day_of_week_label": "السبت",
+                "is_completed": true,
+                "completed_at": "2024-01-06 17:30:00",
+                "status": "completed",
+                "status_label": "مكتملة",
+                "new_date": null,
+                "new_time": null,
+                "reason": null,
+                "notes": null,
+                "created_at": "2024-01-01 00:00:00"
+            }
+        ],
+        "statistics": {
+            "total_sessions": 8,
+            "completed_sessions": 6,
+            "pending_sessions": 1,
+            "canceled_sessions": 0,
+            "postponed_sessions": 1
+        }
+    }
+}
+```
+
+---
+
+### 9.3 Create Student Subscription
+**POST** `/api/student-subscriptions`
+
+**Description:** Create a monthly subscription for a student. This will automatically create 12 subscriptions (for a year) for the same student. Sessions are automatically generated based on the student's weekly schedule. The `sessions_per_week` is derived from the student's `weekly_schedule` or `weekly_days` and `hour` fields.
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+```
+
+**Request Type:** `multipart/form-data` (for payment receipt image upload)
+
+**Request Body:**
+```json
+{
+    "student_id": 1,
+    "start_date": "2024-01-01",
+    "is_paid": true,
+    "payment_receipt_image": "file"
+}
+```
+
+**Field Descriptions:**
+- `student_id` (required): Student ID
+- `start_date` (required): Subscription start date (YYYY-MM-DD, must be today or later)
+- `is_paid` (optional): Payment status (boolean, default: false)
+- `payment_receipt_image` (optional): Payment receipt image file (image file: jpeg, png, jpg, gif, max: 5MB)
+
+**Note:** 
+- A month is defined as 28 days (4 weeks)
+- When a subscription is created, 12 future subscriptions are automatically created for the same student
+- All future subscriptions are initially marked as unpaid
+- Sessions are generated automatically for the first paid subscription based on the student's weekly schedule
+- The `sessions_per_week` is automatically calculated from the student's `weekly_schedule` or `weekly_days` and `hour` fields
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Subscriptions created successfully",
+    "data": {
+        "subscriptions": [
+            {
+                "id": 1,
+                "student_id": 1,
+                "subscription_code": "SUB-1-202401-01",
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-28",
+                "sessions_per_week": 2,
+                "is_paid": true,
+                "payment_receipt_image": "http://domain.com/Admin/images/subscription-receipts/1234567890_abc123.jpg",
+                "is_active": true,
+                "is_upcoming": false,
+                "is_expired": false,
+                "created_at": "2024-01-01 00:00:00",
+                "updated_at": "2024-01-01 00:00:00"
+            }
+        ],
+        "message": "تم إنشاء 12 اشتراك شهري بنجاح"
+    }
+}
+```
+
+**Error Response (422):**
+```json
+{
+    "status": false,
+    "number": "E400",
+    "message": "Student has no weekly schedule defined"
+}
+```
+
+---
+
+### 9.4 Update Student Subscription
+**PUT** `/api/student-subscriptions/{id}`
+
+**Description:** Update a student subscription. If the subscription is marked as paid and sessions haven't been generated yet, they will be created automatically.
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+```
+
+**Request Type:** `multipart/form-data` (for payment receipt image upload)
+
+**Request Body:** (all fields are optional)
+```json
+{
+    "start_date": "2024-01-05",
+    "is_paid": true,
+    "payment_receipt_image": "file"
+}
+```
+
+**Field Descriptions:**
+- `start_date` (optional): Subscription start date (YYYY-MM-DD)
+- `is_paid` (optional): Payment status (boolean)
+- `payment_receipt_image` (optional): Payment receipt image file (image file: jpeg, png, jpg, gif, max: 5MB)
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Subscription updated successfully",
+    "data": {
+        "id": 1,
+        "student_id": 1,
+        "subscription_code": "SUB-1-202401-01",
+        "start_date": "2024-01-05",
+        "end_date": "2024-02-01",
+        "sessions_per_week": 2,
+        "is_paid": true,
+        "payment_receipt_image": "http://domain.com/Admin/images/subscription-receipts/1234567890_abc123.jpg",
+        "is_active": true,
+        "is_upcoming": false,
+        "is_expired": false,
+        "created_at": "2024-01-01 00:00:00",
+        "updated_at": "2024-01-05 10:30:00"
+    }
+}
+```
+
+---
+
+### 9.5 Delete Student Subscription
+**DELETE** `/api/student-subscriptions/{id}`
+
+**Description:** Delete a student subscription
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+```
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "number": 1,
+    "message": "Subscription deleted successfully"
+}
+```
+
+---
+
+## 10. Features
+
+### 10.1 List Features
 **GET** `/api/features`
 
-**Description:** الحصول على قائمة المميزات
+**Description:** Get list of features
 
 **Request Headers:**
 ```
@@ -1843,7 +2217,7 @@ GET /api/features?is_active=true&per_page=10
 ```json
 {
     "status": true,
-    "message": "تم جلب المميزات بنجاح",
+    "message": "Features retrieved successfully",
     "data": {
         "features": [
             {
@@ -1882,10 +2256,10 @@ GET /api/features?is_active=true&per_page=10
 
 ---
 
-### 9.2 Create Feature
+### 10.2 Create Feature
 **POST** `/api/features`
 
-**Description:** إضافة ميزة جديدة
+**Description:** Add a new feature
 
 **Request Headers:**
 ```
@@ -1908,19 +2282,19 @@ Accept: application/json
 ```
 
 **Field Descriptions:**
-- `title` (required): العنوان بالعربية
-- `title_en` (optional): العنوان بالإنجليزية
-- `description` (required): الوصف بالعربية
-- `description_en` (optional): الوصف بالإنجليزية
-- `icon` (optional): اسم الأيقونة
-- `order` (optional): ترتيب العرض (integer, min: 0, default: 0)
-- `is_active` (optional): هل الميزة نشطة (boolean, default: true)
+- `title` (required): Title in Arabic
+- `title_en` (optional): Title in English
+- `description` (required): Description in Arabic
+- `description_en` (optional): Description in English
+- `icon` (optional): Icon name
+- `order` (optional): Display order (integer, min: 0, default: 0)
+- `is_active` (optional): Is feature active (boolean, default: true)
 
 **Success Response (200):**
 ```json
 {
     "status": true,
-    "message": "تم إنشاء الميزة بنجاح",
+    "message": "Feature created successfully",
     "data": {
         "id": 1,
         "title": "معلمون مؤهلون",
@@ -1949,10 +2323,10 @@ Accept: application/json
 
 ---
 
-### 9.3 Get Feature
+### 10.3 Get Feature
 **GET** `/api/features/{id}`
 
-**Description:** الحصول على تفاصيل ميزة محددة
+**Description:** Get details of a specific feature
 
 **Request Headers:**
 ```
@@ -1965,7 +2339,7 @@ lang: ar (optional)
 ```json
 {
     "status": true,
-    "message": "تم جلب بيانات الميزة بنجاح",
+    "message": "Feature data retrieved successfully",
     "data": {
         "id": 1,
         "title": "معلمون مؤهلون",
@@ -1994,10 +2368,10 @@ lang: ar (optional)
 
 ---
 
-### 9.4 Update Feature
+### 10.4 Update Feature
 **PUT** `/api/features/{id}`
 
-**Description:** تحديث بيانات ميزة
+**Description:** Update feature data
 
 **Request Headers:**
 ```
@@ -2006,7 +2380,7 @@ Content-Type: application/json
 Accept: application/json
 ```
 
-**Request Body:** (جميع الحقول اختيارية)
+**Request Body:** (all fields are optional)
 ```json
 {
     "title": "معلمون مؤهلون ومحترفون",
@@ -2020,7 +2394,7 @@ Accept: application/json
 ```json
 {
     "status": true,
-    "message": "تم تحديث بيانات الميزة بنجاح",
+    "message": "Feature data updated successfully",
     "data": {
         "id": 1,
         "title": "معلمون مؤهلون ومحترفون",
@@ -2049,10 +2423,10 @@ Accept: application/json
 
 ---
 
-### 9.5 Delete Feature
+### 10.5 Delete Feature
 **DELETE** `/api/features/{id}`
 
-**Description:** حذف ميزة
+**Description:** Delete a feature
 
 **Request Headers:**
 ```
@@ -2065,7 +2439,7 @@ Accept: application/json
 {
     "status": true,
     "number": 1,
-    "message": "تم حذف الميزة بنجاح"
+    "message": "Feature deleted successfully"
 }
 ```
 
@@ -2080,16 +2454,16 @@ Accept: application/json
 
 ---
 
-## Language Support (دعم اللغات)
+## Language Support
 
-جميع الـ endpoints تدعم الترجمة العربية والإنجليزية. أرسل header التالي للتحكم في اللغة:
+All endpoints support Arabic and English translation. Send the following header to control the language:
 
 ```
-lang: ar  (العربية - افتراضي)
+lang: ar  (Arabic - default)
 lang: en  (English)
 ```
 
-الـ Response سيعيد البيانات حسب اللغة المحددة، مع إرجاع كلا النسختين (ar و en) في الحقول.
+The Response will return data according to the specified language, with both versions (ar and en) returned in the fields.
 
 ---
 
@@ -2128,6 +2502,9 @@ lang: en  (English)
 | E051 | hourly_rate | Hourly rate error |
 | E052 | month | Month field error |
 | E053 | payment_proof_image | Payment proof image error |
+| E054 | start_date | Start date error |
+| E055 | payment_receipt_image | Payment receipt image error |
+| E400 | - | Bad request |
 | E401 | - | Unauthorized |
 | E404 | - | Not found |
 | E500 | - | Server error |
@@ -2146,10 +2523,20 @@ lang: en  (English)
 
 ## Notes
 
-1. جميع الـ endpoints (عدا `/login`) تتطلب Bearer Token
-2. جميع الـ responses موحدة باستخدام GeneralTrait
-3. أخطاء التحقق تُعالج تلقائياً وتُرجع بشكل موحد
-4. الحصص تُنشأ تلقائياً عند إضافة/تحديث اشتراك الطالب
-5. دعم كامل للغتين العربية والإنجليزية
-6. جميع التواريخ تُرجع بصيغة `Y-m-d H:i:s` (مثال: `2024-01-01 00:00:00`)
-7. Pagination format موحد في جميع الـ endpoints: `{"total", "per_page", "current_page", "total_pages"}`
+1. All endpoints (except `/login`) require Bearer Token
+2. All responses are standardized using GeneralTrait
+3. Validation errors are handled automatically and returned in a standardized format
+4. Sessions are created automatically when adding/updating student subscription
+5. Full support for Arabic and English languages
+6. All dates are returned in `Y-m-d H:i:s` format (example: `2024-01-01 00:00:00`)
+7. Pagination format is standardized across all endpoints: `{"total", "per_page", "current_page", "total_pages"}`
+8. Student subscriptions are monthly (28 days = 4 weeks). When creating a subscription, 12 subscriptions (for a year) are automatically created
+9. Student `weekly_schedule` allows each day to have a specific time (e.g., Saturday at 17:00, Tuesday at 14:00)
+10. Student `email` and `age` fields are optional
+11. Student `type` field distinguishes between `website` (registered from website) and `admin` (added/modified by admin)
+12. Student reviews support `type` field (`review` or `rating`) and optional `media_file` (image/video)
+13. Honor board certificates are uploaded as files, not URLs
+14. Teacher profile images are uploaded as files
+15. Payment proof images (teacher salary and student subscriptions) are uploaded as files
+16. Student `password` field is optional when creating/updating from dashboard. If provided, it will be automatically hashed and allows the student to login using phone and password.
+17. Teacher `password`, `phone`, and `email` fields are optional when creating/updating from dashboard. If `password` is provided along with `phone` or `email`, a User account will be automatically created/updated for the teacher to enable login functionality. The password will be automatically hashed.

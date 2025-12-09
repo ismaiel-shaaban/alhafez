@@ -32,11 +32,13 @@ export default function TestimonialsPage() {
     student_id: '',
   })
   const [formData, setFormData] = useState({
+    type: 'review' as 'review' | 'rating',
     student_id: '',
     package_id: '',
     rating: 5,
     review: '',
     review_en: '',
+    media_file: null as File | null,
   })
 
   useEffect(() => {
@@ -81,15 +83,17 @@ export default function TestimonialsPage() {
     if (review) {
       setEditingId(review.id)
       setFormData({
+        type: review.type || 'review',
         student_id: review.student_id?.toString() || '',
         package_id: review.package_id?.toString() || '',
         rating: review.rating || 5,
         review: review.review_ar || review.review || '',
         review_en: review.review_en || '',
+        media_file: null, // Don't populate file input
       })
     } else {
       setEditingId(null)
-      setFormData({ student_id: '', package_id: '', rating: 5, review: '', review_en: '' })
+      setFormData({ type: 'review', student_id: '', package_id: '', rating: 5, review: '', review_en: '', media_file: null })
     }
     setShowModal(true)
   }
@@ -97,7 +101,7 @@ export default function TestimonialsPage() {
   const handleCloseModal = () => {
     setShowModal(false)
     setEditingId(null)
-    setFormData({ student_id: '', package_id: '', rating: 5, review: '', review_en: '' })
+    setFormData({ type: 'review', student_id: '', package_id: '', rating: 5, review: '', review_en: '', media_file: null })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -105,11 +109,13 @@ export default function TestimonialsPage() {
     setIsSubmitting(true)
     try {
       const reviewData = {
-        student_id: parseInt(formData.student_id) || 0,
+        type: formData.type,
+        student_id: formData.student_id ? parseInt(formData.student_id) : undefined,
         package_id: formData.package_id ? parseInt(formData.package_id) : undefined,
         rating: formData.rating,
         review: formData.review,
         review_en: formData.review_en || undefined,
+        media_file: formData.media_file || undefined,
       }
       
       if (editingId) {
@@ -246,21 +252,52 @@ export default function TestimonialsPage() {
                   : 'لا توجد آراء مسجلة بعد'}
               </div>
             ) : (
-              filteredReviews.map((review) => (
-                <div
-                  key={review.id}
-                  className="bg-white p-6 rounded-xl border-2 border-primary-200 shadow-lg hover:shadow-xl transition-all relative"
-                >
-                  <div className="flex items-center gap-1 mb-4">
-                    {[...Array(review.rating)].map((_, i) => (
-                      <Star key={i} className="w-5 h-5 fill-accent-gold text-accent-gold" />
-                    ))}
-                  </div>
-                  <p className="text-primary-700 mb-4 leading-relaxed">{review.review_ar || review.review}</p>
-                  <div className="border-t border-primary-200 pt-4">
-                    <h4 className="font-bold text-primary-900 mb-1">{review.student?.name || 'طالب'}</h4>
-                    <p className="text-sm text-primary-600">{review.package?.name || '-'}</p>
-                  </div>
+              filteredReviews.map((review) => {
+                const isVideo = review.media_file && /\.(mp4|mov|avi|webm)$/i.test(review.media_file)
+                const isImage = review.media_file && /\.(jpeg|jpg|png|gif|webp)$/i.test(review.media_file)
+                
+                return (
+                  <div
+                    key={review.id}
+                    className="bg-white p-6 rounded-xl border-2 border-primary-200 shadow-lg hover:shadow-xl transition-all relative"
+                  >
+                    {/* Media File Display */}
+                    {review.media_file && (
+                      <div className="mb-4 rounded-lg overflow-hidden">
+                        {isImage ? (
+                          <img
+                            src={review.media_file}
+                            alt="Review media"
+                            className="w-full h-48 object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.style.display = 'none'
+                            }}
+                          />
+                        ) : isVideo ? (
+                          <video
+                            src={review.media_file}
+                            className="w-full h-48 object-cover"
+                            controls
+                            onError={(e) => {
+                              const target = e.target as HTMLVideoElement
+                              target.style.display = 'none'
+                            }}
+                          />
+                        ) : null}
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-1 mb-4">
+                      {[...Array(review.rating)].map((_, i) => (
+                        <Star key={i} className="w-5 h-5 fill-accent-gold text-accent-gold" />
+                      ))}
+                    </div>
+                    <p className="text-primary-700 mb-4 leading-relaxed">{review.review_ar || review.review}</p>
+                    <div className="border-t border-primary-200 pt-4">
+                      <h4 className="font-bold text-primary-900 mb-1">{review.student?.name || 'طالب'}</h4>
+                      <p className="text-sm text-primary-600">{review.package?.name || '-'}</p>
+                    </div>
                   <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-primary-200">
                     <button
                       onClick={() => handleViewReview(review.id)}
@@ -285,7 +322,8 @@ export default function TestimonialsPage() {
                     </button>
                   </div>
                 </div>
-              ))
+                )
+              })
             )}
           </div>
         </>
@@ -319,6 +357,36 @@ export default function TestimonialsPage() {
               </div>
 
               <div className="space-y-6">
+                {/* Media File Display */}
+                {viewedReview.media_file && (
+                  <div>
+                    <label className="block text-primary-600 text-sm mb-2">ملف الوسائط</label>
+                    <div className="rounded-lg overflow-hidden">
+                      {/\.(mp4|mov|avi|webm)$/i.test(viewedReview.media_file) ? (
+                        <video
+                          src={viewedReview.media_file}
+                          className="w-full max-h-96 object-contain"
+                          controls
+                          onError={(e) => {
+                            const target = e.target as HTMLVideoElement
+                            target.style.display = 'none'
+                          }}
+                        />
+                      ) : /\.(jpeg|jpg|png|gif|webp)$/i.test(viewedReview.media_file) ? (
+                        <img
+                          src={viewedReview.media_file}
+                          alt="Review media"
+                          className="w-full max-h-96 object-contain"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.style.display = 'none'
+                          }}
+                        />
+                      ) : null}
+                    </div>
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-primary-600 text-sm mb-1">الطالب</label>
@@ -384,15 +452,26 @@ export default function TestimonialsPage() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-primary-900 font-semibold mb-2 text-right">الطالب</label>
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">النوع</label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value as 'review' | 'rating' })}
+                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                    dir="rtl"
+                  >
+                    <option value="review">رأي</option>
+                    <option value="rating">تقييم</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">الطالب (اختياري)</label>
                   <select
                     value={formData.student_id}
                     onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
                     className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
                     dir="rtl"
-                    required
                   >
-                    <option value="">اختر الطالب</option>
+                    <option value="">اختر الطالب (اختياري)</option>
                     {students.map((student) => (
                       <option key={student.id} value={student.id}>
                         {student.name}
@@ -455,6 +534,16 @@ export default function TestimonialsPage() {
                     className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
                     placeholder="Optional"
                   />
+                </div>
+                <div>
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">ملف وسائط (اختياري)</label>
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    onChange={(e) => setFormData({ ...formData, media_file: e.target.files?.[0] || null })}
+                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                  />
+                  <p className="text-xs text-primary-600 mt-1">صورة أو فيديو (jpeg, png, jpg, gif, mp4, mov, الحد الأقصى: 10MB)</p>
                 </div>
                 <div className="flex items-center gap-4 pt-4">
                   <button

@@ -49,9 +49,9 @@ export interface TeacherSalaryResponse {
 }
 
 export interface MarkPaymentRequest {
-  month: string // YYYY-MM
-  payment_proof_image: string
-  notes?: string
+  month: string // YYYY-MM, required
+  payment_proof_image: File // Required, payment proof image file (image file: jpeg, png, jpg, gif, max: 5MB)
+  notes?: string // Optional
 }
 
 // Get teacher salary calculation
@@ -71,9 +71,15 @@ export const markPaymentAsPaid = async (
   teacherId: number,
   data: MarkPaymentRequest
 ): Promise<TeacherPayment> => {
+  // Use FormData for multipart/form-data (payment_proof_image is a file)
+  const formData = new FormData()
+  formData.append('month', data.month)
+  formData.append('payment_proof_image', data.payment_proof_image)
+  if (data.notes) formData.append('notes', data.notes)
+  
   return apiRequest<TeacherPayment>(`/api/teachers/${teacherId}/salary/pay`, {
     method: 'POST',
-    body: data,
+    body: formData,
   })
 }
 

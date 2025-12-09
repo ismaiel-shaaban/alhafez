@@ -19,7 +19,12 @@ export default function TeachersPage() {
     specialization: '',
     specialization_en: '',
     experience_years: '',
+    phone: '',
+    email: '',
+    password: '',
   })
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
 
   useEffect(() => {
     fetchTeachers()
@@ -55,10 +60,17 @@ export default function TeachersPage() {
         specialization: teacher.specialization_ar || teacher.specialization || '',
         specialization_en: teacher.specialization_en || '',
         experience_years: teacher.experience_years?.toString() || '',
+        phone: '',
+        email: '',
+        password: '',
       })
+      setImageFile(null)
+      setImagePreview(teacher.image || null)
     } else {
       setEditingId(null)
-      setFormData({ name: '', name_en: '', specialization: '', specialization_en: '', experience_years: '' })
+      setFormData({ name: '', name_en: '', specialization: '', specialization_en: '', experience_years: '', phone: '', email: '', password: '' })
+      setImageFile(null)
+      setImagePreview(null)
     }
     setShowModal(true)
   }
@@ -66,19 +78,29 @@ export default function TeachersPage() {
   const handleCloseModal = () => {
     setShowModal(false)
     setEditingId(null)
-    setFormData({ name: '', name_en: '', specialization: '', specialization_en: '', experience_years: '' })
+    setFormData({ name: '', name_en: '', specialization: '', specialization_en: '', experience_years: '', phone: '', email: '', password: '' })
+    setImageFile(null)
+    setImagePreview(null)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
     try {
-      const teacherData = {
+      const teacherData: any = {
         name: formData.name,
         name_en: formData.name_en || undefined,
         specialization: formData.specialization,
         specialization_en: formData.specialization_en || undefined,
         experience_years: parseInt(formData.experience_years) || 0,
+        phone: formData.phone || undefined,
+        email: formData.email || undefined,
+        password: formData.password || undefined,
+      }
+      
+      // Add image if a new file is selected
+      if (imageFile) {
+        teacherData.image = imageFile
       }
       
       if (editingId) {
@@ -91,6 +113,28 @@ export default function TeachersPage() {
       alert(error.message || 'حدث خطأ أثناء الحفظ')
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Validate file type
+      if (!file.type.match(/^image\/(jpeg|jpg|png|gif)$/)) {
+        alert('يرجى اختيار صورة بصيغة jpeg, jpg, png, أو gif')
+        return
+      }
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('حجم الصورة يجب أن يكون أقل من 5MB')
+        return
+      }
+      setImageFile(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
     }
   }
 
@@ -169,10 +213,30 @@ export default function TeachersPage() {
                   key={teacher.id}
                   className="bg-white p-6 rounded-xl border-2 border-primary-200 shadow-lg hover:shadow-xl transition-all"
                 >
-                  <div className="w-20 h-20 bg-gradient-to-br from-primary-300/30 via-accent-green/20 to-primary-400/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-2xl font-bold text-primary-700">
-                      {teacher.name.charAt(0)}
-                    </span>
+                  <div className="w-20 h-20 bg-gradient-to-br from-primary-300/30 via-accent-green/20 to-primary-400/30 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
+                    {teacher.image ? (
+                      <img
+                        src={teacher.image}
+                        alt={teacher.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback to initial if image fails to load
+                          const target = e.target as HTMLImageElement
+                          target.style.display = 'none'
+                          const parent = target.parentElement
+                          if (parent) {
+                            const fallback = document.createElement('span')
+                            fallback.className = 'text-2xl font-bold text-primary-700'
+                            fallback.textContent = teacher.name.charAt(0)
+                            parent.appendChild(fallback)
+                          }
+                        }}
+                      />
+                    ) : (
+                      <span className="text-2xl font-bold text-primary-700">
+                        {teacher.name.charAt(0)}
+                      </span>
+                    )}
                   </div>
                   <h3 className="text-xl font-bold text-primary-900 mb-2 text-center">{teacher.name}</h3>
                   <p className="text-primary-700 mb-2 text-center">{teacher.specialization}</p>
@@ -235,6 +299,30 @@ export default function TeachersPage() {
                   <X className="w-5 h-5" />
                 </button>
               </div>
+
+              {/* Teacher Image */}
+              {viewedTeacher.image && (
+                <div className="flex justify-center mb-6">
+                  <div className="w-32 h-32 bg-gradient-to-br from-primary-300/30 via-accent-green/20 to-primary-400/30 rounded-full flex items-center justify-center overflow-hidden">
+                    <img
+                      src={viewedTeacher.image}
+                      alt={viewedTeacher.name_ar || viewedTeacher.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement
+                        target.style.display = 'none'
+                        const parent = target.parentElement
+                        if (parent) {
+                          const fallback = document.createElement('span')
+                          fallback.className = 'text-4xl font-bold text-primary-700'
+                          fallback.textContent = (viewedTeacher.name_ar || viewedTeacher.name).charAt(0)
+                          parent.appendChild(fallback)
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-4">
                 <div>
@@ -350,6 +438,57 @@ export default function TeachersPage() {
                     min="0"
                     required
                   />
+                </div>
+                <div>
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">رقم الهاتف</label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                    dir="rtl"
+                    placeholder="اختياري - للدخول للمعلم"
+                  />
+                </div>
+                <div>
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">البريد الإلكتروني</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                    placeholder="اختياري - للدخول للمعلم"
+                  />
+                </div>
+                <div>
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">كلمة المرور</label>
+                  <input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                    placeholder={editingId ? "اختياري - اتركه فارغاً للحفاظ على كلمة المرور الحالية" : "اختياري - للدخول للمعلم (الحد الأدنى: 6 أحرف)"}
+                    minLength={editingId ? undefined : 6}
+                  />
+                </div>
+                <div>
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">صورة المعلم</label>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/gif"
+                    onChange={handleImageChange}
+                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                  />
+                  <p className="text-xs text-primary-600 mt-1">اختياري - صيغة: jpeg, png, jpg, gif (الحد الأقصى: 5MB)</p>
+                  {imagePreview && (
+                    <div className="mt-2">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-24 h-24 object-cover rounded-lg border-2 border-primary-200"
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-4 pt-4">
                   <button

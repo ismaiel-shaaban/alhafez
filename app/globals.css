@@ -27,64 +27,73 @@
        COLOR VARIABLES - CHANGE COLORS HERE
        ======================================== */
     
-    /* Primary Colors - Based on #006873 */
-    --color-primary-50: #e6f7f9;
-    --color-primary-100: #b3e8ed;
-    --color-primary-200: #80d9e1;
-    --color-primary-300: #4dcad5;
-    --color-primary-400: #26bbc8;
-    --color-primary-500: #00acbb;
-    --color-primary-600: #009aa7;
-    --color-primary-700: #006873;
-    --color-primary-800: #004d55;
-    --color-primary-900: #003237;
-    --color-primary-950: #00191c;
+    /* Primary Colors - Based on Flutter AppColors.primary (rgb(30, 10, 0) = #1E0A00) */
+    --color-primary-50: #f5f3f0;
+    --color-primary-100: #e6e0d8;
+    --color-primary-200: #d4c9bc;
+    --color-primary-300: #b8a896;
+    --color-primary-400: #9d8a70;
+    --color-primary-500: #7a6b56;
+    --color-primary-600: #5a4d3d;
+    --color-primary-700: #3d3328;
+    --color-primary-800: #2a2118;
+    --color-primary-900: #1E0A00;
+    --color-primary-950: #0f0500;
     
-    /* Accent Colors - Complementary colors */
-    --color-accent-green: #059669;
-    --color-accent-green-light: #10b981;
-    --color-accent-green-dark: #047857;
-    --color-accent-gold: #d97706;
-    --color-accent-gold-light: #f59e0b;
+    /* Secondary Colors - Based on Flutter AppColors.secondary (#b09851) */
+    --color-secondary: #b09851;
+    --color-secondary-light: #c4a96a;
+    --color-secondary-dark: #8d783f;
+    
+    /* Accent Colors - From Flutter AppColors */
+    --color-accent-green: #4A9B7E;
+    --color-accent-green-light: #5fb89a;
+    --color-accent-green-dark: #1B5E4A;
+    --color-accent-gold: #B8860B;
+    --color-accent-gold-light: #d4a017;
+    --color-accent-gold-medium: #B8860B;
     --color-accent-amber: #ea580c;
-    --color-accent-blue: #2563eb;
-    --color-accent-purple: #7c3aed;
+    --color-accent-red: #E81123;
+    
+    /* Background Colors - From Flutter AppColors */
+    --color-bg-primary: #F8F6F0;
+    --color-bg-beige: #F5F1E8;
+    --color-bg-features: #ebe4d1;
     
     /* Semantic Colors - Base values (reference primary/accent above) */
-    --color-bg-primary: var(--color-primary-50);
     --color-bg-secondary: #ffffff;
     --color-bg-card: #ffffff;
-    --color-bg-navbar: rgba(255, 255, 255, 0.98);
-    --color-bg-footer: var(--color-primary-100);
+    --color-bg-navbar: rgba(248, 246, 240, 0.98);
+    --color-bg-footer: var(--color-primary-900);
     
-    --color-text-primary: var(--color-primary-700);
+    --color-text-primary: var(--color-primary-900);
     --color-text-secondary: var(--color-primary-800);
-    --color-text-muted: #64748b;
+    --color-text-muted: #7a6b56;
     
     --color-border-primary: var(--color-primary-300);
     --color-border-secondary: var(--color-primary-200);
     
-    --color-button-primary: var(--color-primary-700);
+    --color-button-primary: var(--color-primary-900);
     --color-button-primary-hover: var(--color-primary-800);
     --color-button-secondary-bg: rgba(255, 255, 255, 0.9);
-    --color-button-secondary-border: var(--color-primary-500);
+    --color-button-secondary-border: var(--color-secondary);
     
-    /* Beautiful Gradient Definitions - Premium, elegant gradients */
+    /* Beautiful Gradient Definitions - Based on new color scheme */
     --gradient-body: 
-      radial-gradient(circle at 20% 50%, rgba(179, 232, 237, 0.15) 0%, transparent 50%),
-      radial-gradient(circle at 80% 80%, rgba(128, 217, 225, 0.15) 0%, transparent 50%),
-      radial-gradient(circle at 40% 20%, rgba(230, 247, 249, 0.2) 0%, transparent 50%),
-      linear-gradient(135deg, #ffffff 0%, #f0fdfa 50%, #e6f7f9 100%);
+      radial-gradient(circle at 20% 50%, rgba(184, 152, 81, 0.08) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(74, 155, 126, 0.08) 0%, transparent 50%),
+      radial-gradient(circle at 40% 20%, rgba(235, 228, 209, 0.2) 0%, transparent 50%),
+      linear-gradient(135deg, #F8F6F0 0%, #F5F1E8 50%, #ebe4d1 100%);
     --gradient-page: 
-      radial-gradient(ellipse at top left, rgba(179, 232, 237, 0.2) 0%, transparent 50%),
-      radial-gradient(ellipse at bottom right, rgba(128, 217, 225, 0.15) 0%, transparent 50%),
-      linear-gradient(180deg, #ffffff 0%, #f8fffe 30%, #e6f7f9 100%);
-    --gradient-footer: linear-gradient(180deg, rgba(179, 232, 237, 0.95) 0%, #80d9e1 50%, #4dcad5 100%);
-    --gradient-button-primary: linear-gradient(135deg, #006873 0%, #008a9a 100%);
-    --gradient-button-primary-hover: linear-gradient(135deg, #005662 0%, #006873 100%);
-    --gradient-section-title: linear-gradient(135deg, #006873 0%, #008a9a 100%);
-    --gradient-hero-title: linear-gradient(135deg, #006873 0%, #008a9a 100%);
-    --gradient-card: linear-gradient(135deg, #ffffff 0%, #fafefe 100%);
+      radial-gradient(ellipse at top left, rgba(184, 152, 81, 0.1) 0%, transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(74, 155, 126, 0.08) 0%, transparent 50%),
+      linear-gradient(180deg, #F8F6F0 0%, #F5F1E8 30%, #ebe4d1 100%);
+    --gradient-footer: linear-gradient(180deg, var(--color-primary-900) 0%, var(--color-primary-800) 50%, var(--color-primary-700) 100%);
+    --gradient-button-primary: linear-gradient(135deg, var(--color-primary-900) 0%, var(--color-primary-800) 100%);
+    --gradient-button-primary-hover: linear-gradient(135deg, var(--color-primary-800) 0%, var(--color-primary-700) 100%);
+    --gradient-section-title: linear-gradient(135deg, var(--color-primary-900) 0%, var(--color-secondary) 100%);
+    --gradient-hero-title: linear-gradient(135deg, var(--color-primary-900) 0%, var(--color-secondary) 100%);
+    --gradient-card: linear-gradient(135deg, #ffffff 0%, #F8F6F0 100%);
   }
 
   html[dir='rtl'] {
@@ -99,6 +108,7 @@
     @apply text-primary-900;
     font-family: var(--font-tajawal);
     background: var(--gradient-body);
+    background-color: var(--color-bg-primary);
     background-attachment: fixed;
     background-size: 100% 100%;
     min-height: 100vh;
@@ -213,5 +223,46 @@
   
   .border-secondary {
     border-color: var(--color-border-secondary);
+  }
+
+  /* Swiper Custom Styles */
+  .swiper-pagination-bullet-custom {
+    width: 12px;
+    height: 12px;
+    background: var(--color-primary-200);
+    opacity: 1;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .swiper-pagination-bullet-active-custom {
+    width: 32px;
+    background: var(--color-primary-600);
+    border-radius: 6px;
+  }
+
+  .swiper-button-prev-custom,
+  .swiper-button-next-custom {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+  }
+
+  .swiper-button-prev-custom.swiper-button-disabled,
+  .swiper-button-next-custom.swiper-button-disabled {
+    opacity: 0.35;
+    cursor: auto;
+    pointer-events: none;
+  }
+
+  /* Make Swiper slides equal height */
+  .swiper-slide {
+    height: auto;
+    display: flex;
+  }
+
+  .swiper-slide > * {
+    width: 100%;
   }
 }

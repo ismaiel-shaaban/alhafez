@@ -31,9 +31,8 @@ export default function HonorBoardPage() {
     level_en: '',
     achievement: '',
     achievement_en: '',
-    certificate_images: [] as string[],
+    certificate_images: [] as File[],
   })
-  const [newCertificate, setNewCertificate] = useState('')
 
   useEffect(() => {
     fetchHonorBoard()
@@ -78,7 +77,7 @@ export default function HonorBoardPage() {
         level_en: entry.level_en || '',
         achievement: entry.achievement_ar || entry.achievement || '',
         achievement_en: entry.achievement_en || '',
-        certificate_images: Array.isArray(entry.certificate_images) ? [...entry.certificate_images] : [],
+        certificate_images: [], // Don't populate file inputs
       })
     } else {
       setEditingId(null)
@@ -91,7 +90,6 @@ export default function HonorBoardPage() {
         certificate_images: [] 
       })
     }
-    setNewCertificate('')
     setShowModal(true)
   }
 
@@ -106,16 +104,15 @@ export default function HonorBoardPage() {
       achievement_en: '', 
       certificate_images: [] 
     })
-    setNewCertificate('')
   }
 
-  const handleAddCertificate = () => {
-    if (newCertificate.trim()) {
+  const handleAddCertificates = (files: FileList | null) => {
+    if (files) {
+      const newFiles = Array.from(files)
       setFormData({
         ...formData,
-        certificate_images: [...formData.certificate_images, newCertificate.trim()],
+        certificate_images: [...formData.certificate_images, ...newFiles],
       })
-      setNewCertificate('')
     }
   }
 
@@ -480,38 +477,24 @@ export default function HonorBoardPage() {
                 </div>
                 <div>
                   <label className="block text-primary-900 font-semibold mb-2 text-right">
-                    شهادات التقدير (روابط الصور)
+                    صور الشهادات *
                   </label>
-                  <div className="flex gap-2 mb-2">
-                    <input
-                      type="text"
-                      value={newCertificate}
-                      onChange={(e) => setNewCertificate(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          handleAddCertificate()
-                        }
-                      }}
-                      placeholder="أدخل رابط صورة الشهادة"
-                      className="flex-1 px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddCertificate}
-                      className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-                    >
-                      إضافة
-                    </button>
-                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => handleAddCertificates(e.target.files)}
+                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                  />
+                  <p className="text-xs text-primary-600 mt-1">صور الشهادات (jpeg, png, jpg, gif, الحد الأقصى: 5MB لكل صورة)</p>
                   {formData.certificate_images.length > 0 && (
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {formData.certificate_images.map((cert, index) => (
+                    <div className="space-y-2 mt-4 max-h-40 overflow-y-auto">
+                      {formData.certificate_images.map((file, index) => (
                         <div
                           key={index}
                           className="flex items-center gap-2 p-2 bg-primary-50 rounded-lg"
                         >
-                          <span className="flex-1 text-sm text-primary-700 truncate">{cert}</span>
+                          <span className="flex-1 text-sm text-primary-700 truncate">{file.name}</span>
                           <button
                             type="button"
                             onClick={() => handleRemoveCertificate(index)}

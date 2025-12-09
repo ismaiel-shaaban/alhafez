@@ -17,12 +17,12 @@ export interface HonorBoardEntry {
 }
 
 export interface CreateHonorBoardRequest {
-  student_id: number
-  level: string
-  level_en?: string
-  achievement: string
-  achievement_en?: string
-  certificate_images: string[]
+  student_id: number // Required
+  level: string // Required, level in Arabic
+  level_en?: string // Optional, level in English
+  achievement: string // Required, achievement in Arabic
+  achievement_en?: string // Optional, achievement in English
+  certificate_images: File[] // Required, array of certificate image files (image files: jpeg, png, jpg, gif, max: 5MB each)
 }
 
 // List honor boards
@@ -51,9 +51,22 @@ export const getHonorBoard = async (id: number): Promise<HonorBoardEntry> => {
 export const createHonorBoard = async (
   data: CreateHonorBoardRequest
 ): Promise<HonorBoardEntry> => {
+  // Use FormData for multipart/form-data (certificate images are files)
+  const formData = new FormData()
+  formData.append('student_id', data.student_id.toString())
+  formData.append('level', data.level)
+  if (data.level_en) formData.append('level_en', data.level_en)
+  formData.append('achievement', data.achievement)
+  if (data.achievement_en) formData.append('achievement_en', data.achievement_en)
+  
+  // Append each certificate image file
+  data.certificate_images.forEach((file, index) => {
+    formData.append(`certificate_images[${index}]`, file)
+  })
+  
   return apiRequest<HonorBoardEntry>('/api/honor-boards', {
     method: 'POST',
-    body: data,
+    body: formData,
   })
 }
 
@@ -62,6 +75,27 @@ export const updateHonorBoard = async (
   id: number,
   data: Partial<CreateHonorBoardRequest>
 ): Promise<HonorBoardEntry> => {
+  // If certificate_images are provided, use FormData for multipart/form-data
+  if (data.certificate_images && data.certificate_images.length > 0) {
+    const formData = new FormData()
+    if (data.student_id !== undefined) formData.append('student_id', data.student_id.toString())
+    if (data.level) formData.append('level', data.level)
+    if (data.level_en) formData.append('level_en', data.level_en)
+    if (data.achievement) formData.append('achievement', data.achievement)
+    if (data.achievement_en) formData.append('achievement_en', data.achievement_en)
+    
+    // Append each certificate image file
+    data.certificate_images.forEach((file, index) => {
+      formData.append(`certificate_images[${index}]`, file)
+    })
+    
+    return apiRequest<HonorBoardEntry>(`/api/honor-boards/${id}`, {
+      method: 'PUT',
+      body: formData,
+    })
+  }
+  
+  // Otherwise, use JSON
   return apiRequest<HonorBoardEntry>(`/api/honor-boards/${id}`, {
     method: 'PUT',
     body: data,

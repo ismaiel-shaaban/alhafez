@@ -47,11 +47,19 @@ export const apiRequest = async <T>(
   } = options
 
   const url = `${API_BASE_URL}${endpoint}`
+  
+  // Check if body is FormData (for file uploads)
+  const isFormData = body instanceof FormData
+  
   const requestHeaders: HeadersInit = {
-    'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'Accept-Language': locale || getCurrentLocale(),
+    'lang': locale || getCurrentLocale(),
     ...headers,
+  }
+
+  // Only set Content-Type for JSON, not for FormData (browser will set it automatically with boundary)
+  if (!isFormData) {
+    requestHeaders['Content-Type'] = 'application/json'
   }
 
   // Add auth token if required
@@ -68,7 +76,7 @@ export const apiRequest = async <T>(
   }
 
   if (body && method !== 'GET') {
-    config.body = JSON.stringify(body)
+    config.body = isFormData ? body : JSON.stringify(body)
   }
 
   try {

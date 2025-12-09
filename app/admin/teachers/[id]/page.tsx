@@ -29,7 +29,7 @@ export default function TeacherDetailsPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'details' | 'salary' | 'payments'>('details')
   const [paymentForm, setPaymentForm] = useState({
-    payment_proof_image: '',
+    payment_proof_image: null as File | null,
     notes: '',
   })
 
@@ -101,7 +101,7 @@ export default function TeacherDetailsPage() {
       return
     }
     if (!paymentForm.payment_proof_image) {
-      alert('يرجى إدخال رابط صورة إثبات الدفع')
+      alert('يرجى اختيار صورة إثبات الدفع')
       return
     }
     setIsLoading(true)
@@ -113,7 +113,7 @@ export default function TeacherDetailsPage() {
       })
       alert('تم تسجيل السداد بنجاح')
       setShowPaymentForm(false)
-      setPaymentForm({ payment_proof_image: '', notes: '' })
+      setPaymentForm({ payment_proof_image: null, notes: '' })
       // Refresh salary data
       await loadSalary()
     } catch (error: any) {
@@ -160,10 +160,30 @@ export default function TeacherDetailsPage() {
       {/* Teacher Header */}
       <div className="bg-white rounded-xl border-2 border-primary-200 p-8 mb-6 shadow-lg">
         <div className="flex items-center gap-6">
-          <div className="w-24 h-24 bg-gradient-to-br from-primary-300/30 via-accent-green/20 to-primary-400/30 rounded-full flex items-center justify-center">
-            <span className="text-3xl font-bold text-primary-700">
-              {teacher.name.charAt(0)}
-            </span>
+          <div className="w-24 h-24 bg-gradient-to-br from-primary-300/30 via-accent-green/20 to-primary-400/30 rounded-full flex items-center justify-center overflow-hidden">
+            {teacher.image ? (
+              <img
+                src={teacher.image}
+                alt={teacher.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  // Fallback to initial if image fails to load
+                  const target = e.target as HTMLImageElement
+                  target.style.display = 'none'
+                  const parent = target.parentElement
+                  if (parent) {
+                    const fallback = document.createElement('span')
+                    fallback.className = 'text-3xl font-bold text-primary-700'
+                    fallback.textContent = teacher.name.charAt(0)
+                    parent.appendChild(fallback)
+                  }
+                }}
+              />
+            ) : (
+              <span className="text-3xl font-bold text-primary-700">
+                {teacher.name.charAt(0)}
+              </span>
+            )}
           </div>
           <div className="flex-1">
             <h1 className="text-3xl font-bold text-primary-900 mb-2">{teacher.name}</h1>
@@ -424,15 +444,15 @@ export default function TeacherDetailsPage() {
                   ) : (
                     <form onSubmit={handleMarkAsPaid} className="mt-4 space-y-4">
                       <div>
-                        <label className="block text-primary-900 font-semibold mb-2 text-right">رابط صورة إثبات الدفع *</label>
+                        <label className="block text-primary-900 font-semibold mb-2 text-right">صورة إثبات الدفع *</label>
                         <input
-                          type="url"
-                          value={paymentForm.payment_proof_image}
-                          onChange={(e) => setPaymentForm({ ...paymentForm, payment_proof_image: e.target.value })}
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setPaymentForm({ ...paymentForm, payment_proof_image: e.target.files?.[0] || null })}
                           className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
-                          placeholder="https://example.com/payment-proof.jpg"
                           required
                         />
+                        <p className="text-xs text-primary-600 mt-1">صورة إثبات الدفع (jpeg, png, jpg, gif, الحد الأقصى: 5MB)</p>
                       </div>
                       <div>
                         <label className="block text-primary-900 font-semibold mb-2 text-right">ملاحظات</label>
@@ -457,7 +477,7 @@ export default function TeacherDetailsPage() {
                           type="button"
                           onClick={() => {
                             setShowPaymentForm(false)
-                            setPaymentForm({ payment_proof_image: '', notes: '' })
+                            setPaymentForm({ payment_proof_image: null, notes: '' })
                           }}
                           className="flex-1 px-6 py-3 border-2 border-primary-300 text-primary-700 rounded-lg hover:bg-primary-50 transition-all"
                         >

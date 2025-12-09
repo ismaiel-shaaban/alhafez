@@ -21,9 +21,24 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
           {/* Logo/Brand */}
           <div className="md:col-span-1">
-            <h3 className="text-2xl font-bold mb-4 bg-gradient-to-r from-white via-primary-100 to-white bg-clip-text text-transparent">
-              أكاديمية الحافظ
-            </h3>
+            <div className="mb-4">
+              <img
+                src="/images/logo.jpg"
+                alt="أكاديمية الحافظ"
+                className="h-16 w-auto object-contain"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement
+                  target.style.display = 'none'
+                  const parent = target.parentElement
+                  if (parent) {
+                    const fallback = document.createElement('h3')
+                    fallback.className = 'text-2xl font-bold bg-gradient-to-r from-white via-primary-100 to-white bg-clip-text text-transparent'
+                    fallback.textContent = 'أكاديمية الحافظ'
+                    parent.appendChild(fallback)
+                  }
+                }}
+              />
+            </div>
             <p className="text-primary-200 leading-relaxed text-sm">
               {t('footer.aboutText')}
             </p>
@@ -81,22 +96,22 @@ export default function Footer() {
             </h3>
             <div className="space-y-4">
               <a
-                href="mailto:info@alhafez.academy"
+                href="mailto:hafezacademy84@gmail.com"
                 className="flex items-center gap-3 text-primary-200 hover:text-white transition-colors duration-300 group"
               >
                 <div className="w-10 h-10 rounded-lg bg-primary-700/50 flex items-center justify-center group-hover:bg-accent-green transition-colors">
                   <Mail className="w-4 h-4" />
                 </div>
-                <span className="text-sm">info@alhafez.academy</span>
+                <span className="text-sm">hafezacademy84@gmail.com</span>
               </a>
               <a
-                href="tel:+1234567890"
+                href="tel:+966510253812"
                 className="flex items-center gap-3 text-primary-200 hover:text-white transition-colors duration-300 group"
               >
                 <div className="w-10 h-10 rounded-lg bg-primary-700/50 flex items-center justify-center group-hover:bg-accent-green transition-colors">
                   <Phone className="w-4 h-4" />
                 </div>
-                <span className="text-sm">+1234567890</span>
+                <span className="text-sm">+966 51 025 3812</span>
               </a>
             </div>
           </div>
@@ -108,22 +123,12 @@ export default function Footer() {
             </h3>
             <div className="flex items-center gap-4">
               <a 
-                href="#" 
+                href="https://www.facebook.com/share/1Jxyr6vtLw/"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-12 h-12 rounded-lg bg-primary-700/50 hover:bg-accent-green flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-accent-green/50"
               >
                 <Facebook className="w-5 h-5" />
-              </a>
-              <a 
-                href="#" 
-                className="w-12 h-12 rounded-lg bg-primary-700/50 hover:bg-accent-green flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-accent-green/50"
-              >
-                <Twitter className="w-5 h-5" />
-              </a>
-              <a 
-                href="#" 
-                className="w-12 h-12 rounded-lg bg-primary-700/50 hover:bg-accent-green flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-accent-green/50"
-              >
-                <Instagram className="w-5 h-5" />
               </a>
             </div>
           </div>

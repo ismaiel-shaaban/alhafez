@@ -87,8 +87,29 @@ export default function TeachersList({ showTitle = true, headingLevel = 'h1' }: 
             whileHover={{ y: -8, scale: 1.02 }}
             className="bg-white p-6 rounded-xl border-2 border-primary-200 hover:border-primary-400 transition-all duration-300 text-center shadow-lg hover:shadow-2xl"
           >
-            <div className="w-32 h-32 bg-gradient-to-br from-primary-300/30 via-accent-green/20 to-primary-400/30 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <User className="w-16 h-16 text-primary-600" />
+            <div className="w-32 h-32 bg-gradient-to-br from-primary-300/30 via-accent-green/20 to-primary-400/30 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg overflow-hidden relative">
+              {(teacher as any).image ? (
+                <>
+                  <img
+                    src={(teacher as any).image}
+                    alt={name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement
+                      target.style.display = 'none'
+                      const fallback = target.nextElementSibling as HTMLElement
+                      if (fallback) {
+                        fallback.style.display = 'flex'
+                      }
+                    }}
+                  />
+                  <div className="w-full h-full flex items-center justify-center absolute inset-0" style={{ display: 'none' }}>
+                    <User className="w-16 h-16 text-primary-600" />
+                  </div>
+                </>
+              ) : (
+                <User className="w-16 h-16 text-primary-600" />
+              )}
             </div>
             <h3 className="text-xl font-bold text-primary-900 mb-2">{name}</h3>
             <div className="flex items-center justify-center gap-2 text-primary-700 mb-2">
