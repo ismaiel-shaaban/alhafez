@@ -175,7 +175,7 @@ export default function TeacherSalaryPage() {
             >
               <div className="w-20 h-20 bg-gradient-to-br from-primary-300/30 via-accent-green/20 to-primary-400/30 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl font-bold text-primary-700">
-                  {teacher.name.charAt(0)}
+                  {teacher?.name?.charAt(0)}
                 </span>
               </div>
               <h3 className="text-xl font-bold text-primary-900 mb-2 text-center">{teacher.name}</h3>

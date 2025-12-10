@@ -253,12 +253,12 @@ export default function HonorBoardPage() {
                   <div className="flex items-center gap-4 mb-4">
                     <div className="w-16 h-16 bg-gradient-to-br from-primary-300/30 via-accent-green/20 to-primary-400/30 rounded-full flex items-center justify-center">
                       <span className="text-2xl font-bold text-primary-700">
-                        {entry.student?.name?.charAt(0) || entry.id.toString().charAt(0)}
+                        {entry.student?.name?.charAt(0) || entry?.id?.toString()?.charAt(0)}
                       </span>
                     </div>
                     <div>
                       <h3 className="text-xl font-bold text-primary-900 mb-1">
-                        {entry.student?.name || 'طالب'}
+                        {entry?.student?.name || 'طالب'}
                       </h3>
                       <span className="text-accent-green text-sm font-semibold">{entry.level_ar || entry.level}</span>
                     </div>

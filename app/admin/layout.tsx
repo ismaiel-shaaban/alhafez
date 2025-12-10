@@ -178,10 +178,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="text-sm text-primary-600">مرحباً،</p>
-              <p className="font-bold text-primary-900">{admin.username}</p>
+              <p className="font-bold text-primary-900">{admin?.username}</p>
             </div>
             <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-accent-green rounded-full flex items-center justify-center text-white font-bold">
-              {admin.username.charAt(0).toUpperCase()}
+              {admin?.username?.charAt(0).toUpperCase()}
             </div>
           </div>
         </header>

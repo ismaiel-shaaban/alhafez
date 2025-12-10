@@ -174,14 +174,14 @@ export default function TeacherDetailsPage() {
                   if (parent) {
                     const fallback = document.createElement('span')
                     fallback.className = 'text-3xl font-bold text-primary-700'
-                    fallback.textContent = teacher.name.charAt(0)
+                    fallback.textContent = teacher?.name?.charAt(0)
                     parent.appendChild(fallback)
                   }
                 }}
               />
             ) : (
               <span className="text-3xl font-bold text-primary-700">
-                {teacher.name.charAt(0)}
+                {teacher?.name?.charAt(0)}
               </span>
             )}
           </div>
