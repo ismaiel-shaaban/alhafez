@@ -90,14 +90,14 @@ export const updateHonorBoard = async (
     })
     
     return apiRequest<HonorBoardEntry>(`/api/honor-boards/${id}`, {
-      method: 'PUT',
+      method: 'POST',
       body: formData,
     })
   }
   
   // Otherwise, use JSON
   return apiRequest<HonorBoardEntry>(`/api/honor-boards/${id}`, {
-    method: 'PUT',
+    method: 'POST',
     body: data,
   })
 }

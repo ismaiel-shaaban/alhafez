@@ -111,14 +111,14 @@ export const updateReview = async (
     formData.append('media_file', data.media_file)
     
     return apiRequest<Review>(`/api/reviews/${id}`, {
-      method: 'PUT',
+      method: 'POST',
       body: formData,
     })
   }
   
   // Otherwise, use JSON
   return apiRequest<Review>(`/api/reviews/${id}`, {
-    method: 'PUT',
+    method: 'POST',
     body: data,
   })
 }

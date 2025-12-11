@@ -104,7 +104,7 @@ export const updateStudent = async (
   data: Partial<CreateStudentRequest>
 ): Promise<Student> => {
   return apiRequest<Student>(`/api/students/${id}`, {
-    method: 'PUT',
+    method: 'POST',
     body: data,
   })
 }

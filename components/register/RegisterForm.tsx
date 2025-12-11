@@ -12,10 +12,9 @@ export default function RegisterForm() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
     phone: '',
     age: '',
-    gender: '',
+    gender: 'male',
     package_id: '',
     notes: '',
   })
@@ -33,11 +32,10 @@ export default function RegisterForm() {
     try {
       await registerStudent({
         name: formData.name,
-        email: formData.email,
         phone: formData.phone,
         age: parseInt(formData.age),
         gender: formData.gender as 'male' | 'female',
-        package_id: parseInt(formData.package_id),
+        package_id: formData.package_id ? parseInt(formData.package_id) : undefined,
         notes: formData.notes || undefined,
       })
       
@@ -45,7 +43,6 @@ export default function RegisterForm() {
       // Reset form
       setFormData({
         name: '',
-        email: '',
         phone: '',
         age: '',
         gender: '',
@@ -111,18 +108,6 @@ export default function RegisterForm() {
           </div>
 
           <div>
-            <label className="block text-primary-900 font-medium mb-2">{t('register.email')}</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-3 bg-primary-50 border-2 border-primary-300 rounded-lg text-primary-900 focus:outline-none focus:border-accent-green transition-colors"
-            />
-          </div>
-
-          <div>
             <label className="block text-primary-900 font-medium mb-2">{t('register.phone')}</label>
             <input
               type="tel"
@@ -157,7 +142,6 @@ export default function RegisterForm() {
                 name="gender"
                 value={formData.gender}
                 onChange={handleChange}
-                required
                 className="w-full px-4 py-3 bg-primary-50 border-2 border-primary-300 rounded-lg text-primary-900 focus:outline-none focus:border-accent-green transition-colors"
                 dir="rtl"
               >
@@ -173,8 +157,8 @@ export default function RegisterForm() {
             <select
               name="package_id"
               value={formData.package_id}
-              onChange={handleChange}
               required
+              onChange={handleChange}
               className="w-full px-4 py-3 bg-primary-50 border-2 border-primary-300 rounded-lg text-primary-900 focus:outline-none focus:border-accent-green transition-colors"
               dir="rtl"
             >

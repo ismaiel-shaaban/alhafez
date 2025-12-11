@@ -92,11 +92,10 @@ export interface WebsiteData {
 
 export interface RegisterStudentRequest {
   name: string
-  email: string
   phone: string
   age: number
-  gender: 'male' | 'female'
-  package_id: number
+  gender?: 'male' | 'female'
+  package_id?: number
   notes?: string
 }
 
@@ -203,7 +202,7 @@ export const listReviews = async (
 
 // Get single honor board entry
 export const getHonorBoard = async (id: number, locale?: string): Promise<WebsiteHonorBoard> => {
-  return websiteApiRequest<WebsiteHonorBoard>(`/api/honor-boards/${id}`, { locale })
+  return websiteApiRequest<WebsiteHonorBoard>(`/api/website/honor-boards/${id}`, { locale })
 }
 
 // Register new student

@@ -63,7 +63,7 @@ export const updatePackage = async (
   data: Partial<CreatePackageRequest>
 ): Promise<Package> => {
   return apiRequest<Package>(`/api/packages/${id}`, {
-    method: 'PUT',
+    method: 'POST',
     body: data,
   })
 }

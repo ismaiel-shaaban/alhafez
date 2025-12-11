@@ -77,7 +77,7 @@ export default function PackagesList({ showTitle = true, headingLevel = 'h1' }: 
       >
       {packages.map((pkg) => {
         const name = currentLocale === 'en' && pkg.name_en ? pkg.name_en : (pkg.name_ar || pkg.name)
-        const priceLabel = currentLocale === 'en' && pkg.price_en ? pkg.price_en : (pkg.price_ar || pkg.price_label || `${pkg.price} ر.س`)
+        const priceLabel = currentLocale === 'en' && pkg.price_en ? pkg.price_en : (pkg.price_ar || pkg.price_label || `${pkg.price} جنيه`)
         const features = currentLocale === 'en' && pkg.features_en ? pkg.features_en : (pkg.features_ar || pkg.features || [])
 
         return (
@@ -104,7 +104,7 @@ export default function PackagesList({ showTitle = true, headingLevel = 'h1' }: 
               <h3 className="text-2xl font-bold text-primary-900 mb-4">{name}</h3>
               <div className="flex items-baseline justify-center gap-2">
                 <span className="text-4xl font-bold bg-gradient-to-r from-primary-700 to-primary-600 bg-clip-text text-transparent">{priceLabel}</span>
-                {!pkg.price_ar && !pkg.price_en && <span className="text-primary-600">{currentLocale === 'en' ? '/month' : 'ر.س/شهرياً'}</span>}
+                {!pkg.price_ar && !pkg.price_en && <span className="text-primary-600">{currentLocale === 'en' ? '/month' : 'جنيه/شهرياً'}</span>}
               </div>
             </div>
 

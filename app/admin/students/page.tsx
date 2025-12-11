@@ -686,7 +686,7 @@ export default function StudentsPage() {
                   </div>
                   <div>
                     <label className="block text-primary-600 text-sm mb-1">سعر الساعة</label>
-                    <p className="text-primary-900">{viewedStudent.hourly_rate ? `${viewedStudent.hourly_rate} ر.س` : '-'}</p>
+                    <p className="text-primary-900">{viewedStudent.hourly_rate ? `${viewedStudent.hourly_rate} جنيه` : '-'}</p>
                   </div>
                 </div>
                 {viewedStudent.notes && (
@@ -1097,7 +1097,7 @@ export default function StudentsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-primary-900 font-semibold mb-2 text-right">سعر الساعة (ر.س)</label>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">سعر الساعة (جنيه)</label>
                     <input
                       type="number"
                       step="0.01"
@@ -1402,7 +1402,7 @@ export default function StudentsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-primary-900 font-semibold mb-2 text-right">سعر الساعة (ر.س)</label>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">سعر الساعة (جنيه)</label>
                     <input
                       type="number"
                       step="0.01"

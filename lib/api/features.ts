@@ -69,7 +69,7 @@ export const updateFeature = async (
   data: Partial<CreateFeatureRequest>
 ): Promise<Feature> => {
   return apiRequest<Feature>(`/api/features/${id}`, {
-    method: 'PUT',
+    method: 'POST',
     body: data,
   })
 }
