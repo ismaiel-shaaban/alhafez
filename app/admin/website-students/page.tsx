@@ -421,7 +421,7 @@ export default function WebsiteStudentsPage() {
                   {viewedStudent.hourly_rate && (
                     <div>
                       <label className="block text-primary-600 text-sm mb-1">سعر الساعة</label>
-                      <p className="text-primary-900 font-semibold text-lg">{viewedStudent.hourly_rate} ر.س</p>
+                      <p className="text-primary-900 font-semibold text-lg">{viewedStudent.hourly_rate} جنيه</p>
                     </div>
                   )}
                   {viewedStudent.created_at && (
@@ -644,7 +644,7 @@ export default function WebsiteStudentsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-primary-900 font-semibold mb-2 text-right">سعر الساعة (ر.س)</label>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">سعر الساعة (جنيه)</label>
                     <input
                       type="number"
                       step="0.01"

@@ -84,7 +84,7 @@ export const updateSession = async (
   data: Partial<CreateSessionRequest & { is_completed?: boolean }>
 ): Promise<StudentSession> => {
   return apiRequest<StudentSession>(`/api/student-sessions/${id}`, {
-    method: 'PUT',
+    method: 'POST',
     body: data,
   })
 }

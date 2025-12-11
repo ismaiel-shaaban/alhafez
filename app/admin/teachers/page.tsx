@@ -60,9 +60,9 @@ export default function TeachersPage() {
         specialization: teacher.specialization_ar || teacher.specialization || '',
         specialization_en: teacher.specialization_en || '',
         experience_years: teacher.experience_years?.toString() || '',
-        phone: '',
-        email: '',
-        password: '',
+        phone: teacher.phone || '',
+        email: teacher.email || '',
+        password: '', // Keep empty for security - user can leave it to keep current password
       })
       setImageFile(null)
       setImagePreview(teacher.image || null)
@@ -96,6 +96,7 @@ export default function TeachersPage() {
         phone: formData.phone || undefined,
         email: formData.email || undefined,
         password: formData.password || undefined,
+      
       }
       
       // Add image if a new file is selected
@@ -104,6 +105,7 @@ export default function TeachersPage() {
       }
       
       if (editingId) {
+        teacherData._method = 'put'
         await updateTeacher(editingId, teacherData)
       } else {
         await addTeacher(teacherData)

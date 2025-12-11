@@ -343,8 +343,8 @@ export default function TeacherDetailsPage() {
                             </td>
                             <td className="border border-primary-200 p-3 text-center text-primary-700">{student.sessions_count}</td>
                             <td className="border border-primary-200 p-3 text-center text-primary-700">{student.total_hours.toFixed(2)}</td>
-                            <td className="border border-primary-200 p-3 text-center text-primary-700">{student.hourly_rate.toFixed(2)} ر.س</td>
-                            <td className="border border-primary-200 p-3 text-center font-semibold text-primary-900">{student.total_amount.toFixed(2)} ر.س</td>
+                            <td className="border border-primary-200 p-3 text-center text-primary-700">{student.hourly_rate.toFixed(2)} جنيه</td>
+                            <td className="border border-primary-200 p-3 text-center font-semibold text-primary-900">{student.total_amount.toFixed(2)} جنيه</td>
                           </tr>
                         ))}
                       </tbody>
@@ -376,14 +376,14 @@ export default function TeacherDetailsPage() {
                     </div>
                     <div className="bg-white p-4 rounded-lg border-2 border-accent-green">
                       <p className="text-primary-600 text-sm mb-1">المبلغ الإجمالي</p>
-                      <p className="font-bold text-2xl text-accent-green">{salaryData.summary.total_amount.toFixed(2)} ر.س</p>
+                      <p className="font-bold text-2xl text-accent-green">{salaryData.summary.total_amount.toFixed(2)} جنيه</p>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* Payment Status */}
-              {salaryData.payment ? (
+              {salaryData.payment?.is_paid ? (
                 <div className="bg-accent-green/10 rounded-xl border-2 border-accent-green p-8 shadow-lg">
                   <div className="flex items-center gap-2 mb-4">
                     <CheckCircle className="w-6 h-6 text-accent-green" />
@@ -406,7 +406,7 @@ export default function TeacherDetailsPage() {
                     </div>
                     <div>
                       <p className="text-primary-600 text-sm mb-1">المبلغ المدفوع</p>
-                      <p className="text-primary-900 font-bold text-xl">{salaryData.payment.total_amount.toFixed(2)} ر.س</p>
+                      <p className="text-primary-900 font-bold text-xl">{salaryData.payment.total_amount.toFixed(2)} جنيه</p>
                     </div>
                   </div>
                   {salaryData.payment.notes && (
@@ -524,7 +524,7 @@ export default function TeacherDetailsPage() {
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <p className="text-primary-600 text-sm mb-1">المبلغ</p>
-                            <p className="text-primary-900 font-bold text-xl">{payment.total_amount.toFixed(2)} ر.س</p>
+                            <p className="text-primary-900 font-bold text-xl">{payment.total_amount.toFixed(2)} جنيه</p>
                           </div>
                           {payment.paid_at && (
                             <div>

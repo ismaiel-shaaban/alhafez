@@ -96,14 +96,14 @@ export const updateTeacher = async (
     if (data.password) formData.append('password', data.password)
     
     return apiRequest<Teacher>(`/api/teachers/${id}`, {
-      method: 'PUT',
+      method: 'POST',
       body: formData,
     })
   }
   
   // Otherwise, use JSON
   return apiRequest<Teacher>(`/api/teachers/${id}`, {
-    method: 'PUT',
+    method: 'POST',
     body: data,
   })
 }
