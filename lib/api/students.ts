@@ -31,6 +31,14 @@ export interface Student {
     specialization?: string
   }
   subscriptions?: any[] // Student subscriptions
+  subscriptions_statistics?: {
+    total_subscriptions: number
+    paid_subscriptions: number
+    unpaid_subscriptions: number
+  }
+  past_months_count?: number // Optional, may be returned by API
+  paid_months_count?: number // Optional, may be returned by API
+  subscription_start_date?: string // Optional, may be returned by API
   created_at?: string
   updated_at?: string
 }
@@ -61,6 +69,9 @@ export interface CreateStudentRequest {
   hourly_rate?: number
   notes?: string
   password?: string // Optional, min: 6 characters. Password will be automatically hashed.
+  past_months_count?: number // Optional, integer, min: 0, max: 120. Number of past months to create subscriptions for.
+  paid_months_count?: number // Optional, integer, min: 0, max: 120. Number of paid months.
+  subscription_start_date?: string // Optional, YYYY-MM-DD format. Required if past_months_count is provided. Used to calculate past subscriptions.
 }
 
 // List students

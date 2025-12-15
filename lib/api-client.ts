@@ -46,7 +46,12 @@ export const apiRequest = async <T>(
     locale,
   } = options
 
-  const url = `${API_BASE_URL}${endpoint}`
+  // Add /dashboard after /api/ for endpoints that start with /api/ (except login)
+  const processedEndpoint = endpoint.startsWith('/api/') 
+    ? endpoint.replace('/api/', '/api/dashboard/')
+    : endpoint
+  
+  const url = `${API_BASE_URL}${processedEndpoint}`
   
   // Check if body is FormData (for file uploads)
   const isFormData = body instanceof FormData

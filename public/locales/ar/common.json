@@ -91,7 +91,26 @@
   },
   "testimonials": {
     "title": "آراء الطلاب",
-    "subtitle": "ماذا يقول طلابنا عنا"
+    "subtitle": "ماذا يقول طلابنا عنا",
+    "addReview": "أضف رأيك",
+    "addReviewSubtitle": "شاركنا تجربتك مع أكاديمية الحافظ",
+    "name": "الاسم",
+    "namePlaceholder": "أدخل اسمك",
+    "rating": "التقييم",
+    "review": "الرأي",
+    "reviewPlaceholder": "اكتب رأيك هنا...",
+    "reviewNote": "سيتم إرسال نفس النص للعربية والإنجليزية",
+    "mediaFile": "ملف وسائط (اختياري)",
+    "uploadClick": "اضغط للرفع",
+    "uploadDrag": "أو اسحب الملف هنا",
+    "uploadInfo": "صورة أو فيديو (jpeg, png, jpg, gif, mp4, mov - الحد الأقصى: 10MB)",
+    "submit": "إرسال الرأي",
+    "submitting": "جاري الإرسال...",
+    "success": "تم إرسال رأيك بنجاح! شكراً لك.",
+    "error": "حدث خطأ أثناء إرسال الرأي",
+    "errorFileSize": "حجم الملف يجب أن يكون أقل من 10 ميجابايت",
+    "errorFileType": "نوع الملف غير مدعوم. يرجى اختيار صورة (jpeg, png, jpg, gif) أو فيديو (mp4, mov)",
+    "noReviews": "لا توجد آراء متاحة حالياً"
   },
   "register": {
     "title": "سجل معانا",
@@ -115,5 +134,8 @@
     "contact": "اتصل بنا",
     "followUs": "تابعنا",
     "rights": "جميع الحقوق محفوظة"
+  },
+  "common": {
+    "seeAll": "عرض الكل"
   }
 }

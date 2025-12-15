@@ -69,6 +69,9 @@ export default function StudentsPage() {
     hourly_rate: '',
     notes: '',
     password: '',
+    past_months_count: '',
+    paid_months_count: '',
+    subscription_start_date: '',
   })
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -92,6 +95,9 @@ export default function StudentsPage() {
     hourly_rate: '',
     notes: '',
     password: '',
+    past_months_count: '',
+    paid_months_count: '',
+    subscription_start_date: '',
   })
 
   // Session modals
@@ -149,30 +155,63 @@ export default function StudentsPage() {
     }
   }
 
-  const handleEdit = (student: any) => {
-    setEditingId(student.id)
-    // Check if student has weekly_schedule (takes precedence)
-    const hasWeeklySchedule = student.weekly_schedule && typeof student.weekly_schedule === 'object' && Object.keys(student.weekly_schedule).length > 0
-    setEditForm({
-      name: student.name || '',
-      email: student.email || '',
-      phone: student.phone || '',
-      age: student.age?.toString() || '',
-      gender: student.gender || '',
-      package_id: student.package_id?.toString() || '',
-      teacher_id: student.teacher_id?.toString() || '',
-      hour: student.hour || '',
-      monthly_sessions: student.monthly_sessions?.toString() || '',
-      weekly_sessions: student.weekly_sessions?.toString() || '',
-      weekly_days: Array.isArray(student.weekly_days) ? [...student.weekly_days] : [],
-      weekly_schedule: hasWeeklySchedule ? { ...student.weekly_schedule } : {},
-      useWeeklySchedule: hasWeeklySchedule,
-      session_duration: student.session_duration?.toString() || '',
-      hourly_rate: student.hourly_rate?.toString() || '',
-      notes: student.notes || '',
-      password: '', // Don't populate password field for security
-    })
-    setShowEditModal(true)
+  const handleEdit = async (student: any) => {
+    try {
+      setEditingId(student.id)
+      // Fetch fresh student data to get complete information
+      const fullStudent = await getStudent(student.id)
+      
+      // Check if student has weekly_schedule (takes precedence)
+      const hasWeeklySchedule = !!(fullStudent.weekly_schedule && typeof fullStudent.weekly_schedule === 'object' && Object.keys(fullStudent.weekly_schedule).length > 0)
+      
+      // Get subscription start date from earliest subscription if available
+      let subscriptionStartDate = ''
+      if (fullStudent.subscriptions && Array.isArray(fullStudent.subscriptions) && fullStudent.subscriptions.length > 0) {
+        // Sort subscriptions by start_date and get the earliest one
+        const sortedSubscriptions = [...fullStudent.subscriptions]
+          .filter((sub: any) => sub.start_date) // Filter out subscriptions without start_date
+          .sort((a: any, b: any) => {
+            const dateA = new Date(a.start_date).getTime()
+            const dateB = new Date(b.start_date).getTime()
+            return dateA - dateB
+          })
+        if (sortedSubscriptions.length > 0) {
+          subscriptionStartDate = sortedSubscriptions[0].start_date
+        }
+      }
+      
+      // Get subscription statistics
+      const paidMonthsCount = fullStudent.subscriptions_statistics?.paid_subscriptions?.toString() || ''
+      const totalSubscriptions = fullStudent.subscriptions_statistics?.total_subscriptions || 0
+      const unpaidSubscriptions = fullStudent.subscriptions_statistics?.unpaid_subscriptions || 0
+      
+      setEditForm({
+        name: fullStudent.name || '',
+        email: fullStudent.email || '',
+        phone: fullStudent.phone || '',
+        age: fullStudent.age?.toString() || '',
+        gender: fullStudent.gender || '',
+        package_id: fullStudent.package_id?.toString() || '',
+        teacher_id: fullStudent.teacher_id?.toString() || '',
+        hour: fullStudent.hour || '',
+        monthly_sessions: fullStudent.monthly_sessions?.toString() || '',
+        weekly_sessions: fullStudent.weekly_sessions?.toString() || '',
+        weekly_days: Array.isArray(fullStudent.weekly_days) ? [...fullStudent.weekly_days] : [],
+        weekly_schedule: hasWeeklySchedule ? { ...fullStudent.weekly_schedule } : {},
+        useWeeklySchedule: hasWeeklySchedule,
+        session_duration: fullStudent.session_duration?.toString() || '',
+        hourly_rate: fullStudent.hourly_rate?.toString() || '',
+        notes: fullStudent.notes || '',
+        password: '', // Don't populate password field for security
+        // Get data from subscriptions_statistics
+        past_months_count: totalSubscriptions.toString(),
+        paid_months_count: paidMonthsCount,
+        subscription_start_date: subscriptionStartDate, // Derived from earliest subscription
+      })
+      setShowEditModal(true)
+    } catch (error: any) {
+      alert(error.message || 'فشل تحميل بيانات الطالب')
+    }
   }
 
   const handleSaveEdit = async (e: React.FormEvent) => {
@@ -206,6 +245,17 @@ export default function StudentsPage() {
           if (editForm.weekly_days.length > 0) updateData.weekly_days = editForm.weekly_days
         }
 
+        // Add subscription-related fields
+        if (editForm.past_months_count) {
+          updateData.past_months_count = parseInt(editForm.past_months_count)
+        }
+        if (editForm.paid_months_count) {
+          updateData.paid_months_count = parseInt(editForm.paid_months_count)
+        }
+        if (editForm.subscription_start_date) {
+          updateData.subscription_start_date = editForm.subscription_start_date
+        }
+
         await updateStudent(editingId, updateData)
         setEditingId(null)
         setEditForm({
@@ -226,6 +276,9 @@ export default function StudentsPage() {
           hourly_rate: '',
           notes: '',
           password: '',
+          past_months_count: '',
+          paid_months_count: '',
+          subscription_start_date: '',
         })
         setShowEditModal(false)
       } catch (error: any) {
@@ -257,6 +310,9 @@ export default function StudentsPage() {
         hourly_rate: '',
         notes: '',
         password: '',
+        past_months_count: '',
+        paid_months_count: '',
+        subscription_start_date: '',
       })
   }
 
@@ -300,6 +356,17 @@ export default function StudentsPage() {
         if (newStudent.weekly_days.length > 0) createData.weekly_days = newStudent.weekly_days
       }
 
+      // Add subscription-related fields
+      if (newStudent.past_months_count) {
+        createData.past_months_count = parseInt(newStudent.past_months_count)
+      }
+      if (newStudent.paid_months_count) {
+        createData.paid_months_count = parseInt(newStudent.paid_months_count)
+      }
+      if (newStudent.subscription_start_date) {
+        createData.subscription_start_date = newStudent.subscription_start_date
+      }
+
       await addStudent(createData)
       setNewStudent({
         name: '',
@@ -319,6 +386,9 @@ export default function StudentsPage() {
         hourly_rate: '',
         notes: '',
         password: '',
+        past_months_count: '',
+        paid_months_count: '',
+        subscription_start_date: '',
       })
       setShowAddModal(false)
     } catch (error: any) {
@@ -693,6 +763,95 @@ export default function StudentsPage() {
                   <div>
                     <label className="block text-primary-600 text-sm mb-1">ملاحظات</label>
                     <p className="text-primary-900">{viewedStudent.notes}</p>
+                  </div>
+                )}
+                
+                {viewedStudent.subscriptions_statistics && (
+                  <div className="border-t-2 border-primary-200 pt-4 mt-4">
+                    <h3 className="text-lg font-bold text-primary-900 mb-4 text-right">إحصائيات الاشتراكات</h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="bg-primary-50 p-4 rounded-lg">
+                        <label className="block text-primary-600 text-sm mb-1">إجمالي الاشتراكات</label>
+                        <p className="text-2xl font-bold text-primary-900">{viewedStudent.subscriptions_statistics.total_subscriptions || 0}</p>
+                      </div>
+                      <div className="bg-green-50 p-4 rounded-lg">
+                        <label className="block text-green-600 text-sm mb-1">الاشتراكات المدفوعة</label>
+                        <p className="text-2xl font-bold text-green-700">{viewedStudent.subscriptions_statistics.paid_subscriptions || 0}</p>
+                      </div>
+                      <div className="bg-red-50 p-4 rounded-lg">
+                        <label className="block text-red-600 text-sm mb-1">الاشتراكات غير المدفوعة</label>
+                        <p className="text-2xl font-bold text-red-700">{viewedStudent.subscriptions_statistics.unpaid_subscriptions || 0}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Subscriptions Table */}
+                {viewedStudent.subscriptions && Array.isArray(viewedStudent.subscriptions) && viewedStudent.subscriptions.length > 0 && (
+                  <div className="border-t-2 border-primary-200 pt-4 mt-4">
+                    <h3 className="text-lg font-bold text-primary-900 mb-4 text-right">الاشتراكات</h3>
+                    <div className="overflow-x-auto">
+                      <table className="border-collapse bg-white rounded-lg overflow-hidden shadow-sm" style={{ tableLayout: 'auto', minWidth: '100%' }}>
+                        <thead className="bg-primary-100">
+                          <tr>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">رمز الاشتراك</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">تاريخ البدء</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">تاريخ الانتهاء</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">الحصص/الأسبوع</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">إجمالي الحصص</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">مكتملة</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">متبقية</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">الحالة</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {viewedStudent.subscriptions.map((subscription: any) => (
+                            <tr key={subscription.id} className="border-b border-primary-100 hover:bg-primary-50 transition-colors">
+                              <td className="px-4 py-3 text-primary-900 font-medium text-sm whitespace-nowrap">{subscription.subscription_code}</td>
+                              <td className="px-4 py-3 text-primary-700 text-sm whitespace-nowrap">{subscription.start_date}</td>
+                              <td className="px-4 py-3 text-primary-700 text-sm whitespace-nowrap">{subscription.end_date}</td>
+                              <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{subscription.sessions_per_week || '-'}</td>
+                              <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{subscription.total_sessions || '-'}</td>
+                              <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{subscription.completed_sessions_count || 0}</td>
+                              <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{subscription.remaining_sessions_count || 0}</td>
+                              <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                <div className="flex items-center justify-end gap-2 flex-wrap">
+                                  {subscription.is_paid ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                                      <CheckCircle className="w-3 h-3" />
+                                      مدفوع
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                                      <X className="w-3 h-3" />
+                                      غير مدفوع
+                                    </span>
+                                  )}
+                                  {subscription.is_active && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                      <Clock className="w-3 h-3" />
+                                      نشط
+                                    </span>
+                                  )}
+                                  {subscription.is_upcoming && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
+                                      <Clock className="w-3 h-3" />
+                                      قادم
+                                    </span>
+                                  )}
+                                  {subscription.is_expired && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+                                      <X className="w-3 h-3" />
+                                      منتهي
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1213,6 +1372,64 @@ export default function StudentsPage() {
                     placeholder="ملاحظات اختيارية..."
                   />
                 </div>
+                
+                {/* Subscription Fields Section */}
+                <div className="border-t-2 border-primary-200 pt-4 mt-4">
+                  <h3 className="text-lg font-bold text-primary-900 mb-4 text-right">إعدادات الاشتراكات (اختياري)</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-primary-900 font-semibold mb-2 text-right">
+                        تاريخ بداية الاشتراك
+                      </label>
+                      <input
+                        type="date"
+                        value={newStudent.subscription_start_date}
+                        onChange={(e) => setNewStudent({ ...newStudent, subscription_start_date: e.target.value })}
+                        className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                      />
+                      <p className="text-xs text-primary-600 mt-1 text-right">
+                        مطلوب إذا تم تحديد عدد الأشهر السابقة
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-primary-900 font-semibold mb-2 text-right">
+                          عدد الأشهر السابقة
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="120"
+                          value={newStudent.past_months_count}
+                          onChange={(e) => setNewStudent({ ...newStudent, past_months_count: e.target.value })}
+                          className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                          placeholder="0-120"
+                        />
+                        <p className="text-xs text-primary-600 mt-1 text-right">
+                          عدد الأشهر السابقة لإنشاء اشتراكات لها
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-primary-900 font-semibold mb-2 text-right">
+                          عدد الأشهر المدفوعة
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="120"
+                          value={newStudent.paid_months_count}
+                          onChange={(e) => setNewStudent({ ...newStudent, paid_months_count: e.target.value })}
+                          className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                          placeholder="0-120"
+                        />
+                        <p className="text-xs text-primary-600 mt-1 text-right">
+                          عدد الأشهر المدفوعة من أول N اشتراك
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex items-center gap-4 pt-4">
                   <button
                     type="submit"
@@ -1518,6 +1735,64 @@ export default function StudentsPage() {
                     placeholder="ملاحظات اختيارية..."
                   />
                 </div>
+                
+                {/* Subscription Fields Section */}
+                <div className="border-t-2 border-primary-200 pt-4 mt-4">
+                  <h3 className="text-lg font-bold text-primary-900 mb-4 text-right">إعدادات الاشتراكات (اختياري)</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-primary-900 font-semibold mb-2 text-right">
+                        تاريخ بداية الاشتراك
+                      </label>
+                      <input
+                        type="date"
+                        value={editForm.subscription_start_date}
+                        onChange={(e) => setEditForm({ ...editForm, subscription_start_date: e.target.value })}
+                        className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                      />
+                      <p className="text-xs text-primary-600 mt-1 text-right">
+                        مطلوب إذا تم تحديد عدد الأشهر السابقة
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-primary-900 font-semibold mb-2 text-right">
+                          عدد الأشهر السابقة
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="120"
+                          value={editForm.past_months_count}
+                          onChange={(e) => setEditForm({ ...editForm, past_months_count: e.target.value })}
+                          className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                          placeholder="0-120"
+                        />
+                        <p className="text-xs text-primary-600 mt-1 text-right">
+                          عدد الأشهر السابقة لإنشاء اشتراكات لها
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-primary-900 font-semibold mb-2 text-right">
+                          عدد الأشهر المدفوعة
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="120"
+                          value={editForm.paid_months_count}
+                          onChange={(e) => setEditForm({ ...editForm, paid_months_count: e.target.value })}
+                          className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                          placeholder="0-120"
+                        />
+                        <p className="text-xs text-primary-600 mt-1 text-right">
+                          عدد الأشهر المدفوعة من أول N اشتراك
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex items-center gap-4 pt-4">
                   <button
                     type="submit"

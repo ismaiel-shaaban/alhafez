@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslation } from '@/hooks/useTranslation'
 import { useWebsiteStore } from '@/store/useWebsiteStore'
-import { Check } from 'lucide-react'
+import { Check, ArrowLeft, ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 interface PackagesListProps {
@@ -66,6 +66,23 @@ export default function PackagesList({ showTitle = true, headingLevel = 'h1' }: 
         <div className="text-center mb-12">
           <HeadingTag className="section-title">{t('packages.title')}</HeadingTag>
           <p className="section-subtitle">{t('packages.subtitle')}</p>
+          <div className="mt-0">
+            <Link 
+              href="/packages"
+              className="inline-flex items-center  gap-1.5 text-accent-green hover:text-primary-600 font-medium transition-all group text-sm sm:text-base relative pb-0.5"
+              dir={currentLocale === 'ar' ? 'rtl' : 'ltr'}
+            >
+              <span className="relative">
+                {t('common.seeAll') || 'عرض الكل'}
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-green scale-x-0 group-hover:scale-x-100 transition-transform origin-center"></span>
+              </span>
+              {currentLocale === 'ar' ? (
+                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+              ) : (
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              )}
+            </Link>
+          </div>
         </div>
       )}
       <motion.div
