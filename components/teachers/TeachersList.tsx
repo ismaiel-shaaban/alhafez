@@ -10,9 +10,10 @@ import { motion } from 'framer-motion'
 interface TeachersListProps {
   showTitle?: boolean
   headingLevel?: 'h1' | 'h2'
+  limit?: number // Limit number of teachers to display (for home page)
 }
 
-export default function TeachersList({ showTitle = true, headingLevel = 'h1' }: TeachersListProps = {}) {
+export default function TeachersList({ showTitle = true, headingLevel = 'h1', limit }: TeachersListProps = {}) {
   const { t } = useTranslation()
   const { teachers, isLoading, fetchWebsiteData } = useWebsiteStore()
 
@@ -50,7 +51,9 @@ export default function TeachersList({ showTitle = true, headingLevel = 'h1' }: 
     )
   }
 
-  if (teachers.length === 0) {
+  const displayedTeachers = limit ? teachers.slice(0, limit) : teachers
+
+  if (displayedTeachers.length === 0) {
     return (
       <div className="text-center py-12 text-primary-600">
         {t('teachers.noTeachers') || 'لا يوجد معلمون متاحون حالياً'}
@@ -66,7 +69,7 @@ export default function TeachersList({ showTitle = true, headingLevel = 'h1' }: 
         <div className="text-center mb-12">
           <HeadingTag className="section-title">{t('teachers.title')}</HeadingTag>
           <p className="section-subtitle">{t('teachers.subtitle')}</p>
-          <div className="mt-4">
+          <div className="mt-0">
             <Link 
               href="/teachers"
               className="inline-flex items-center gap-1.5 text-accent-green hover:text-primary-600 font-medium transition-all group text-sm sm:text-base relative pb-0.5"
@@ -92,7 +95,7 @@ export default function TeachersList({ showTitle = true, headingLevel = 'h1' }: 
         whileInView="visible"
         viewport={{ once: true, margin: '-50px' }}
       >
-      {teachers.map((teacher) => {
+      {displayedTeachers.map((teacher) => {
         const name = currentLocale === 'en' && teacher.name_en ? teacher.name_en : (teacher.name_ar || teacher.name)
         const specialization = currentLocale === 'en' && teacher.specialization_en ? teacher.specialization_en : (teacher.specialization_ar || teacher.specialization)
         const experience = `${teacher.experience_years} ${currentLocale === 'en' ? 'years experience' : 'سنة خبرة'}`

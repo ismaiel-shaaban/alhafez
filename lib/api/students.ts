@@ -127,3 +127,14 @@ export const deleteStudent = async (id: number): Promise<void> => {
   })
 }
 
+// Update subscription payment status
+export const updateSubscriptionPaymentStatus = async (
+  subscriptionId: number,
+  isPaid: boolean
+): Promise<any> => {
+  return apiRequest(`/api/student-subscriptions/${subscriptionId}`, {
+    method: 'POST',
+    body: { is_paid: isPaid },
+  })
+}
+

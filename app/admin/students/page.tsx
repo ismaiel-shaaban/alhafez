@@ -24,6 +24,7 @@ export default function StudentsPage() {
     addStudent, 
     deleteStudent, 
     updateStudent,
+    updateSubscriptionPaymentStatus,
     sessions,
     isLoadingSessions,
     fetchSessions,
@@ -152,6 +153,20 @@ export default function StudentsPage() {
       await fetchSessions({ student_id: id })
     } catch (error: any) {
       alert(error.message || 'فشل تحميل بيانات الطالب')
+    }
+  }
+
+  const handleToggleSubscriptionPayment = async (subscriptionId: number, currentPaidStatus: boolean) => {
+    try {
+      const newPaidStatus = !currentPaidStatus
+      await updateSubscriptionPaymentStatus(subscriptionId, newPaidStatus)
+      // Refresh the student data to show updated subscription status
+      if (viewingId) {
+        const updatedStudent = await getStudent(viewingId)
+        setViewedStudent(updatedStudent)
+      }
+    } catch (error: any) {
+      alert(error.message || 'فشل تحديث حالة الدفع')
     }
   }
 
@@ -802,6 +817,7 @@ export default function StudentsPage() {
                             <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">مكتملة</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">متبقية</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">الحالة</th>
+                            <th className="px-4 py-3 text-center text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">الإجراءات</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -846,6 +862,19 @@ export default function StudentsPage() {
                                     </span>
                                   )}
                                 </div>
+                              </td>
+                              <td className="px-4 py-3 text-center whitespace-nowrap">
+                                <button
+                                  onClick={() => handleToggleSubscriptionPayment(subscription.id, subscription.is_paid)}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                    subscription.is_paid
+                                      ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                      : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                  }`}
+                                  title={subscription.is_paid ? 'تعيين كغير مدفوع' : 'تعيين كمدفوع'}
+                                >
+                                  {subscription.is_paid ? 'غير مدفوع' : 'مدفوع'}
+                                </button>
                               </td>
                             </tr>
                           ))}

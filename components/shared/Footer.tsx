@@ -79,6 +79,15 @@ export default function Footer() {
               </li>
               <li>
                 <Link 
+                  href="/lessons" 
+                  className="text-primary-200 hover:text-white transition-colors duration-300 flex items-center gap-2 group"
+                >
+                  <span className="w-1 h-1 bg-accent-green rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                  {t('nav.lessons')}
+                </Link>
+              </li>
+              <li>
+                <Link 
                   href="/register" 
                   className="text-primary-200 hover:text-white transition-colors duration-300 flex items-center gap-2 group"
                 >

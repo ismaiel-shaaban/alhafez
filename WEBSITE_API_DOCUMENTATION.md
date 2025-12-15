@@ -35,7 +35,7 @@ These API endpoints are for the public website (alhafez.netlify.app) and do not 
 ```json
 {
     "status": false,
-    "number": "E001",
+    "code": "E001",
     "message": "Error message"
 }
 ```
@@ -411,9 +411,67 @@ GET /api/reviews?rating=5&per_page=10
 
 ---
 
-## 6. Student Registration
+## 6. Lessons (جزء من حصصنا / دروسنا)
 
-### 6.1 Register New Student
+### 6.1 List Lessons
+**GET** `/api/lessons`
+
+**Description:** Get list of lessons with pagination
+
+**Request Headers:**
+```
+Accept: application/json
+lang: ar (optional)
+```
+
+**Query Parameters:**
+- `per_page` (optional) - Results per page (default: 15)
+- `page` (optional) - Page number
+
+**Example Request:**
+```
+GET /api/lessons?per_page=10&page=1
+```
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Lessons retrieved successfully",
+    "data": {
+        "lessons": [
+            {
+                "id": 1,
+                "title": "درس في التجويد",
+                "title_ar": "درس في التجويد",
+                "title_en": "Tajweed Lesson",
+                "localized_title": "درس في التجويد",
+                "description": "شرح مفصل لأحكام التجويد",
+                "description_ar": "شرح مفصل لأحكام التجويد",
+                "description_en": "Detailed explanation of Tajweed rules",
+                "localized_description": "شرح مفصل لأحكام التجويد",
+                "video": "http://domain.com/Admin/images/lessons/1234567890_abc123.mp4",
+                "created_at": "2024-01-01 00:00:00",
+                "updated_at": "2024-01-01 00:00:00"
+            }
+        ],
+        "pagination": {
+            "total": 20,
+            "per_page": 15,
+            "current_page": 1,
+            "total_pages": 2
+        }
+    }
+}
+```
+
+**Note:** The `localized_title` and `localized_description` fields return the appropriate language based on the `lang` header (Arabic by default, English if `lang: en` is sent).
+
+---
+
+## 7. Student Registration
+
+### 7.1 Register New Student
 **POST** `/api/register`
 
 **Description:** Register a new student from the public website. All other fields (teacher_id, hour, sessions, etc.) will be null automatically.
@@ -487,7 +545,7 @@ lang: ar (optional)
 ```json
 {
     "status": false,
-    "number": "E001",
+    "code": "E001",
     "message": "The name field is required."
 }
 ```
@@ -496,7 +554,7 @@ lang: ar (optional)
 ```json
 {
     "status": false,
-    "number": "E002",
+    "code": "E002",
     "message": "The email has already been taken."
 }
 ```
@@ -505,16 +563,16 @@ lang: ar (optional)
 ```json
 {
     "status": false,
-    "number": "E006",
+    "code": "E006",
     "message": "The selected package does not exist"
 }
 ```
 
 ---
 
-## 7. Submit Rating
+## 8. Submit Rating
 
-### 7.1 Submit Public Rating
+### 8.1 Submit Public Rating
 **POST** `/api/submit-rating`
 
 **Description:** Submit a public rating/review from the website. This creates a rating entry with `type` set to `rating` and no associated student or package.
@@ -557,10 +615,80 @@ lang: ar (optional)
 ```json
 {
     "status": false,
-    "number": "E034",
+    "code": "E034",
     "message": "The rating must be between 1 and 5."
 }
 ```
+
+---
+
+## 9. Add Review from Website
+
+### 9.1 Add Review
+**POST** `/api/reviews`
+
+**Description:** Add a review from the website. This creates a review entry with `type` set to `website` and includes the reviewer's name. This is different from the submit rating endpoint as it returns the created review data.
+
+**Request Headers:**
+```
+Content-Type: multipart/form-data
+Accept: application/json
+lang: ar (optional)
+```
+
+**Request Body:**
+```json
+{
+    "name": "Ahmed Ali",
+    "rating": 5,
+    "review": "تجربة رائعة جداً",
+    "review_en": "Excellent experience",
+    "media_file": "file"
+}
+```
+
+**Field Descriptions:**
+- `name` (required): Name of the person submitting the review
+- `rating` (required): Rating from 1 to 5
+- `review` (required): Review text in Arabic
+- `review_en` (optional): Review text in English
+- `media_file` (optional): Media file (image or video) - file upload (jpeg, png, jpg, gif, mp4, avi, mov, wmv, flv, webm, max: 20MB)
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Review added successfully",
+    "data": {
+        "id": 1,
+        "type": "website",
+        "name": "Ahmed Ali",
+        "student": null,
+        "student_id": null,
+        "package": null,
+        "package_id": null,
+        "rating": 5,
+        "review": "تجربة رائعة جداً",
+        "review_ar": "تجربة رائعة جداً",
+        "review_en": "Excellent experience",
+        "media_file": "http://domain.com/Admin/images/review-media/1234567890_abc123.jpg",
+        "created_at": "2024-01-15 10:30:00"
+    }
+}
+```
+
+**Error Response (422):**
+```json
+{
+    "status": false,
+    "code": "E034",
+    "message": "The rating must be between 1 and 5."
+}
+```
+
+**Note:** This endpoint is different from `/api/submit-rating`:
+- `/api/submit-rating` creates a rating with `type` set to `rating` and returns only a success message
+- `/api/reviews` creates a review with `type` set to `website`, includes the reviewer's name, and returns the full review data
 
 ---
 
@@ -599,11 +727,15 @@ lang: ar (optional)
 5. **Email and Age** - Both `email` and `age` fields are optional when registering a student
 6. **Email Uniqueness** - Email address must be unique in the database (if provided)
 7. **Package Validation** - When registering, the package must exist in the database
-8. **Student Reviews** - Reviews support `type` field (`review` or `rating`) and optional `media_file` (image/video)
-9. **Teacher Images** - Teachers may have profile images
-10. **Honor Board Certificates** - Certificate images are returned as full URLs
-11. **Date Format** - All dates are returned in `Y-m-d H:i:s` format (example: `2024-01-01 00:00:00`)
-12. **Student Password** - When registering from the website, password is not required. The password can be set later by the admin from the dashboard to enable student login functionality.
+8. **Student Reviews** - Reviews support `type` field (`review`, `rating`, or `website`) and optional `media_file` (image/video)
+9. **Submit Rating vs Add Review** - There are two endpoints for submitting reviews:
+   - `/api/submit-rating` - Creates a rating with `type` set to `rating`, returns only success message
+   - `/api/reviews` - Creates a review with `type` set to `website`, includes reviewer name, returns full review data
+10. **Teacher Images** - Teachers may have profile images
+11. **Honor Board Certificates** - Certificate images are returned as full URLs
+12. **Date Format** - All dates are returned in `Y-m-d H:i:s` format (example: `2024-01-01 00:00:00`)
+13. **Student Password** - When registering from the website, password is not required. The password can be set later by the admin from the dashboard to enable student login functionality.
+14. **Lessons (جزء من حصصنا / دروسنا)** - Public endpoint available to retrieve lessons with bilingual support (Arabic/English). Lessons include title, description, and video content. The `localized_title` and `localized_description` fields automatically return the appropriate language based on the `lang` header.
 
 ---
 
@@ -657,6 +789,25 @@ curl -X POST "http://al-hafiz-academy.cloudy-digital.com/api/submit-rating" \
   -F "review=تجربة رائعة جداً" \
   -F "review_en=Excellent experience" \
   -F "media_file=@/path/to/image.jpg"
+```
+
+### Add Review from Website
+```bash
+curl -X POST "http://al-hafiz-academy.cloudy-digital.com/api/reviews" \
+  -H "Accept: application/json" \
+  -H "lang: ar" \
+  -F "name=Ahmed Ali" \
+  -F "rating=5" \
+  -F "review=تجربة رائعة جداً" \
+  -F "review_en=Excellent experience" \
+  -F "media_file=@/path/to/image.jpg"
+```
+
+### Get Lessons
+```bash
+curl -X GET "http://al-hafiz-academy.cloudy-digital.com/api/lessons?per_page=10" \
+  -H "Accept: application/json" \
+  -H "lang: ar"
 ```
 
 ---

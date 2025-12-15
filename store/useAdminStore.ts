@@ -9,6 +9,7 @@ import * as honorBoardsAPI from '@/lib/api/honor-boards'
 import * as sessionsAPI from '@/lib/api/sessions'
 import * as teacherSalaryAPI from '@/lib/api/teacher-salary'
 import * as featuresAPI from '@/lib/api/features'
+import * as lessonsAPI from '@/lib/api/lessons'
 import { getCurrentLocale } from '@/lib/api-client'
 
 // Re-export API types for convenience
@@ -19,6 +20,7 @@ export type HonorBoardEntry = honorBoardsAPI.HonorBoardEntry
 export type Student = studentsAPI.Student
 export type StudentSession = sessionsAPI.StudentSession
 export type Feature = featuresAPI.Feature
+export type Lesson = lessonsAPI.Lesson
 export type TeacherSalaryResponse = teacherSalaryAPI.TeacherSalaryResponse
 export type TeacherPayment = teacherSalaryAPI.TeacherPayment
 
@@ -50,6 +52,7 @@ interface AdminState {
   addStudent: (student: studentsAPI.CreateStudentRequest) => Promise<void>
   updateStudent: (id: number, student: Partial<studentsAPI.CreateStudentRequest>) => Promise<void>
   deleteStudent: (id: number) => Promise<void>
+  updateSubscriptionPaymentStatus: (subscriptionId: number, isPaid: boolean) => Promise<void>
 
   // Student Sessions
   sessions: StudentSession[]
@@ -135,6 +138,20 @@ interface AdminState {
   addFeature: (feature: featuresAPI.CreateFeatureRequest) => Promise<void>
   updateFeature: (id: number, feature: Partial<featuresAPI.CreateFeatureRequest>) => Promise<void>
   deleteFeature: (id: number) => Promise<void>
+
+  // Lessons
+  lessons: lessonsAPI.Lesson[]
+  lessonsMeta: {
+    current_page: number
+    total: number
+    last_page: number
+  } | null
+  isLoadingLessons: boolean
+  fetchLessons: (filters?: lessonsAPI.LessonFilters) => Promise<void>
+  getLesson: (id: number) => Promise<lessonsAPI.Lesson>
+  addLesson: (lesson: lessonsAPI.CreateLessonRequest) => Promise<void>
+  updateLesson: (id: number, lesson: Partial<lessonsAPI.CreateLessonRequest>) => Promise<void>
+  deleteLesson: (id: number) => Promise<void>
 
   // Teacher Salary & Payments
   getTeacherSalary: (teacherId: number, month: string) => Promise<teacherSalaryAPI.TeacherSalaryResponse>
@@ -282,6 +299,19 @@ export const useAdminStore = create<AdminState>()(
           set({
             isLoading: false,
             error: error.message || 'فشل حذف الطالب',
+          })
+          throw error
+        }
+      },
+      updateSubscriptionPaymentStatus: async (subscriptionId, isPaid) => {
+        set({ isLoading: true, error: null })
+        try {
+          await studentsAPI.updateSubscriptionPaymentStatus(subscriptionId, isPaid)
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تحديث حالة الدفع',
           })
           throw error
         }
@@ -804,6 +834,89 @@ export const useAdminStore = create<AdminState>()(
           set({
             isLoading: false,
             error: error.message || 'فشل حذف الميزة',
+          })
+          throw error
+        }
+      },
+
+      // Lessons
+      lessons: [],
+      lessonsMeta: null,
+      isLoadingLessons: false,
+      fetchLessons: async (filters = {}) => {
+        set({ isLoadingLessons: true, error: null })
+        try {
+          const locale = getCurrentLocale()
+          const response = await lessonsAPI.listLessons(filters, locale)
+          set({
+            lessons: response.lessons || [],
+            lessonsMeta: response.pagination ? {
+              current_page: response.pagination.current_page || 1,
+              total: response.pagination.total || 0,
+              last_page: response.pagination.total_pages || 1,
+            } : null,
+            isLoadingLessons: false,
+          })
+        } catch (error: any) {
+          set({
+            isLoadingLessons: false,
+            error: error.message || 'فشل تحميل الدروس',
+          })
+        }
+      },
+      getLesson: async (id) => {
+        set({ isLoading: true, error: null })
+        try {
+          const locale = getCurrentLocale()
+          const lesson = await lessonsAPI.getLesson(id, locale)
+          set({ isLoading: false })
+          return lesson
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تحميل بيانات الدرس',
+          })
+          throw error
+        }
+      },
+      addLesson: async (lesson) => {
+        set({ isLoading: true, error: null })
+        try {
+          await lessonsAPI.createLesson(lesson)
+          await get().fetchLessons()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل إضافة الدرس',
+          })
+          throw error
+        }
+      },
+      updateLesson: async (id, lesson) => {
+        set({ isLoading: true, error: null })
+        try {
+          await lessonsAPI.updateLesson(id, lesson)
+          await get().fetchLessons()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تحديث الدرس',
+          })
+          throw error
+        }
+      },
+      deleteLesson: async (id) => {
+        set({ isLoading: true, error: null })
+        try {
+          await lessonsAPI.deleteLesson(id)
+          await get().fetchLessons()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل حذف الدرس',
           })
           throw error
         }

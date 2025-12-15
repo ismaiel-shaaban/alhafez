@@ -19,7 +19,7 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: 'أكاديمية الحافظ | Al-Hafez Academy',
-  description: 'أكاديمية الحافظ لتعليم القرآن الكريم واللغة العربية',
+  description: 'أكاديمية الحافظ لتأسيس وتحفيظ القرآن الكريم',
 }
 
 export default function RootLayout({

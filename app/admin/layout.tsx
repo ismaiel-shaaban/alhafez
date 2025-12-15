@@ -16,6 +16,7 @@ import {
   X,
   DollarSign,
   BookOpen,
+  Video,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -72,6 +73,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/teacher-salary', label: 'الرواتب', icon: DollarSign },
     { href: '/admin/packages', label: 'الباقات', icon: Package },
     { href: '/admin/features', label: 'المميزات', icon: BookOpen },
+    { href: '/admin/lessons', label: 'فيديوهات من الحصص', icon: Video },
     { href: '/admin/testimonials', label: 'آراء الطلاب', icon: MessageSquare },
     { href: '/admin/honor-board', label: 'لوحة الشرف', icon: Award },
   ]

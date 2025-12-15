@@ -17,9 +17,18 @@ interface WebsiteState {
     total_pages: number
   } | null
   
+  // Lessons
+  lessons: websiteAPI.WebsiteLesson[]
+  lessonsPagination: {
+    current_page: number
+    total: number
+    total_pages: number
+  } | null
+  
   // Loading states
   isLoading: boolean
   isLoadingHonorBoards: boolean
+  isLoadingLessons: boolean
   error: string | null
   
   // Actions
@@ -29,6 +38,7 @@ interface WebsiteState {
   fetchTeachers: (page?: number) => Promise<void>
   fetchPackages: (isPopular?: boolean, page?: number) => Promise<void>
   fetchReviews: (rating?: number, packageId?: number, page?: number) => Promise<void>
+  fetchLessons: (page?: number) => Promise<void>
   registerStudent: (data: websiteAPI.RegisterStudentRequest) => Promise<websiteAPI.RegisterStudentResponse>
   createReview: (data: websiteAPI.CreateReviewRequest) => Promise<websiteAPI.CreateReviewResponse>
 }
@@ -41,8 +51,11 @@ export const useWebsiteStore = create<WebsiteState>((set, get) => ({
   reviews: [],
   honorBoards: [],
   honorBoardsPagination: null,
+  lessons: [],
+  lessonsPagination: null,
   isLoading: false,
   isLoadingHonorBoards: false,
+  isLoadingLessons: false,
   error: null,
 
   // Fetch all website data
@@ -154,6 +167,29 @@ export const useWebsiteStore = create<WebsiteState>((set, get) => ({
       set({
         isLoading: false,
         error: error.message || 'فشل تحميل الآراء',
+      })
+    }
+  },
+
+  // Fetch lessons
+  fetchLessons: async (page = 1) => {
+    set({ isLoadingLessons: true, error: null })
+    try {
+      const locale = getCurrentLocale()
+      const response = await websiteAPI.listLessons(page, 15, locale)
+      set({
+        lessons: response.lessons || [],
+        lessonsPagination: response.pagination ? {
+          current_page: response.pagination.current_page || 1,
+          total: response.pagination.total || 0,
+          total_pages: response.pagination.total_pages || 1,
+        } : null,
+        isLoadingLessons: false,
+      })
+    } catch (error: any) {
+      set({
+        isLoadingLessons: false,
+        error: error.message || 'فشل تحميل الدروس',
       })
     }
   },
