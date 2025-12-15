@@ -83,6 +83,21 @@ export interface WebsiteHonorBoard {
   created_at?: string
 }
 
+export interface WebsiteLesson {
+  id: number
+  title: string
+  title_ar: string
+  title_en?: string
+  localized_title: string
+  description: string
+  description_ar: string
+  description_en?: string
+  localized_description: string
+  video: string // Video URL
+  created_at?: string
+  updated_at?: string
+}
+
 export interface WebsiteData {
   features: WebsiteFeature[]
   packages: WebsitePackage[]
@@ -203,6 +218,22 @@ export const listReviews = async (
 // Get single honor board entry
 export const getHonorBoard = async (id: number, locale?: string): Promise<WebsiteHonorBoard> => {
   return websiteApiRequest<WebsiteHonorBoard>(`/api/website/honor-boards/${id}`, { locale })
+}
+
+// List lessons
+export const listLessons = async (
+  page: number = 1,
+  perPage: number = 15,
+  locale?: string
+): Promise<{ lessons: WebsiteLesson[]; pagination: Pagination }> => {
+  const params = new URLSearchParams()
+  params.append('page', page.toString())
+  params.append('per_page', perPage.toString())
+
+  return websiteApiRequest<{ lessons: WebsiteLesson[]; pagination: Pagination }>(
+    `/api/lessons?${params.toString()}`,
+    { locale }
+  )
 }
 
 // Register new student

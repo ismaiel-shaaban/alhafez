@@ -270,7 +270,13 @@ GET /api/students?gender=male&per_page=10&page=1
                 "subscriptions_statistics": {
                     "total_subscriptions": 12,
                     "paid_subscriptions": 3,
-                    "unpaid_subscriptions": 9
+                    "unpaid_subscriptions": 9,
+                    "first_subscription_date": "2025-05-10",
+                    "last_subscription_date": "2026-05-20",
+                    "monthly_sessions": 8,
+                    "total_sessions_count": 96,
+                    "completed_sessions_count": 40,
+                    "remaining_sessions_count": 56
                 },
                 "created_at": "2024-01-01 00:00:00"
             }
@@ -471,7 +477,13 @@ lang: ar (optional)
         "subscriptions_statistics": {
             "total_subscriptions": 19,
             "paid_subscriptions": 5,
-            "unpaid_subscriptions": 14
+            "unpaid_subscriptions": 14,
+            "first_subscription_date": "2025-05-10",
+            "last_subscription_date": "2026-05-20",
+            "monthly_sessions": 8,
+            "total_sessions_count": 152,
+            "completed_sessions_count": 40,
+            "remaining_sessions_count": 112
         },
         "created_at": "2024-01-01 00:00:00"
     }
@@ -511,13 +523,15 @@ Accept: application/json
     "monthly_sessions": 12,
     "weekly_sessions": 6,
     "weekly_days": ["sunday", "wednesday"],
-    "password": "newpassword123"
+    "password": "newpassword123",
+    "paid_subscriptions_count": 10
 }
 ```
 
 **Field Descriptions:**
 - All fields from Create Student are available
 - `password` (optional): New password for student login (min: 6 characters). Password will be automatically hashed.
+- `paid_subscriptions_count` (optional): Number of paid subscriptions (integer, min: 0). When provided, the first N subscriptions (ordered by start_date, oldest first) will be marked as paid (`is_paid = true`), and the remaining subscriptions will be marked as unpaid (`is_paid = false`). This allows you to update payment status for multiple subscriptions at once.
 
 **Success Response (200):**
 ```json
@@ -550,10 +564,24 @@ Accept: application/json
         "session_duration": 60,
         "hourly_rate": 100.00,
         "notes": "طالب مجتهد",
+        "subscriptions": [],
+        "subscriptions_statistics": {
+            "total_subscriptions": 19,
+            "paid_subscriptions": 10,
+            "unpaid_subscriptions": 9,
+            "first_subscription_date": "2025-05-10",
+            "last_subscription_date": "2026-05-20",
+            "monthly_sessions": 12,
+            "total_sessions_count": 228,
+            "completed_sessions_count": 40,
+            "remaining_sessions_count": 188
+        },
         "created_at": "2024-01-01 00:00:00"
     }
 }
 ```
+
+**Note:** When `paid_subscriptions_count` is provided, the `subscriptions_statistics` in the response will reflect the updated payment status.
 
 **Error Response (404):**
 ```json
@@ -2188,9 +2216,11 @@ Accept: application/json
 ```
 
 **Field Descriptions:**
-- `start_date` (optional): Subscription start date (YYYY-MM-DD)
-- `is_paid` (optional): Payment status (boolean)
+- `start_date` (optional): Subscription start date (YYYY-MM-DD). If updated, the `end_date` will be recalculated automatically based on `total_sessions` and `sessions_per_week`.
+- `is_paid` (optional): Payment status (boolean). When set to `true`, if sessions haven't been generated yet for this subscription, they will be created automatically based on the student's weekly schedule.
 - `payment_receipt_image` (optional): Payment receipt image file (image file: jpeg, png, jpg, gif, max: 5MB)
+
+**Note:** This endpoint allows you to update individual subscription payment status. To update payment status for multiple subscriptions at once, use the Update Student endpoint with `paid_subscriptions_count` field.
 
 **Success Response (200):**
 ```json
@@ -2509,6 +2539,258 @@ Accept: application/json
 
 ---
 
+## 11. Lessons (جزء من حصصنا / دروسنا)
+
+### 11.1 List Lessons
+**GET** `/api/dashboard/lessons`
+
+**Description:** Get list of lessons with pagination
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+lang: ar (optional)
+```
+
+**Query Parameters:**
+- `per_page` (optional) - Results per page (default: 15)
+- `page` (optional) - Page number
+
+**Example Request:**
+```
+GET /api/dashboard/lessons?per_page=10&page=1
+```
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Lessons retrieved successfully",
+    "data": {
+        "lessons": [
+            {
+                "id": 1,
+                "title": "درس في التجويد",
+                "title_ar": "درس في التجويد",
+                "title_en": "Tajweed Lesson",
+                "localized_title": "درس في التجويد",
+                "description": "شرح مفصل لأحكام التجويد",
+                "description_ar": "شرح مفصل لأحكام التجويد",
+                "description_en": "Detailed explanation of Tajweed rules",
+                "localized_description": "شرح مفصل لأحكام التجويد",
+                "video": "http://domain.com/Admin/images/lessons/1234567890_abc123.mp4",
+                "created_at": "2024-01-01 00:00:00",
+                "updated_at": "2024-01-01 00:00:00"
+            }
+        ],
+        "pagination": {
+            "total": 20,
+            "per_page": 15,
+            "current_page": 1,
+            "total_pages": 2
+        }
+    }
+}
+```
+
+---
+
+### 11.2 Create Lesson
+**POST** `/api/dashboard/lessons`
+
+**Description:** Create a new lesson
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+```
+
+**Request Type:** `multipart/form-data` (for video upload)
+
+**Request Body:**
+```json
+{
+    "title": "درس في التجويد",
+    "title_en": "Tajweed Lesson",
+    "description": "شرح مفصل لأحكام التجويد",
+    "description_en": "Detailed explanation of Tajweed rules",
+    "video": "file"
+}
+```
+
+**Field Descriptions:**
+- `title` (required): Lesson title in Arabic
+- `title_en` (optional): Lesson title in English
+- `description` (required): Lesson description in Arabic
+- `description_en` (optional): Lesson description in English
+- `video` (required): Video file (mp4, avi, mov, wmv, flv, webm, max: 50MB)
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Lesson created successfully",
+    "data": {
+        "id": 1,
+        "title": "درس في التجويد",
+        "title_ar": "درس في التجويد",
+        "title_en": "Tajweed Lesson",
+        "localized_title": "درس في التجويد",
+        "description": "شرح مفصل لأحكام التجويد",
+        "description_ar": "شرح مفصل لأحكام التجويد",
+        "description_en": "Detailed explanation of Tajweed rules",
+        "localized_description": "شرح مفصل لأحكام التجويد",
+        "video": "http://domain.com/Admin/images/lessons/1234567890_abc123.mp4",
+        "created_at": "2024-01-01 00:00:00",
+        "updated_at": "2024-01-01 00:00:00"
+    }
+}
+```
+
+**Error Response (422):**
+```json
+{
+    "status": false,
+    "number": "E001",
+    "message": "The title field is required."
+}
+```
+
+---
+
+### 11.3 Get Lesson
+**GET** `/api/dashboard/lessons/{id}`
+
+**Description:** Get details of a specific lesson
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+lang: ar (optional)
+```
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Lesson retrieved successfully",
+    "data": {
+        "id": 1,
+        "title": "درس في التجويد",
+        "title_ar": "درس في التجويد",
+        "title_en": "Tajweed Lesson",
+        "localized_title": "درس في التجويد",
+        "description": "شرح مفصل لأحكام التجويد",
+        "description_ar": "شرح مفصل لأحكام التجويد",
+        "description_en": "Detailed explanation of Tajweed rules",
+        "localized_description": "شرح مفصل لأحكام التجويد",
+        "video": "http://domain.com/Admin/images/lessons/1234567890_abc123.mp4",
+        "created_at": "2024-01-01 00:00:00",
+        "updated_at": "2024-01-01 00:00:00"
+    }
+}
+```
+
+**Error Response (404):**
+```json
+{
+    "status": false,
+    "number": "E404",
+    "message": "Resource not found"
+}
+```
+
+---
+
+### 11.4 Update Lesson
+**POST** `/api/dashboard/lessons/{id}`
+
+**Description:** Update lesson data
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+```
+
+**Request Type:** `multipart/form-data` (for video upload)
+
+**Request Body:** (all fields are optional)
+```json
+{
+    "title": "درس متقدم في التجويد",
+    "title_en": "Advanced Tajweed Lesson",
+    "description": "شرح متقدم ومفصل لأحكام التجويد",
+    "description_en": "Advanced and detailed explanation of Tajweed rules",
+    "video": "file"
+}
+```
+
+**Field Descriptions:**
+- `title` (optional): Lesson title in Arabic
+- `title_en` (optional): Lesson title in English
+- `description` (optional): Lesson description in Arabic
+- `description_en` (optional): Lesson description in English
+- `video` (optional): Video file (mp4, avi, mov, wmv, flv, webm, max: 50MB). If provided, the old video will be deleted and replaced with the new one.
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Lesson updated successfully",
+    "data": {
+        "id": 1,
+        "title": "درس متقدم في التجويد",
+        "title_ar": "درس متقدم في التجويد",
+        "title_en": "Advanced Tajweed Lesson",
+        "localized_title": "درس متقدم في التجويد",
+        "description": "شرح متقدم ومفصل لأحكام التجويد",
+        "description_ar": "شرح متقدم ومفصل لأحكام التجويد",
+        "description_en": "Advanced and detailed explanation of Tajweed rules",
+        "localized_description": "شرح متقدم ومفصل لأحكام التجويد",
+        "video": "http://domain.com/Admin/images/lessons/9876543210_xyz789.mp4",
+        "created_at": "2024-01-01 00:00:00",
+        "updated_at": "2024-01-15 10:30:00"
+    }
+}
+```
+
+---
+
+### 11.5 Delete Lesson
+**DELETE** `/api/dashboard/lessons/{id}`
+
+**Description:** Delete a lesson. The associated video file will also be deleted.
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+```
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "number": 1,
+    "message": "Lesson deleted successfully"
+}
+```
+
+**Error Response (404):**
+```json
+{
+    "status": false,
+    "number": "E404",
+    "message": "Resource not found"
+}
+```
+
+---
+
 ## Language Support
 
 All endpoints support Arabic and English translation. Send the following header to control the language:
@@ -2559,6 +2841,7 @@ The Response will return data according to the specified language, with both ver
 | E053 | payment_proof_image | Payment proof image error |
 | E054 | start_date | Start date error |
 | E055 | payment_receipt_image | Payment receipt image error |
+| E056 | paid_subscriptions_count | Paid subscriptions count error |
 | E400 | - | Bad request |
 | E401 | - | Unauthorized |
 | E404 | - | Not found |
@@ -2596,5 +2879,18 @@ The Response will return data according to the specified language, with both ver
 16. Student `password` field is optional when creating/updating from dashboard. If provided, it will be automatically hashed and allows the student to login using phone and password.
 17. Teacher `password`, `phone`, and `email` fields are optional when creating/updating from dashboard. If `password` is provided along with `phone` or `email`, a User account will be automatically created/updated for the teacher to enable login functionality. The password will be automatically hashed.
 18. When creating a student, you can specify `past_months_count`, `paid_months_count`, and `subscription_start_date` to create past subscriptions with completed sessions. Past subscriptions are marked as unpaid unless covered by `paid_months_count`.
-19. Student resource includes `subscriptions_statistics` with `total_subscriptions`, `paid_subscriptions`, and `unpaid_subscriptions` counts. These statistics are automatically updated when subscriptions are created or payment status changes.
+19. Student resource includes `subscriptions_statistics` with comprehensive subscription data:
+    - `total_subscriptions`: Total number of subscriptions
+    - `paid_subscriptions`: Number of paid subscriptions
+    - `unpaid_subscriptions`: Number of unpaid subscriptions
+    - `first_subscription_date`: Date of first subscription start (YYYY-MM-DD)
+    - `last_subscription_date`: Date of last subscription end (YYYY-MM-DD)
+    - `monthly_sessions`: Number of monthly sessions from student profile
+    - `total_sessions_count`: Total sessions across all subscriptions
+    - `completed_sessions_count`: Total completed sessions across all subscriptions
+    - `remaining_sessions_count`: Total remaining sessions across all subscriptions
+    These statistics are automatically updated when subscriptions are created or payment status changes.
 20. Student subscription resource includes `total_sessions`, `completed_sessions_count`, `remaining_sessions_count`, `notification_sent`, and `notification_sent_at` fields to track subscription progress and expiry notifications.
+21. Lessons (جزء من حصصنا / دروسنا) - CRUD operations available for managing lesson content with bilingual support (Arabic/English) and video upload functionality.
+22. When updating a student, you can use `paid_subscriptions_count` field to update payment status for multiple subscriptions at once. The system will mark the first N subscriptions (ordered by start_date, oldest first) as paid, and the remaining subscriptions as unpaid. This is useful when you want to update payment status for multiple subscriptions in a single operation.
+23. To update payment status for a single subscription, use the Update Student Subscription endpoint (`POST /api/student-subscriptions/{id}`) with the `is_paid` field.

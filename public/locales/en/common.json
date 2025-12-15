@@ -5,6 +5,7 @@
     "honorBoard": "Honor Board",
     "teachers": "Teachers",
     "packages": "Packages",
+    "lessons": "Lessons",
     "testimonials": "Testimonials",
     "register": "Register",
     "admin": "Admin"
@@ -53,6 +54,11 @@
   "teachers": {
     "title": "Our Teachers",
     "subtitle": "Our Team of Qualified Teachers"
+  },
+  "lessons": {
+    "title": "Lessons from Our Sessions",
+    "subtitle": "Watch our recorded lessons from live sessions",
+    "noLessons": "No lessons available at the moment"
   },
   "packages": {
     "title": "Our Packages",

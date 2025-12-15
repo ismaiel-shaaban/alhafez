@@ -22,10 +22,11 @@ export default function Navbar() {
 
   const navLinks = [
     { href: '/', label: t('nav.home') },
-    { href: '/#features', label: t('nav.features') },
+    // { href: '/#features', label: t('nav.features') },
     { href: '/honor-board', label: t('nav.honorBoard') },
     { href: '/teachers', label: t('nav.teachers') },
     { href: '/packages', label: t('nav.packages') },
+    { href: '/lessons', label: t('nav.lessons') },
     { href: '/testimonials', label: t('nav.testimonials') },
     { href: '/register', label: t('nav.register') },
   ]
