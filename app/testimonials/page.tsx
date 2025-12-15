@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Navbar from '@/components/shared/Navbar'
 import Footer from '@/components/shared/Footer'
 import TestimonialsList from '@/components/testimonials/TestimonialsList'
+import ReviewForm from '@/components/testimonials/ReviewForm'
 
 export const metadata: Metadata = {
   title: 'آراء الطلاب | أكاديمية الحافظ - تجارب الطلاب',
@@ -26,6 +27,14 @@ export default function TestimonialsPage() {
           <TestimonialsList />
         </div>
       </section>
+      
+      {/* Review Form Section */}
+      <section className="py-20 bg-primary-50">
+        <div className="container-custom">
+          <ReviewForm />
+        </div>
+      </section>
+      
       <Footer />
     </div>
   )

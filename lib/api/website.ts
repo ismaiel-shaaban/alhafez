@@ -217,3 +217,43 @@ export const registerStudent = async (
   })
 }
 
+// Create review from website
+export interface CreateReviewRequest {
+  name: string
+  rating: number // Required, 1-5
+  review: string // Review text (will be sent to both review and review_en)
+  media_file?: File // Optional, media file (image or video)
+}
+
+export interface CreateReviewResponse {
+  id: number
+  name: string
+  rating: number
+  review: string
+  review_ar: string
+  review_en: string
+  media_file?: string
+  created_at?: string
+}
+
+export const createReview = async (
+  data: CreateReviewRequest,
+  locale?: string
+): Promise<CreateReviewResponse> => {
+  // Always use FormData for review submission (even without file, to match API expectations)
+  const formData = new FormData()
+  formData.append('name', data.name)
+  formData.append('rating', data.rating.toString())
+  formData.append('review', data.review)
+  formData.append('review_en', data.review) // Send same value to both fields
+  if (data.media_file) {
+    formData.append('media_file', data.media_file)
+  }
+  
+  return websiteApiRequest<CreateReviewResponse>('/api/reviews', {
+    method: 'POST',
+    body: formData,
+    locale,
+  })
+}
+

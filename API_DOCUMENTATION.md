@@ -267,6 +267,11 @@ GET /api/students?gender=male&per_page=10&page=1
                 "hourly_rate": 100.00,
                 "notes": "طالب مجتهد",
                 "subscriptions": [],
+                "subscriptions_statistics": {
+                    "total_subscriptions": 12,
+                    "paid_subscriptions": 3,
+                    "unpaid_subscriptions": 9
+                },
                 "created_at": "2024-01-01 00:00:00"
             }
         ],
@@ -324,7 +329,10 @@ Accept: application/json
     "session_duration": 60,
     "hourly_rate": 100.00,
     "notes": "طالب مجتهد",
-    "password": "password123"
+    "password": "password123",
+    "past_months_count": 7,
+    "paid_months_count": 5,
+    "subscription_start_date": "2025-05-10"
 }
 ```
 
@@ -345,8 +353,14 @@ Accept: application/json
 - `hourly_rate` (optional): Hourly rate for the teacher (numeric, min: 0)
 - `notes` (optional): Notes
 - `password` (optional): Password for student login (min: 6 characters). Password will be automatically hashed.
+- `past_months_count` (optional): Number of past months to create subscriptions for (integer, min: 0, max: 120). If provided along with `subscription_start_date`, past subscriptions will be created with all sessions marked as completed but subscriptions marked as unpaid.
+- `paid_months_count` (optional): Number of paid months (integer, min: 0, max: 120). The first N subscriptions (including past ones if applicable) will be marked as paid.
+- `subscription_start_date` (optional): Subscription start date (YYYY-MM-DD). Required if `past_months_count` is provided. Used to calculate past subscriptions.
 
-**Note:** When a student is created from the dashboard, the `type` is automatically set to `admin`. If a student registered from the website is later modified by the administration, their `type` changes to `admin`.
+**Note:** 
+- When a student is created from the dashboard, the `type` is automatically set to `admin`. If a student registered from the website is later modified by the administration, their `type` changes to `admin`.
+- If `monthly_sessions` and `weekly_schedule` (or `weekly_days`) are provided, 12 subscriptions will be automatically created for a full year.
+- If `past_months_count` and `subscription_start_date` are provided, past subscriptions will be created with all sessions marked as completed. These subscriptions will be marked as unpaid unless covered by `paid_months_count`.
 
 **Success Response (200):**
 ```json
@@ -379,6 +393,12 @@ Accept: application/json
         "session_duration": 60,
         "hourly_rate": 100.00,
         "notes": "طالب مجتهد",
+        "subscriptions": [],
+        "subscriptions_statistics": {
+            "total_subscriptions": 0,
+            "paid_subscriptions": 0,
+            "unpaid_subscriptions": 0
+        },
         "created_at": "2024-01-01 00:00:00"
     }
 }
@@ -447,6 +467,12 @@ lang: ar (optional)
         "session_duration": 60,
         "hourly_rate": 100.00,
         "notes": "طالب مجتهد",
+        "subscriptions": [],
+        "subscriptions_statistics": {
+            "total_subscriptions": 19,
+            "paid_subscriptions": 5,
+            "unpaid_subscriptions": 14
+        },
         "created_at": "2024-01-01 00:00:00"
     }
 }
@@ -464,7 +490,7 @@ lang: ar (optional)
 ---
 
 ### 2.4 Update Student
-**PUT** `/api/students/{id}`
+**POST** `/api/students/{id}`
 
 **Description:** Update student data. If subscription data is updated, incomplete future sessions will be recreated.
 
@@ -759,7 +785,7 @@ Accept: application/json
 ---
 
 ### 3.4 Update Session
-**PUT** `/api/student-sessions/{id}`
+**POST** `/api/student-sessions/{id}`
 
 **Description:** Update session data. If `is_completed` is set to `true`, `completed_at` will be set automatically.
 
@@ -992,7 +1018,7 @@ Accept: application/json
 ---
 
 ### 4.4 Update Teacher
-**PUT** `/api/teachers/{id}`
+**POST** `/api/teachers/{id}`
 
 **Request Body:** (all fields are optional)
 ```json
@@ -1238,7 +1264,7 @@ Accept: application/json
 ---
 
 ### 5.4 Update Package
-**PUT** `/api/packages/{id}`
+**POST** `/api/packages/{id}`
 
 **Request Body:** (all fields are optional)
 ```json
@@ -1443,7 +1469,7 @@ Accept: application/json
 ---
 
 ### 6.4 Update Review
-**PUT** `/api/reviews/{id}`
+**POST** `/api/reviews/{id}`
 
 **Request Body:** (all fields are optional)
 ```json
@@ -1845,7 +1871,7 @@ lang: ar (optional)
 ---
 
 ### 8.4 Update Honor Board Entry
-**PUT** `/api/honor-boards/{id}`
+**POST** `/api/honor-boards/{id}`
 
 **Request Type:** `multipart/form-data` (for certificate images upload)
 
@@ -1934,13 +1960,18 @@ lang: ar (optional)
                 "student_id": 1,
                 "subscription_code": "SUB-1-202401-01",
                 "start_date": "2024-01-01",
-                "end_date": "2024-01-28",
+                "end_date": "2024-02-05",
                 "sessions_per_week": 2,
+                "total_sessions": 8,
+                "completed_sessions_count": 8,
+                "remaining_sessions_count": 0,
                 "is_paid": true,
                 "payment_receipt_image": "http://domain.com/Admin/images/subscription-receipts/1234567890_abc123.jpg",
                 "is_active": false,
                 "is_upcoming": false,
                 "is_expired": true,
+                "notification_sent": true,
+                "notification_sent_at": "2024-02-01 10:30:00",
                 "created_at": "2024-01-01 00:00:00",
                 "updated_at": "2024-01-01 00:00:00"
             }
@@ -1956,14 +1987,19 @@ lang: ar (optional)
                 "id": 2,
                 "student_id": 1,
                 "subscription_code": "SUB-1-202402-02",
-                "start_date": "2024-02-01",
-                "end_date": "2024-02-28",
+                "start_date": "2024-02-05",
+                "end_date": "2024-03-12",
                 "sessions_per_week": 2,
+                "total_sessions": 8,
+                "completed_sessions_count": 0,
+                "remaining_sessions_count": 8,
                 "is_paid": false,
                 "payment_receipt_image": null,
                 "is_active": false,
                 "is_upcoming": true,
                 "is_expired": false,
+                "notification_sent": false,
+                "notification_sent_at": null,
                 "created_at": "2024-01-01 00:00:00",
                 "updated_at": "2024-01-01 00:00:00"
             }
@@ -1997,13 +2033,18 @@ lang: ar (optional)
             "student_id": 1,
             "subscription_code": "SUB-1-202401-01",
             "start_date": "2024-01-01",
-            "end_date": "2024-01-28",
+            "end_date": "2024-02-05",
             "sessions_per_week": 2,
+            "total_sessions": 8,
+            "completed_sessions_count": 6,
+            "remaining_sessions_count": 2,
             "is_paid": true,
             "payment_receipt_image": "http://domain.com/Admin/images/subscription-receipts/1234567890_abc123.jpg",
             "is_active": false,
             "is_upcoming": false,
-            "is_expired": true,
+            "is_expired": false,
+            "notification_sent": false,
+            "notification_sent_at": null,
             "created_at": "2024-01-01 00:00:00",
             "updated_at": "2024-01-01 00:00:00"
         },
@@ -2043,7 +2084,7 @@ lang: ar (optional)
 ### 9.3 Create Student Subscription
 **POST** `/api/student-subscriptions`
 
-**Description:** Create a monthly subscription for a student. This will automatically create 12 subscriptions (for a year) for the same student. Sessions are automatically generated based on the student's weekly schedule. The `sessions_per_week` is derived from the student's `weekly_schedule` or `weekly_days` and `hour` fields.
+**Description:** Create a subscription for a student. This will automatically create 12 subscriptions (for a year) for the same student. Each subscription contains a number of sessions equal to the student's `monthly_sessions`. The subscription end date is calculated dynamically based on the number of sessions and sessions per week. Sessions are automatically generated based on the student's weekly schedule. The `sessions_per_week` is derived from the student's `weekly_schedule` or `weekly_days` and `hour` fields.
 
 **Request Headers:**
 ```
@@ -2070,11 +2111,15 @@ Accept: application/json
 - `payment_receipt_image` (optional): Payment receipt image file (image file: jpeg, png, jpg, gif, max: 5MB)
 
 **Note:** 
-- A month is defined as 28 days (4 weeks)
+- Subscriptions are based on the number of sessions, not fixed calendar months
+- Each subscription contains `monthly_sessions` number of sessions (e.g., 8 sessions)
+- The subscription `end_date` is calculated dynamically: `start_date + (total_sessions / sessions_per_week) weeks + buffer`
 - When a subscription is created, 12 future subscriptions are automatically created for the same student
 - All future subscriptions are initially marked as unpaid
 - Sessions are generated automatically for the first paid subscription based on the student's weekly schedule
 - The `sessions_per_week` is automatically calculated from the student's `weekly_schedule` or `weekly_days` and `hour` fields
+- A subscription expires when all its sessions are completed (not based on end date)
+- When a subscription expires (all sessions completed), a notification is automatically sent to the student
 
 **Success Response (200):**
 ```json
@@ -2088,13 +2133,18 @@ Accept: application/json
                 "student_id": 1,
                 "subscription_code": "SUB-1-202401-01",
                 "start_date": "2024-01-01",
-                "end_date": "2024-01-28",
+                "end_date": "2024-02-05",
                 "sessions_per_week": 2,
+                "total_sessions": 8,
+                "completed_sessions_count": 0,
+                "remaining_sessions_count": 8,
                 "is_paid": true,
                 "payment_receipt_image": "http://domain.com/Admin/images/subscription-receipts/1234567890_abc123.jpg",
                 "is_active": true,
                 "is_upcoming": false,
                 "is_expired": false,
+                "notification_sent": false,
+                "notification_sent_at": null,
                 "created_at": "2024-01-01 00:00:00",
                 "updated_at": "2024-01-01 00:00:00"
             }
@@ -2116,7 +2166,7 @@ Accept: application/json
 ---
 
 ### 9.4 Update Student Subscription
-**PUT** `/api/student-subscriptions/{id}`
+**POST** `/api/student-subscriptions/{id}`
 
 **Description:** Update a student subscription. If the subscription is marked as paid and sessions haven't been generated yet, they will be created automatically.
 
@@ -2152,13 +2202,18 @@ Accept: application/json
         "student_id": 1,
         "subscription_code": "SUB-1-202401-01",
         "start_date": "2024-01-05",
-        "end_date": "2024-02-01",
+        "end_date": "2024-02-09",
         "sessions_per_week": 2,
+        "total_sessions": 8,
+        "completed_sessions_count": 0,
+        "remaining_sessions_count": 8,
         "is_paid": true,
         "payment_receipt_image": "http://domain.com/Admin/images/subscription-receipts/1234567890_abc123.jpg",
         "is_active": true,
         "is_upcoming": false,
         "is_expired": false,
+        "notification_sent": false,
+        "notification_sent_at": null,
         "created_at": "2024-01-01 00:00:00",
         "updated_at": "2024-01-05 10:30:00"
     }
@@ -2369,7 +2424,7 @@ lang: ar (optional)
 ---
 
 ### 10.4 Update Feature
-**PUT** `/api/features/{id}`
+**POST** `/api/features/{id}`
 
 **Description:** Update feature data
 
@@ -2530,7 +2585,7 @@ The Response will return data according to the specified language, with both ver
 5. Full support for Arabic and English languages
 6. All dates are returned in `Y-m-d H:i:s` format (example: `2024-01-01 00:00:00`)
 7. Pagination format is standardized across all endpoints: `{"total", "per_page", "current_page", "total_pages"}`
-8. Student subscriptions are monthly (28 days = 4 weeks). When creating a subscription, 12 subscriptions (for a year) are automatically created
+8. Student subscriptions are based on the number of sessions, not fixed calendar months. Each subscription contains `monthly_sessions` number of sessions. The subscription end date is calculated dynamically based on sessions count and sessions per week. When creating a subscription, 12 subscriptions (for a year) are automatically created. A subscription expires when all its sessions are completed, and a notification is automatically sent to the student.
 9. Student `weekly_schedule` allows each day to have a specific time (e.g., Saturday at 17:00, Tuesday at 14:00)
 10. Student `email` and `age` fields are optional
 11. Student `type` field distinguishes between `website` (registered from website) and `admin` (added/modified by admin)
@@ -2540,3 +2595,6 @@ The Response will return data according to the specified language, with both ver
 15. Payment proof images (teacher salary and student subscriptions) are uploaded as files
 16. Student `password` field is optional when creating/updating from dashboard. If provided, it will be automatically hashed and allows the student to login using phone and password.
 17. Teacher `password`, `phone`, and `email` fields are optional when creating/updating from dashboard. If `password` is provided along with `phone` or `email`, a User account will be automatically created/updated for the teacher to enable login functionality. The password will be automatically hashed.
+18. When creating a student, you can specify `past_months_count`, `paid_months_count`, and `subscription_start_date` to create past subscriptions with completed sessions. Past subscriptions are marked as unpaid unless covered by `paid_months_count`.
+19. Student resource includes `subscriptions_statistics` with `total_subscriptions`, `paid_subscriptions`, and `unpaid_subscriptions` counts. These statistics are automatically updated when subscriptions are created or payment status changes.
+20. Student subscription resource includes `total_sessions`, `completed_sessions_count`, `remaining_sessions_count`, `notification_sent`, and `notification_sent_at` fields to track subscription progress and expiry notifications.

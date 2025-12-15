@@ -91,7 +91,26 @@
   },
   "testimonials": {
     "title": "Student Testimonials",
-    "subtitle": "What Our Students Say About Us"
+    "subtitle": "What Our Students Say About Us",
+    "addReview": "Add Your Review",
+    "addReviewSubtitle": "Share your experience with Al-Hafez Academy",
+    "name": "Name",
+    "namePlaceholder": "Enter your name",
+    "rating": "Rating",
+    "review": "Review",
+    "reviewPlaceholder": "Write your review here...",
+    "reviewNote": "The same text will be sent for both Arabic and English",
+    "mediaFile": "Media File (Optional)",
+    "uploadClick": "Click to upload",
+    "uploadDrag": "or drag and drop file here",
+    "uploadInfo": "Image or video (jpeg, png, jpg, gif, mp4, mov - Max: 10MB)",
+    "submit": "Submit Review",
+    "submitting": "Submitting...",
+    "success": "Your review has been sent successfully! Thank you.",
+    "error": "An error occurred while sending your review",
+    "errorFileSize": "File size must be less than 10MB",
+    "errorFileType": "File type not supported. Please choose an image (jpeg, png, jpg, gif) or video (mp4, mov)",
+    "noReviews": "No reviews available at the moment"
   },
   "register": {
     "title": "Register with Us",
@@ -115,5 +134,8 @@
     "contact": "Contact Us",
     "followUs": "Follow Us",
     "rights": "All rights reserved"
+  },
+  "common": {
+    "seeAll": "See All"
   }
 }

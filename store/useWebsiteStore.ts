@@ -30,6 +30,7 @@ interface WebsiteState {
   fetchPackages: (isPopular?: boolean, page?: number) => Promise<void>
   fetchReviews: (rating?: number, packageId?: number, page?: number) => Promise<void>
   registerStudent: (data: websiteAPI.RegisterStudentRequest) => Promise<websiteAPI.RegisterStudentResponse>
+  createReview: (data: websiteAPI.CreateReviewRequest) => Promise<websiteAPI.CreateReviewResponse>
 }
 
 export const useWebsiteStore = create<WebsiteState>((set, get) => ({
@@ -169,6 +170,23 @@ export const useWebsiteStore = create<WebsiteState>((set, get) => ({
       set({
         isLoading: false,
         error: error.message || 'فشل تسجيل الطالب',
+      })
+      throw error
+    }
+  },
+
+  // Create review
+  createReview: async (data) => {
+    set({ isLoading: true, error: null })
+    try {
+      const locale = getCurrentLocale()
+      const response = await websiteAPI.createReview(data, locale)
+      set({ isLoading: false })
+      return response
+    } catch (error: any) {
+      set({
+        isLoading: false,
+        error: error.message || 'فشل إرسال الرأي',
       })
       throw error
     }
