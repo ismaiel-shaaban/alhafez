@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 export default function HonorBoardPage() {
   const { 
     honorBoard, 
+    honorBoardMeta,
     isLoadingHonorBoard, 
     fetchHonorBoard, 
     getHonorEntry,
@@ -25,6 +26,7 @@ export default function HonorBoardPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStudentId, setFilterStudentId] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
   const [formData, setFormData] = useState({
     student_id: '',
     level: '',
@@ -39,11 +41,16 @@ export default function HonorBoardPage() {
     fetchStudents()
   }, [fetchHonorBoard, fetchStudents])
 
+  // Reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filterStudentId])
+
   // Apply API filter when student filter changes
   useEffect(() => {
     const studentId = filterStudentId ? parseInt(filterStudentId) : undefined
-    fetchHonorBoard(studentId)
-  }, [filterStudentId, fetchHonorBoard])
+    fetchHonorBoard(studentId, currentPage)
+  }, [currentPage, filterStudentId, fetchHonorBoard])
 
   // Filter by search term (client-side)
   const filteredEntries = honorBoard.filter((entry) => {
@@ -296,6 +303,29 @@ export default function HonorBoardPage() {
               ))
             )}
           </div>
+
+          {/* Pagination */}
+          {honorBoardMeta && honorBoardMeta.last_page > 1 && (
+            <div className="flex items-center justify-center gap-2 p-4 border-t border-primary-200">
+              <button
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="px-4 py-2 border-2 border-primary-300 rounded-lg hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                السابق
+              </button>
+              <span className="px-4 py-2 text-primary-700">
+                صفحة {currentPage} من {honorBoardMeta.last_page}
+              </span>
+              <button
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage >= honorBoardMeta.last_page}
+                className="px-4 py-2 border-2 border-primary-300 rounded-lg hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                التالي
+              </button>
+            </div>
+          )}
         </>
       )}
 

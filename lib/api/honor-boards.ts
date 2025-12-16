@@ -29,11 +29,13 @@ export interface CreateHonorBoardRequest {
 export const listHonorBoards = async (
   studentId?: number,
   perPage: number = 15,
+  page: number = 1,
   locale?: string
 ): Promise<{ honor_boards: HonorBoardEntry[]; pagination: any }> => {
   const params = new URLSearchParams()
   if (studentId) params.append('student_id', studentId.toString())
   params.append('per_page', perPage.toString())
+  params.append('page', page.toString())
 
   // API returns: { status: true, message: "...", data: { honor_boards: [...], pagination: {...} } }
   return apiRequest<{ honor_boards: HonorBoardEntry[]; pagination: any }>(

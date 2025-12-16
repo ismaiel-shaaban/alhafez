@@ -6,7 +6,7 @@ import { Plus, Edit, Trash2, X, Eye, Search, Check, Filter } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function PackagesPage() {
-  const { packages, isLoadingPackages, fetchPackages, getPackage, addPackage, updatePackage, deletePackage, error } = useAdminStore()
+  const { packages, packagesMeta, isLoadingPackages, fetchPackages, getPackage, addPackage, updatePackage, deletePackage, error } = useAdminStore()
   const [showModal, setShowModal] = useState(false)
   const [showViewModal, setShowViewModal] = useState(false)
   const [viewedPackage, setViewedPackage] = useState<any>(null)
@@ -27,10 +27,15 @@ export default function PackagesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterPopular, setFilterPopular] = useState<boolean | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
-    fetchPackages(filterPopular === null ? undefined : filterPopular)
-  }, [fetchPackages, filterPopular])
+    setCurrentPage(1) // Reset to first page when filter changes
+  }, [filterPopular])
+
+  useEffect(() => {
+    fetchPackages(filterPopular === null ? undefined : filterPopular, currentPage)
+  }, [fetchPackages, filterPopular, currentPage])
 
   const filteredPackages = packages.filter((pkg) => {
     if (searchTerm) {
@@ -286,6 +291,29 @@ export default function PackagesPage() {
               ))
             )}
           </div>
+
+          {/* Pagination */}
+          {packagesMeta && packagesMeta.last_page > 1 && (
+            <div className="flex items-center justify-center gap-2 p-4 border-t border-primary-200">
+              <button
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="px-4 py-2 border-2 border-primary-300 rounded-lg hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                السابق
+              </button>
+              <span className="px-4 py-2 text-primary-700">
+                صفحة {currentPage} من {packagesMeta.last_page}
+              </span>
+              <button
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage >= packagesMeta.last_page}
+                className="px-4 py-2 border-2 border-primary-300 rounded-lg hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                التالي
+              </button>
+            </div>
+          )}
         </>
       )}
 

@@ -18,6 +18,7 @@ const DAYS_OF_WEEK = [
 export default function StudentsPage() {
   const { 
     students, 
+    studentsMeta,
     isLoadingStudents, 
     fetchStudents, 
     getStudent,
@@ -47,6 +48,7 @@ export default function StudentsPage() {
     teacher_id: '',
     search: '',
   })
+  const [currentPage, setCurrentPage] = useState(1)
   
   // Student modals
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -123,14 +125,20 @@ export default function StudentsPage() {
 
   // Apply filters when they change
   useEffect(() => {
+    setCurrentPage(1) // Reset to first page when filters change
+  }, [filters.type, filters.package_id, filters.gender, filters.teacher_id])
+
+  useEffect(() => {
     const apiFilters: any = {}
     if (filters.type) apiFilters.type = filters.type
     if (filters.package_id) apiFilters.package_id = parseInt(filters.package_id)
     if (filters.gender) apiFilters.gender = filters.gender
     if (filters.teacher_id) apiFilters.teacher_id = parseInt(filters.teacher_id)
+    apiFilters.page = currentPage
+    apiFilters.per_page = 15
     
     fetchStudents(apiFilters)
-  }, [filters.type, filters.package_id, filters.gender, filters.teacher_id, fetchStudents])
+  }, [currentPage, filters.type, filters.package_id, filters.gender, filters.teacher_id, fetchStudents])
 
   // Filter students by search term (client-side for name/email)
   const filteredStudents = students.filter((student) => {
@@ -150,7 +158,7 @@ export default function StudentsPage() {
       setViewingId(id)
       setShowViewModal(true)
       // Load sessions for this student
-      await fetchSessions({ student_id: id })
+      await fetchSessions({ student_id: id, per_page: 10000 })
     } catch (error: any) {
       alert(error.message || 'فشل تحميل بيانات الطالب')
     }
@@ -416,7 +424,7 @@ export default function StudentsPage() {
   // Session handlers
   const handleViewSessions = async (studentId: number) => {
     setSelectedStudentId(studentId)
-    await fetchSessions({ student_id: studentId })
+    await fetchSessions({ student_id: studentId, per_page: 10000 })
     setShowSessionsModal(true)
   }
 
@@ -442,7 +450,7 @@ export default function StudentsPage() {
         notes: '',
       })
       setShowAddSessionModal(false)
-      await fetchSessions({ student_id: selectedStudentId })
+      await fetchSessions({ student_id: selectedStudentId, per_page: 10000 })
     } catch (error: any) {
       alert(error.message || 'حدث خطأ أثناء إضافة الحصة')
     } finally {
@@ -455,7 +463,7 @@ export default function StudentsPage() {
       try {
         await completeSession(id)
         if (selectedStudentId) {
-          await fetchSessions({ student_id: selectedStudentId })
+          await fetchSessions({ student_id: selectedStudentId, per_page: 10000 })
         }
       } catch (error: any) {
         alert(error.message || 'حدث خطأ أثناء تسجيل إتمام الحصة')
@@ -468,7 +476,7 @@ export default function StudentsPage() {
       try {
         await deleteSession(id)
         if (selectedStudentId) {
-          await fetchSessions({ student_id: selectedStudentId })
+          await fetchSessions({ student_id: selectedStudentId, per_page: 10000 })
         }
       } catch (error: any) {
         alert(error.message || 'حدث خطأ أثناء حذف الحصة')
@@ -666,6 +674,28 @@ export default function StudentsPage() {
               </tbody>
             </table>
           </div>
+          {/* Pagination */}
+          {studentsMeta && studentsMeta.last_page > 1 && (
+            <div className="flex items-center justify-center gap-2 p-4 border-t border-primary-200">
+              <button
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="px-4 py-2 border-2 border-primary-300 rounded-lg hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                السابق
+              </button>
+              <span className="px-4 py-2 text-primary-700">
+                صفحة {currentPage} من {studentsMeta.last_page}
+              </span>
+              <button
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage >= studentsMeta.last_page}
+                className="px-4 py-2 border-2 border-primary-300 rounded-lg hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                التالي
+              </button>
+            </div>
+          )}
         </div>
       )}
 

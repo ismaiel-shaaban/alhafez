@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 export default function LessonsPage() {
   const { 
     lessons, 
+    lessonsMeta,
     isLoadingLessons, 
     fetchLessons, 
     getLesson,
@@ -31,10 +32,11 @@ export default function LessonsPage() {
     description: '',
     description_en: '',
   })
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
-    fetchLessons()
-  }, [fetchLessons])
+    fetchLessons({ page: currentPage, per_page: 15 })
+  }, [fetchLessons, currentPage])
 
   // Filter by search term (client-side)
   const filteredLessons = lessons.filter((lesson) => {
@@ -278,6 +280,29 @@ export default function LessonsPage() {
               ))
             )}
           </div>
+
+          {/* Pagination */}
+          {lessonsMeta && lessonsMeta.last_page > 1 && (
+            <div className="flex items-center justify-center gap-2 p-4 border-t border-primary-200">
+              <button
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="px-4 py-2 border-2 border-primary-300 rounded-lg hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                السابق
+              </button>
+              <span className="px-4 py-2 text-primary-700">
+                صفحة {currentPage} من {lessonsMeta.last_page}
+              </span>
+              <button
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage >= lessonsMeta.last_page}
+                className="px-4 py-2 border-2 border-primary-300 rounded-lg hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                التالي
+              </button>
+            </div>
+          )}
         </>
       )}
 
