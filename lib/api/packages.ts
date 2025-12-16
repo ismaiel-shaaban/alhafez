@@ -31,11 +31,13 @@ export interface CreatePackageRequest {
 export const listPackages = async (
   isPopular?: boolean,
   perPage: number = 15,
+  page: number = 1,
   locale?: string
 ): Promise<{ packages: Package[]; pagination: any }> => {
   const params = new URLSearchParams()
   if (isPopular !== undefined) params.append('is_popular', isPopular.toString())
   params.append('per_page', perPage.toString())
+  params.append('page', page.toString())
 
   // API returns: { status: true, message: "...", data: { packages: [...], pagination: {...} } }
   return apiRequest<{ packages: Package[]; pagination: any }>(

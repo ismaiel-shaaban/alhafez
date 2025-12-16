@@ -6,7 +6,7 @@ import { Plus, Edit, Trash2, X, Eye, Search } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function TeachersPage() {
-  const { teachers, isLoadingTeachers, fetchTeachers, getTeacher, addTeacher, updateTeacher, deleteTeacher, error } = useAdminStore()
+  const { teachers, teachersMeta, isLoadingTeachers, fetchTeachers, getTeacher, addTeacher, updateTeacher, deleteTeacher, error } = useAdminStore()
   const [showModal, setShowModal] = useState(false)
   const [showViewModal, setShowViewModal] = useState(false)
   const [viewedTeacher, setViewedTeacher] = useState<any>(null)
@@ -25,10 +25,11 @@ export default function TeachersPage() {
   })
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
-    fetchTeachers()
-  }, [fetchTeachers])
+    fetchTeachers(currentPage)
+  }, [fetchTeachers, currentPage])
 
   const filteredTeachers = teachers.filter((teacher) => {
     if (!searchTerm) return true
@@ -272,6 +273,29 @@ export default function TeachersPage() {
               ))
             )}
           </div>
+
+          {/* Pagination */}
+          {teachersMeta && teachersMeta.last_page > 1 && (
+            <div className="flex items-center justify-center gap-2 p-4 border-t border-primary-200">
+              <button
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="px-4 py-2 border-2 border-primary-300 rounded-lg hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                السابق
+              </button>
+              <span className="px-4 py-2 text-primary-700">
+                صفحة {currentPage} من {teachersMeta.last_page}
+              </span>
+              <button
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage >= teachersMeta.last_page}
+                className="px-4 py-2 border-2 border-primary-300 rounded-lg hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                التالي
+              </button>
+            </div>
+          )}
         </>
       )}
 

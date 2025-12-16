@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 export default function TestimonialsPage() {
   const { 
     reviews, 
+    reviewsMeta,
     isLoadingReviews, 
     fetchReviews, 
     getReview,
@@ -31,6 +32,7 @@ export default function TestimonialsPage() {
     package_id: '',
     student_id: '',
   })
+  const [currentPage, setCurrentPage] = useState(1)
   const [formData, setFormData] = useState({
     type: 'review' as 'review' | 'rating',
     student_id: '',
@@ -47,15 +49,22 @@ export default function TestimonialsPage() {
     fetchPackages()
   }, [fetchReviews, fetchStudents, fetchPackages])
 
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filters.rating, filters.package_id, filters.student_id])
+
   // Apply API filters when they change
   useEffect(() => {
     const apiFilters: any = {}
     if (filters.rating) apiFilters.rating = parseInt(filters.rating)
     if (filters.package_id) apiFilters.package_id = parseInt(filters.package_id)
     if (filters.student_id) apiFilters.student_id = parseInt(filters.student_id)
+    apiFilters.page = currentPage
+    apiFilters.per_page = 15
     
     fetchReviews(apiFilters)
-  }, [filters.rating, filters.package_id, filters.student_id, fetchReviews])
+  }, [currentPage, filters.rating, filters.package_id, filters.student_id, fetchReviews])
 
   // Filter by search term (client-side)
   const filteredReviews = reviews.filter((review) => {
@@ -326,6 +335,29 @@ export default function TestimonialsPage() {
               })
             )}
           </div>
+
+          {/* Pagination */}
+          {reviewsMeta && reviewsMeta.last_page > 1 && (
+            <div className="flex items-center justify-center gap-2 p-4 border-t border-primary-200">
+              <button
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="px-4 py-2 border-2 border-primary-300 rounded-lg hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                السابق
+              </button>
+              <span className="px-4 py-2 text-primary-700">
+                صفحة {currentPage} من {reviewsMeta.last_page}
+              </span>
+              <button
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage >= reviewsMeta.last_page}
+                className="px-4 py-2 border-2 border-primary-300 rounded-lg hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                التالي
+              </button>
+            </div>
+          )}
         </>
       )}
 

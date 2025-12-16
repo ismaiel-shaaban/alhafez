@@ -26,6 +26,7 @@ const iconOptions = [
 export default function FeaturesPage() {
   const { 
     features, 
+    featuresMeta,
     isLoadingFeatures, 
     fetchFeatures, 
     getFeature,
@@ -41,6 +42,7 @@ export default function FeaturesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterActive, setFilterActive] = useState<boolean | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
   const [formData, setFormData] = useState({
     title: '',
     title_en: '',
@@ -55,12 +57,19 @@ export default function FeaturesPage() {
     fetchFeatures()
   }, [fetchFeatures])
 
+  // Reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filterActive])
+
   // Apply API filter when active filter changes
   useEffect(() => {
     const filters: any = {}
     if (filterActive !== null) filters.is_active = filterActive
+    filters.page = currentPage
+    filters.per_page = 15
     fetchFeatures(filters)
-  }, [filterActive, fetchFeatures])
+  }, [currentPage, filterActive, fetchFeatures])
 
   // Filter by search term (client-side)
   const filteredFeatures = features.filter((feature) => {
@@ -280,6 +289,29 @@ export default function FeaturesPage() {
               ))
             )}
           </div>
+
+          {/* Pagination */}
+          {featuresMeta && featuresMeta.last_page > 1 && (
+            <div className="flex items-center justify-center gap-2 p-4 border-t border-primary-200">
+              <button
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="px-4 py-2 border-2 border-primary-300 rounded-lg hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                السابق
+              </button>
+              <span className="px-4 py-2 text-primary-700">
+                صفحة {currentPage} من {featuresMeta.last_page}
+              </span>
+              <button
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage >= featuresMeta.last_page}
+                className="px-4 py-2 border-2 border-primary-300 rounded-lg hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                التالي
+              </button>
+            </div>
+          )}
         </>
       )}
 

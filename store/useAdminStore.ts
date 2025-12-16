@@ -91,7 +91,7 @@ interface AdminState {
     last_page: number
   } | null
   isLoadingPackages: boolean
-  fetchPackages: (isPopular?: boolean) => Promise<void>
+  fetchPackages: (isPopular?: boolean, page?: number) => Promise<void>
   getPackage: (id: number) => Promise<Package>
   addPackage: (pkg: packagesAPI.CreatePackageRequest) => Promise<void>
   updatePackage: (id: number, pkg: Partial<packagesAPI.CreatePackageRequest>) => Promise<void>
@@ -119,7 +119,7 @@ interface AdminState {
     last_page: number
   } | null
   isLoadingHonorBoard: boolean
-  fetchHonorBoard: (studentId?: number) => Promise<void>
+  fetchHonorBoard: (studentId?: number, page?: number) => Promise<void>
   getHonorEntry: (id: number) => Promise<HonorBoardEntry>
   addHonorEntry: (entry: honorBoardsAPI.CreateHonorBoardRequest) => Promise<void>
   updateHonorEntry: (id: number, entry: Partial<honorBoardsAPI.CreateHonorBoardRequest>) => Promise<void>
@@ -514,11 +514,11 @@ export const useAdminStore = create<AdminState>()(
       packages: [],
       packagesMeta: null,
       isLoadingPackages: false,
-      fetchPackages: async (isPopular) => {
+      fetchPackages: async (isPopular, page = 1) => {
         set({ isLoadingPackages: true, error: null })
         try {
           const locale = getCurrentLocale()
-          const response = await packagesAPI.listPackages(isPopular, 15, locale)
+          const response = await packagesAPI.listPackages(isPopular, 15, page, locale)
           set({
             packages: response.packages || [],
             packagesMeta: response.pagination ? {
@@ -678,11 +678,11 @@ export const useAdminStore = create<AdminState>()(
       honorBoard: [],
       honorBoardMeta: null,
       isLoadingHonorBoard: false,
-      fetchHonorBoard: async (studentId) => {
+      fetchHonorBoard: async (studentId, page = 1) => {
         set({ isLoadingHonorBoard: true, error: null })
         try {
           const locale = getCurrentLocale()
-          const response = await honorBoardsAPI.listHonorBoards(studentId, 15, locale)
+          const response = await honorBoardsAPI.listHonorBoards(studentId, 15, page, locale)
           set({
             honorBoard: response.honor_boards || [],
             honorBoardMeta: response.pagination ? {
