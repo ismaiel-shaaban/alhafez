@@ -120,7 +120,7 @@ export default function StudentsPage() {
   useEffect(() => {
     fetchStudents()
     fetchPackages()
-    fetchTeachers()
+    fetchTeachers(1, 1000)
   }, [fetchStudents, fetchPackages, fetchTeachers])
 
   // Apply filters when they change
