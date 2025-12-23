@@ -64,11 +64,25 @@ export const useWebsiteStore = create<WebsiteState>((set, get) => ({
     try {
       const locale = getCurrentLocale()
       const data = await websiteAPI.getWebsiteData(locale)
+      // Remove duplicates based on id
+      const uniquePackages = Array.from(
+        new Map((data.packages || []).map((pkg) => [pkg.id, pkg])).values()
+      )
+      const uniqueFeatures = Array.from(
+        new Map((data.features || []).map((feature) => [feature.id, feature])).values()
+      )
+      const uniqueTeachers = Array.from(
+        new Map((data.teachers || []).map((teacher) => [teacher.id, teacher])).values()
+      )
+      const uniqueReviews = Array.from(
+        new Map((data.reviews || []).map((review) => [review.id, review])).values()
+      )
+      
       set({
-        features: data.features || [],
-        packages: data.packages || [],
-        teachers: data.teachers || [],
-        reviews: data.reviews || [],
+        features: uniqueFeatures,
+        packages: uniquePackages,
+        teachers: uniqueTeachers,
+        reviews: uniqueReviews,
         isLoading: false,
       })
     } catch (error: any) {
@@ -177,8 +191,12 @@ export const useWebsiteStore = create<WebsiteState>((set, get) => ({
     try {
       const locale = getCurrentLocale()
       const response = await websiteAPI.listLessons(page, 15, locale)
+      // Remove duplicates based on id
+      const uniqueLessons = Array.from(
+        new Map((response.lessons || []).map((lesson) => [lesson.id, lesson])).values()
+      )
       set({
-        lessons: response.lessons || [],
+        lessons: uniqueLessons,
         lessonsPagination: response.pagination ? {
           current_page: response.pagination.current_page || 1,
           total: response.pagination.total || 0,

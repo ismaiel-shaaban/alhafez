@@ -368,13 +368,13 @@ export default function LessonsPage() {
                   {viewedLesson.created_at && (
                     <div>
                       <label className="block text-primary-600 text-sm mb-1">تاريخ الإنشاء</label>
-                      <p className="text-primary-900">{new Date(viewedLesson.created_at).toLocaleDateString('ar-SA')}</p>
+                      <p className="text-primary-900">{new Date(viewedLesson.created_at).toLocaleDateString('ar-EG')}</p>
                     </div>
                   )}
                   {viewedLesson.updated_at && (
                     <div>
                       <label className="block text-primary-600 text-sm mb-1">تاريخ التحديث</label>
-                      <p className="text-primary-900">{new Date(viewedLesson.updated_at).toLocaleDateString('ar-SA')}</p>
+                      <p className="text-primary-900">{new Date(viewedLesson.updated_at).toLocaleDateString('ar-EG')}</p>
                     </div>
                   )}
                 </div>

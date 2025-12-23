@@ -17,6 +17,8 @@ import {
   DollarSign,
   BookOpen,
   Video,
+  Calendar,
+  FileText,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -67,6 +69,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const navItems = [
     { href: '/admin/dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
+    { href: '/admin/sessions', label: 'حصص اليوم', icon: Calendar },
     { href: '/admin/website-students', label: 'الطلاب الجدد من الموقع', icon: Users },
     { href: '/admin/students', label: 'الطلاب', icon: Users },
     { href: '/admin/teachers', label: 'المعلمين', icon: GraduationCap },
@@ -74,6 +77,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/packages', label: 'الباقات', icon: Package },
     { href: '/admin/features', label: 'المميزات', icon: BookOpen },
     { href: '/admin/lessons', label: 'فيديوهات من الحصص', icon: Video },
+    { href: '/admin/certificates', label: 'شهادات التقدير', icon: FileText },
     { href: '/admin/testimonials', label: 'آراء الطلاب', icon: MessageSquare },
     { href: '/admin/honor-board', label: 'لوحة الشرف', icon: Award },
   ]

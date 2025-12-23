@@ -100,10 +100,11 @@ export default function TestimonialsList({ showTitle = true, headingLevel = 'h1'
             spaceBetween={32}
             slidesPerView={1}
             slidesPerGroup={1}
-            navigation={{
-              nextEl: '.swiper-button-next-custom',
-              prevEl: '.swiper-button-prev-custom',
-            }}
+            speed={300}
+            watchSlidesProgress={true}
+            allowSlidePrev={true}
+            allowSlideNext={true}
+            navigation={false}
             pagination={{
               clickable: true,
               el: '.swiper-pagination-custom',
@@ -118,18 +119,22 @@ export default function TestimonialsList({ showTitle = true, headingLevel = 'h1'
             breakpoints={{
               640: {
                 slidesPerView: 1,
+                slidesPerGroup: 1,
                 spaceBetween: 24,
               },
               768: {
                 slidesPerView: 2,
+                slidesPerGroup: 1,
                 spaceBetween: 32,
               },
               1024: {
                 slidesPerView: 3,
+                slidesPerGroup: 1,
                 spaceBetween: 32,
               },
             }}
-            loop={reviews.length > 3}
+            loop={false}
+            allowTouchMove={true}
             className="!pb-12"
             dir={currentLocale === 'ar' ? 'rtl' : 'ltr'}
             onSwiper={(swiper) => {
@@ -198,15 +203,23 @@ export default function TestimonialsList({ showTitle = true, headingLevel = 'h1'
 
           {/* Custom Navigation Buttons */}
           <button
-            onClick={() => swiperRef.current?.slidePrev()}
-            className="swiper-button-prev-custom absolute right-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-white rounded-full p-3 shadow-lg hover:shadow-xl transition-all border-2 border-primary-200 hover:border-primary-400 z-10"
+            onClick={() => {
+              if (swiperRef.current && !swiperRef.current.isBeginning) {
+                swiperRef.current.slidePrev()
+              }
+            }}
+            className="swiper-button-prev-custom absolute right-[-38px] top-1/2 -translate-y-1/2 -translate-x-4 bg-white rounded-full p-3 shadow-lg hover:shadow-xl transition-all border-2 border-primary-200 hover:border-primary-400 z-10 disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Previous"
           >
             <ChevronRight className="w-6 h-6 text-primary-600" />
           </button>
           <button
-            onClick={() => swiperRef.current?.slideNext()}
-            className="swiper-button-next-custom absolute left-0 top-1/2 -translate-y-1/2 translate-x-4 bg-white rounded-full p-3 shadow-lg hover:shadow-xl transition-all border-2 border-primary-200 hover:border-primary-400 z-10"
+            onClick={() => {
+              if (swiperRef.current && !swiperRef.current.isEnd) {
+                swiperRef.current.slideNext()
+              }
+            }}
+            className="swiper-button-next-custom absolute left-[-38px] top-1/2 -translate-y-1/2 translate-x-4 bg-white rounded-full p-3 shadow-lg hover:shadow-xl transition-all border-2 border-primary-200 hover:border-primary-400 z-10 disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Next"
           >
             <ChevronLeft className="w-6 h-6 text-primary-600" />

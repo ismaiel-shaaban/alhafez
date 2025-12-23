@@ -41,7 +41,7 @@ export default function Home() {
       <AnimatedSection id="packages" className="py-20 bg-white" delay={0.2}>
         <div className="container-custom">
           <SectionWrapper delay={0.4}>
-            <PackagesList headingLevel="h2" />
+            <PackagesList headingLevel="h2" carousel={true} />
           </SectionWrapper>
         </div>
       </AnimatedSection>
@@ -50,7 +50,7 @@ export default function Home() {
       <AnimatedSection id="lessons" className="py-20 bg-primary-50" delay={0.2}>
         <div className="container-custom">
           <SectionWrapper delay={0.4}>
-            <LessonsList headingLevel="h2" limit={6} />
+            <LessonsList headingLevel="h2" limit={6} carousel={true} />
           </SectionWrapper>
         </div>
       </AnimatedSection>
@@ -59,7 +59,7 @@ export default function Home() {
       <AnimatedSection id="teachers" className="py-20 bg-white" delay={0.2}>
         <div className="container-custom">
           <SectionWrapper delay={0.4}>
-            <TeachersList headingLevel="h2" limit={4} />
+            <TeachersList headingLevel="h2" limit={4} carousel={true} />
           </SectionWrapper>
         </div>
       </AnimatedSection>
