@@ -8,4 +8,5 @@ export * from './honor-boards'
 export * from './sessions'
 export * from './teacher-salary'
 export * from './features'
+export * from './certificates'
 

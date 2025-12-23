@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useAdminStore } from '@/store/useAdminStore'
-import { Users, BookOpen, GraduationCap, MessageSquare, Award } from 'lucide-react'
+import { Users, BookOpen, GraduationCap, MessageSquare, Award, Calendar } from 'lucide-react'
 import Link from 'next/link'
 
 export default function AdminDashboard() {
@@ -12,6 +12,11 @@ export default function AdminDashboard() {
     packages, 
     reviews, 
     honorBoard,
+    studentsMeta,
+    teachersMeta,
+    packagesMeta,
+    reviewsMeta,
+    honorBoardMeta,
     fetchStudents,
     fetchTeachers,
     fetchPackages,
@@ -31,38 +36,45 @@ export default function AdminDashboard() {
   const stats = [
     {
       title: 'إجمالي الطلاب',
-      value: (students?.length || 0).toString(),
+      value: (studentsMeta?.total || students?.length || 0).toString(),
       icon: <Users className="w-8 h-8" />,
       color: 'bg-blue-500',
       href: '/admin/students',
     },
     {
       title: 'المعلمين',
-      value: (teachers?.length || 0).toString(),
+      value: (teachersMeta?.total || teachers?.length || 0).toString(),
       icon: <GraduationCap className="w-8 h-8" />,
       color: 'bg-green-500',
       href: '/admin/teachers',
     },
     {
       title: 'الباقات',
-      value: (packages?.length || 0).toString(),
+      value: (packagesMeta?.total || packages?.length || 0).toString(),
       icon: <BookOpen className="w-8 h-8" />,
       color: 'bg-purple-500',
       href: '/admin/packages',
     },
     {
       title: 'آراء الطلاب',
-      value: (reviews?.length || 0).toString(),
+      value: (reviewsMeta?.total || reviews?.length || 0).toString(),
       icon: <MessageSquare className="w-8 h-8" />,
       color: 'bg-yellow-500',
       href: '/admin/testimonials',
     },
     {
       title: 'لوحة الشرف',
-      value: (honorBoard?.length || 0).toString(),
+      value: (honorBoardMeta?.total || honorBoard?.length || 0).toString(),
       icon: <Award className="w-8 h-8" />,
       color: 'bg-orange-500',
       href: '/admin/honor-board',
+    },
+    {
+      title: 'الحصص',
+      value: 'عرض',
+      icon: <Calendar className="w-8 h-8" />,
+      color: 'bg-indigo-500',
+      href: '/admin/sessions',
     },
   ]
 

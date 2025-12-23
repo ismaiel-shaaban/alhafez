@@ -9,8 +9,13 @@ export interface StudentSession {
   day_of_week: string
   day_of_week_label?: string // Localized day label (e.g., "السبت", "Saturday")
   is_completed: boolean
-  completed_at?: string
-  notes?: string
+  completed_at?: string | null
+  status: string // "pending", "completed", etc.
+  status_label?: string // Localized status label
+  new_date?: string | null
+  new_time?: string | null
+  reason?: string | null
+  notes?: string | null
   student?: {
     id: number
     name: string
@@ -105,5 +110,33 @@ export const deleteSession = async (id: number): Promise<void> => {
   return apiRequest(`/api/student-sessions/${id}`, {
     method: 'DELETE',
   })
+}
+
+// Response type for getSessionsByDate
+export interface SessionsByDateResponse {
+  date: string
+  sessions: StudentSession[]
+  statistics: {
+    total_sessions: number
+    completed_sessions: number
+    pending_sessions: number
+  }
+}
+
+// Get sessions by date
+export const getSessionsByDate = async (
+  date: string, // YYYY-MM-DD
+  isCompleted?: boolean,
+  locale?: string
+): Promise<SessionsByDateResponse> => {
+  const params = new URLSearchParams()
+  params.append('date', date)
+  if (isCompleted !== undefined) {
+    params.append('is_completed', isCompleted.toString())
+  }
+  return apiRequest<SessionsByDateResponse>(
+    `/api/student-sessions/by-date?${params.toString()}`,
+    { locale }
+  )
 }
 
