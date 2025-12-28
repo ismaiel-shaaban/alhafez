@@ -9,6 +9,8 @@ import Link from 'next/link'
 export default function TeacherSalaryPage() {
   const { 
     teachers,
+    teachersMeta,
+    isLoadingTeachers,
     fetchTeachers,
     getTeacherSalary,
     markPaymentAsPaid,
@@ -25,31 +27,32 @@ export default function TeacherSalaryPage() {
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
   const [paymentForm, setPaymentForm] = useState({
     payment_proof_image: null as File | null,
     notes: '',
   })
 
+  // Set default month to current month
   useEffect(() => {
-    fetchTeachers()
-    // Set default month to current month
     const now = new Date()
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
     setSelectedMonth(currentMonth)
-  }, [fetchTeachers])
+  }, [])
 
-  const filteredTeachers = teachers.filter((teacher) => {
-    if (!searchTerm) return true
-    const search = searchTerm.toLowerCase()
-    return (
-      teacher.name.toLowerCase().includes(search) ||
-      teacher.name_ar?.toLowerCase().includes(search) ||
-      teacher.name_en?.toLowerCase().includes(search) ||
-      teacher.specialization?.toLowerCase().includes(search) ||
-      teacher.specialization_ar?.toLowerCase().includes(search) ||
-      teacher.specialization_en?.toLowerCase().includes(search)
-    )
-  })
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm])
+
+  // Fetch teachers with search and pagination
+  useEffect(() => {
+    const search = searchTerm.trim() || undefined
+    fetchTeachers(currentPage, 15, search)
+  }, [fetchTeachers, currentPage, searchTerm])
+
+  // Teachers are now filtered on the API side, so we use them directly
+  const filteredTeachers = teachers
 
   const handleViewSalary = async (teacherId: number) => {
     if (!selectedMonth) {
@@ -122,7 +125,9 @@ export default function TeacherSalaryPage() {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-4xl font-bold text-primary-900">حسابات المعلمين</h1>
         <div className="flex items-center gap-4">
-          <div className="text-primary-600 font-medium">إجمالي المعلمين: {teachers.length}</div>
+          <div className="text-primary-600 font-medium">
+            إجمالي المعلمين: {teachersMeta?.total || teachers.length}
+          </div>
         </div>
       </div>
 
@@ -162,13 +167,19 @@ export default function TeacherSalaryPage() {
       </div>
 
       {/* Teachers List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredTeachers.length === 0 ? (
-          <div className="col-span-full text-center py-12 text-primary-600">
-            {searchTerm ? 'لا توجد نتائج' : 'لا يوجد معلمون مسجلون بعد'}
-          </div>
-        ) : (
-          filteredTeachers.map((teacher) => (
+      {isLoadingTeachers ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredTeachers.length === 0 ? (
+              <div className="col-span-full text-center py-12 text-primary-600">
+                {searchTerm ? 'لا توجد نتائج' : 'لا يوجد معلمون مسجلون بعد'}
+              </div>
+            ) : (
+              filteredTeachers.map((teacher) => (
             <div
               key={teacher.id}
               className="bg-white p-6 rounded-xl border-2 border-primary-200 shadow-lg hover:shadow-xl transition-all"
@@ -208,9 +219,34 @@ export default function TeacherSalaryPage() {
                 </div>
               </div>
             </div>
-          ))
-        )}
-      </div>
+              ))
+            )}
+          </div>
+
+          {/* Pagination */}
+          {teachersMeta && teachersMeta.last_page > 1 && (
+            <div className="flex items-center justify-center gap-2 p-4 border-t border-primary-200 mt-6">
+              <button
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="px-4 py-2 border-2 border-primary-300 rounded-lg hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                السابق
+              </button>
+              <span className="px-4 py-2 text-primary-700">
+                صفحة {currentPage} من {teachersMeta.last_page}
+              </span>
+              <button
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage >= teachersMeta.last_page}
+                className="px-4 py-2 border-2 border-primary-300 rounded-lg hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                التالي
+              </button>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Salary Details Modal */}
       <AnimatePresence>

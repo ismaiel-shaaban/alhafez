@@ -27,20 +27,18 @@ export default function TeachersPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
 
+  // Reset page when search changes
   useEffect(() => {
-    fetchTeachers(currentPage)
-  }, [fetchTeachers, currentPage])
+    setCurrentPage(1)
+  }, [searchTerm])
 
-  const filteredTeachers = teachers.filter((teacher) => {
-    if (!searchTerm) return true
-    const search = searchTerm.toLowerCase()
-    return (
-      teacher.name.toLowerCase().includes(search) ||
-      teacher.name_en?.toLowerCase().includes(search) ||
-      teacher.specialization.toLowerCase().includes(search) ||
-      teacher.specialization_en?.toLowerCase().includes(search)
-    )
-  })
+  useEffect(() => {
+    const search = searchTerm.trim() || undefined
+    fetchTeachers(currentPage, 15, search)
+  }, [fetchTeachers, currentPage, searchTerm])
+
+  // Teachers are now filtered on the API side, so we use them directly
+  const filteredTeachers = teachers
 
   const handleViewTeacher = async (id: number) => {
     try {

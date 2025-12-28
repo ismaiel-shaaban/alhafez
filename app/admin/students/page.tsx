@@ -47,6 +47,8 @@ export default function StudentsPage() {
     gender: '' as 'male' | 'female' | '',
     teacher_id: '',
     search: '',
+    unpaid_months_count: '',
+    payment_status: '' as 'all_paid' | 'has_unpaid' | '',
   })
   const [currentPage, setCurrentPage] = useState(1)
   
@@ -126,7 +128,7 @@ export default function StudentsPage() {
   // Apply filters when they change
   useEffect(() => {
     setCurrentPage(1) // Reset to first page when filters change
-  }, [filters.type, filters.package_id, filters.gender, filters.teacher_id])
+  }, [filters.type, filters.package_id, filters.gender, filters.teacher_id, filters.search, filters.unpaid_months_count, filters.payment_status])
 
   useEffect(() => {
     const apiFilters: any = {}
@@ -134,22 +136,17 @@ export default function StudentsPage() {
     if (filters.package_id) apiFilters.package_id = parseInt(filters.package_id)
     if (filters.gender) apiFilters.gender = filters.gender
     if (filters.teacher_id) apiFilters.teacher_id = parseInt(filters.teacher_id)
+    if (filters.search) apiFilters.search = filters.search
+    if (filters.unpaid_months_count) apiFilters.unpaid_months_count = parseInt(filters.unpaid_months_count)
+    if (filters.payment_status) apiFilters.payment_status = filters.payment_status
     apiFilters.page = currentPage
     apiFilters.per_page = 15
     
     fetchStudents(apiFilters)
-  }, [currentPage, filters.type, filters.package_id, filters.gender, filters.teacher_id, fetchStudents])
+  }, [currentPage, filters.type, filters.package_id, filters.gender, filters.teacher_id, filters.search, filters.unpaid_months_count, filters.payment_status, fetchStudents])
 
-  // Filter students by search term (client-side for name/email)
-  const filteredStudents = students.filter((student) => {
-    if (!filters.search) return true
-    const search = filters.search.toLowerCase()
-    return (
-      student.name.toLowerCase().includes(search) ||
-      (student.email && student.email.toLowerCase().includes(search)) ||
-      student.phone.includes(search)
-    )
-  })
+  // Students are now filtered on the API side, so we use them directly
+  const filteredStudents = students
 
   const handleViewStudent = async (id: number) => {
     try {
@@ -517,7 +514,7 @@ export default function StudentsPage() {
           <Filter className="w-5 h-5 text-primary-600" />
           <h3 className="text-lg font-semibold text-primary-900">فلترة الطلاب</h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <div>
             <label className="block text-primary-900 font-semibold mb-2 text-right">البحث</label>
             <div className="relative">
@@ -590,6 +587,31 @@ export default function StudentsPage() {
               ))}
             </select>
           </div>
+          <div>
+            <label className="block text-primary-900 font-semibold mb-2 text-right">عدد الشهور الغير مدفوعه</label>
+            <input
+              type="number"
+              value={filters.unpaid_months_count}
+              onChange={(e) => setFilters({ ...filters, unpaid_months_count: e.target.value })}
+              placeholder="عدد الشهور..."
+              className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+              dir="rtl"
+              min="0"
+            />
+          </div>
+          <div>
+            <label className="block text-primary-900 font-semibold mb-2 text-right">حالة الدفع</label>
+            <select
+              value={filters.payment_status}
+              onChange={(e) => setFilters({ ...filters, payment_status: e.target.value as 'all_paid' | 'has_unpaid' | '' })}
+              className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+              dir="rtl"
+            >
+              <option value="">جميع الحالات</option>
+              <option value="all_paid">كلها مدفوعة</option>
+              <option value="has_unpaid">يوجد غير مدفوع</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -618,7 +640,7 @@ export default function StudentsPage() {
                 {filteredStudents.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-6 py-8 text-center text-primary-600">
-                      {filters.search || filters.package_id || filters.gender || filters.teacher_id
+                      {filters.search || filters.package_id || filters.gender || filters.teacher_id || filters.unpaid_months_count || filters.payment_status
                         ? 'لا توجد نتائج'
                         : 'لا يوجد طلاب مسجلون بعد'}
                     </td>

@@ -48,6 +48,9 @@ export interface StudentFilters {
   package_id?: number
   gender?: 'male' | 'female'
   teacher_id?: number
+  search?: string // Search term
+  unpaid_months_count?: number // Number of unpaid months
+  payment_status?: 'all_paid' | 'has_unpaid' // Payment status filter
   per_page?: number
   page?: number
 }
@@ -85,6 +88,9 @@ export const listStudents = async (
   if (filters.package_id) params.append('package_id', filters.package_id.toString())
   if (filters.gender) params.append('gender', filters.gender)
   if (filters.teacher_id) params.append('teacher_id', filters.teacher_id.toString())
+  if (filters.search) params.append('search', filters.search)
+  if (filters.unpaid_months_count !== undefined) params.append('unpaid_months_count', filters.unpaid_months_count.toString())
+  if (filters.payment_status) params.append('payment_status', filters.payment_status)
   if (filters.per_page) params.append('per_page', filters.per_page.toString())
   if (filters.page) params.append('page', filters.page.toString())
 

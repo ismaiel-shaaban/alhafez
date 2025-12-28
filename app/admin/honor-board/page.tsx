@@ -38,7 +38,7 @@ export default function HonorBoardPage() {
 
   useEffect(() => {
     fetchHonorBoard()
-    fetchStudents()
+    fetchStudents({ per_page: 1000000, page: 1 })
   }, [fetchHonorBoard, fetchStudents])
 
   // Reset page when filter changes
