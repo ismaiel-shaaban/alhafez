@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useMemo } from 'react'
+import { useEffect, useRef, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from '@/hooks/useTranslation'
 import { useWebsiteStore } from '@/store/useWebsiteStore'
@@ -23,10 +23,21 @@ export default function LessonsList({ showTitle = true, headingLevel = 'h1', lim
   const { t } = useTranslation()
   const { lessons, isLoadingLessons, fetchLessons } = useWebsiteStore()
   const swiperRef = useRef<any>(null)
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
     fetchLessons()
   }, [fetchLessons])
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   const currentLocale = typeof window !== 'undefined' ? (localStorage.getItem('locale') || 'ar') : 'ar'
 
@@ -124,7 +135,7 @@ export default function LessonsList({ showTitle = true, headingLevel = 'h1', lim
               bulletClass: 'swiper-pagination-bullet-custom',
               bulletActiveClass: 'swiper-pagination-bullet-active-custom',
             }}
-            autoplay={{
+            autoplay={isMobile ? false : {
               delay: 5000,
               disableOnInteraction: false,
               pauseOnMouseEnter: true,
@@ -174,8 +185,9 @@ export default function LessonsList({ showTitle = true, headingLevel = 'h1', lim
                           src={lesson.video}
                           className="w-full h-full object-cover"
                           controls
-                          preload="metadata"
+                          preload="none"
                           playsInline
+                          loading="lazy"
                           onError={(e) => {
                             const target = e.target as HTMLVideoElement
                             console.error('Video loading error:', lesson.video)
@@ -282,8 +294,9 @@ export default function LessonsList({ showTitle = true, headingLevel = 'h1', lim
                       src={lesson.video}
                       className="w-full h-full object-cover"
                       controls
-                      preload="metadata"
+                      preload="none"
                       playsInline
+                      loading="lazy"
                       onError={(e) => {
                         const target = e.target as HTMLVideoElement
                         console.error('Video loading error:', lesson.video)

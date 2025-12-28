@@ -29,11 +29,13 @@ export interface CreateTeacherRequest {
 export const listTeachers = async (
   page: number = 1,
   perPage: number = 15,
+  search?: string,
   locale?: string
 ): Promise<{ teachers: Teacher[]; pagination: any }> => {
   const params = new URLSearchParams()
   params.append('page', page.toString())
   params.append('per_page', perPage.toString())
+  if (search) params.append('search', search)
 
   // API returns: { status: true, message: "...", data: { teachers: [...], pagination: {...} } }
   return apiRequest<{ teachers: Teacher[]; pagination: any }>(

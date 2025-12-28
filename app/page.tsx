@@ -1,14 +1,48 @@
 import type { Metadata } from 'next'
+import dynamic from 'next/dynamic'
 import Hero from '@/components/home/Hero'
 import Features from '@/components/home/Features'
 import Navbar from '@/components/shared/Navbar'
 import Footer from '@/components/shared/Footer'
-import PackagesList from '@/components/packages/PackagesList'
-import LessonsList from '@/components/lessons/LessonsList'
-import TeachersList from '@/components/teachers/TeachersList'
-import TestimonialsList from '@/components/testimonials/TestimonialsList'
 import AnimatedSection from '@/components/home/AnimatedSection'
 import SectionWrapper from '@/components/home/SectionWrapper'
+
+// Lazy load below-the-fold components for better performance
+const PackagesList = dynamic(() => import('@/components/packages/PackagesList'), {
+  loading: () => (
+    <div className="flex items-center justify-center py-12">
+      <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  ),
+  ssr: true,
+})
+
+const LessonsList = dynamic(() => import('@/components/lessons/LessonsList'), {
+  loading: () => (
+    <div className="flex items-center justify-center py-12">
+      <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  ),
+  ssr: true,
+})
+
+const TeachersList = dynamic(() => import('@/components/teachers/TeachersList'), {
+  loading: () => (
+    <div className="flex items-center justify-center py-12">
+      <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  ),
+  ssr: true,
+})
+
+const TestimonialsList = dynamic(() => import('@/components/testimonials/TestimonialsList'), {
+  loading: () => (
+    <div className="flex items-center justify-center py-12">
+      <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  ),
+  ssr: true,
+})
 
 export const metadata: Metadata = {
   title: 'أكاديمية الحافظ | Al-Hafez Academy - تعليم القرآن الكريم',

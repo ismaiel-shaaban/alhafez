@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from '@/hooks/useTranslation'
 import { useWebsiteStore } from '@/store/useWebsiteStore'
@@ -22,10 +22,21 @@ export default function TestimonialsList({ showTitle = true, headingLevel = 'h1'
   const { t } = useTranslation()
   const { reviews, isLoading, fetchWebsiteData } = useWebsiteStore()
   const swiperRef = useRef<any>(null)
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
     fetchWebsiteData()
   }, [fetchWebsiteData])
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   const currentLocale = typeof window !== 'undefined' ? (localStorage.getItem('locale') || 'ar') : 'ar'
 
@@ -111,7 +122,7 @@ export default function TestimonialsList({ showTitle = true, headingLevel = 'h1'
               bulletClass: 'swiper-pagination-bullet-custom',
               bulletActiveClass: 'swiper-pagination-bullet-active-custom',
             }}
-            autoplay={{
+            autoplay={isMobile ? false : {
               delay: 5000,
               disableOnInteraction: false,
               pauseOnMouseEnter: true,
@@ -166,6 +177,8 @@ export default function TestimonialsList({ showTitle = true, headingLevel = 'h1'
                             src={review.media_file}
                             className="w-full h-48 object-cover rounded-lg"
                             controls
+                            preload="none"
+                            loading="lazy"
                             onError={(e) => {
                               const target = e.target as HTMLVideoElement
                               target.style.display = 'none'
@@ -176,6 +189,7 @@ export default function TestimonialsList({ showTitle = true, headingLevel = 'h1'
                             src={review.media_file}
                             alt="Review media"
                             className="w-full h-48 object-cover rounded-lg"
+                            loading="lazy"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement
                               target.style.display = 'none'
@@ -260,6 +274,8 @@ export default function TestimonialsList({ showTitle = true, headingLevel = 'h1'
                         src={review.media_file}
                         className="w-full h-48 object-cover rounded-lg"
                         controls
+                        preload="none"
+                        loading="lazy"
                         onError={(e) => {
                           const target = e.target as HTMLVideoElement
                           target.style.display = 'none'
@@ -270,6 +286,7 @@ export default function TestimonialsList({ showTitle = true, headingLevel = 'h1'
                         src={review.media_file}
                         alt="Review media"
                         className="w-full h-48 object-cover rounded-lg"
+                        loading="lazy"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement
                           target.style.display = 'none'

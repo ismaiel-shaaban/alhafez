@@ -127,12 +127,16 @@ export interface SessionsByDateResponse {
 export const getSessionsByDate = async (
   date: string, // YYYY-MM-DD
   isCompleted?: boolean,
+  teacherId?: number,
   locale?: string
 ): Promise<SessionsByDateResponse> => {
   const params = new URLSearchParams()
   params.append('date', date)
   if (isCompleted !== undefined) {
     params.append('is_completed', isCompleted.toString())
+  }
+  if (teacherId !== undefined) {
+    params.append('teacher_id', teacherId.toString())
   }
   return apiRequest<SessionsByDateResponse>(
     `/api/student-sessions/by-date?${params.toString()}`,

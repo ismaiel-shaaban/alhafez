@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from '@/hooks/useTranslation'
 import { useWebsiteStore } from '@/store/useWebsiteStore'
 import * as websiteAPI from '@/lib/api/website'
 import { Users, Clock, Heart, BookOpen, GraduationCap, UserCheck, Award, Star, Sparkles, MessageCircle, Calendar, Shield, Zap } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 
 // Icon mapping
 const iconMap: Record<string, JSX.Element> = {
@@ -27,10 +27,21 @@ const iconMap: Record<string, JSX.Element> = {
 export default function Features() {
   const { t } = useTranslation()
   const { features, isLoading, fetchWebsiteData } = useWebsiteStore()
+  const prefersReducedMotion = useReducedMotion()
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
     fetchWebsiteData()
   }, [fetchWebsiteData])
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Get active features sorted by order
   const activeFeatures = features
@@ -50,11 +61,13 @@ export default function Features() {
   
   const displayFeatures = activeFeatures.length > 0 ? activeFeatures : fallbackFeatures
 
+  const shouldReduceMotion = isMobile || prefersReducedMotion
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: {
+      transition: shouldReduceMotion ? { duration: 0.3 } : {
         staggerChildren: 0.1,
         delayChildren: 0.1,
       },
@@ -62,7 +75,7 @@ export default function Features() {
   }
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 30, scale: 0.9 },
+    hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 30, scale: shouldReduceMotion ? 1 : 0.9 },
     visible: {
       opacity: 1,
       y: 0,
@@ -99,7 +112,7 @@ export default function Features() {
                   key={feature.id}
                   variants={itemVariants}
                   transition={{ duration: 0.5, ease: 'easeOut' }}
-                  whileHover={{ y: -8, scale: 1.02 }}
+                  whileHover={shouldReduceMotion ? {} : { y: -8, scale: 1.02 }}
                   className="bg-white p-6 rounded-xl hover:shadow-2xl transition-all duration-300 border-2 border-primary-200 hover:border-accent-green group"
                 >
                   <div className="w-16 h-16 bg-gradient-to-br from-accent-green/20 via-primary-300/30 to-accent-green/40 rounded-full flex items-center justify-center mb-4 group-hover:from-accent-green/30 group-hover:to-primary-400/40 transition-all duration-300 shadow-lg group-hover:scale-110">

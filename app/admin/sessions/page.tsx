@@ -1,16 +1,19 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Calendar as CalendarIcon, Clock, X, User, GraduationCap, CheckCircle, AlertCircle } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
+import { Calendar as CalendarIcon, Clock, X, User, GraduationCap, CheckCircle, AlertCircle, Filter, Search, ChevronDown } from 'lucide-react'
 import { getSessionsByDate, StudentSession } from '@/lib/api/sessions'
+import { useAdminStore } from '@/store/useAdminStore'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function SessionsPage() {
+  const { teachers, fetchTeachers } = useAdminStore()
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     // Get today's date in YYYY-MM-DD format
     const today = new Date()
     return today.toISOString().split('T')[0]
   })
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>('')
   const [sessions, setSessions] = useState<StudentSession[]>([])
   const [statistics, setStatistics] = useState<{
     total_sessions: number
@@ -20,13 +23,24 @@ export default function SessionsPage() {
   const [selectedSession, setSelectedSession] = useState<StudentSession | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  
+  // Custom dropdown states
+  const [isTeacherDropdownOpen, setIsTeacherDropdownOpen] = useState(false)
+  const [teacherSearchTerm, setTeacherSearchTerm] = useState('')
+  const teacherDropdownRef = useRef<HTMLDivElement>(null)
 
-  // Load sessions for selected date
+  // Fetch teachers on mount
+  useEffect(() => {
+    fetchTeachers(1, 1000)
+  }, [fetchTeachers])
+
+  // Load sessions for selected date and teacher
   useEffect(() => {
     const loadSessions = async () => {
       setLoading(true)
       try {
-        const data = await getSessionsByDate(selectedDate)
+        const teacherId = selectedTeacherId ? parseInt(selectedTeacherId) : undefined
+        const data = await getSessionsByDate(selectedDate, undefined, teacherId)
         setSessions(data?.sessions || [])
         setStatistics(data?.statistics || null)
       } catch (error) {
@@ -38,7 +52,46 @@ export default function SessionsPage() {
       }
     }
     loadSessions()
-  }, [selectedDate])
+  }, [selectedDate, selectedTeacherId])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (teacherDropdownRef.current && !teacherDropdownRef.current.contains(event.target as Node)) {
+        setIsTeacherDropdownOpen(false)
+        setTeacherSearchTerm('')
+      }
+    }
+
+    if (isTeacherDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isTeacherDropdownOpen])
+
+  // Filter teachers based on search term
+  const filteredTeachers = teachers.filter((teacher) => {
+    if (!teacherSearchTerm) return true
+    const search = teacherSearchTerm.toLowerCase()
+    return (
+      teacher.name.toLowerCase().includes(search) ||
+      teacher.name_en?.toLowerCase().includes(search) ||
+      teacher.specialization.toLowerCase().includes(search) ||
+      teacher.specialization_en?.toLowerCase().includes(search)
+    )
+  })
+
+  // Get selected teacher name
+  const selectedTeacher = teachers.find((t) => t.id.toString() === selectedTeacherId)
+
+  const handleTeacherSelect = (teacherId: string) => {
+    setSelectedTeacherId(teacherId)
+    setIsTeacherDropdownOpen(false)
+    setTeacherSearchTerm('')
+  }
 
   const handleSessionClick = (session: StudentSession) => {
     setSelectedSession(session)
@@ -54,15 +107,110 @@ export default function SessionsPage() {
         <div className="lg:col-span-1">
           <div className="bg-white rounded-xl border-2 border-primary-200 overflow-hidden shadow-lg">
             <div className="p-6 border-b border-primary-200">
-              <h2 className="text-xl font-bold text-primary-900 mb-4">اختر التاريخ</h2>
-              <div className="flex items-center gap-3">
-                <CalendarIcon className="w-5 h-5 text-primary-600" />
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="flex-1 px-4 py-2 border-2 border-primary-300 rounded-lg focus:outline-none focus:border-primary-500 text-primary-900"
-                />
+              <h2 className="text-xl font-bold text-primary-900 mb-4">الفلترة</h2>
+              
+              {/* Date Picker */}
+              <div className="mb-4">
+                <label className="block text-primary-900 font-semibold mb-2 text-right">التاريخ</label>
+                <div className="flex items-center gap-3">
+                  <CalendarIcon className="w-5 h-5 text-primary-600" />
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="flex-1 px-4 py-2 border-2 border-primary-300 rounded-lg focus:outline-none focus:border-primary-500 text-primary-900"
+                  />
+                </div>
+              </div>
+
+              {/* Teacher Filter */}
+              <div>
+                <label className="block text-primary-900 font-semibold mb-2 text-right">المعلم</label>
+                <div className="relative" ref={teacherDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsTeacherDropdownOpen(!isTeacherDropdownOpen)}
+                    className="w-full flex items-center gap-3 px-4 py-2 border-2 border-primary-300 rounded-lg focus:outline-none focus:border-primary-500 text-primary-900 bg-white hover:bg-primary-50 transition-colors"
+                    dir="rtl"
+                  >
+                    <Filter className="w-5 h-5 text-primary-600 flex-shrink-0" />
+                    <span className="flex-1 text-right">
+                      {selectedTeacher ? selectedTeacher.name : 'جميع المعلمين'}
+                    </span>
+                    <ChevronDown className={`w-5 h-5 text-primary-600 flex-shrink-0 transition-transform ${isTeacherDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  <AnimatePresence>
+                    {isTeacherDropdownOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute z-50 w-full mt-2 bg-white border-2 border-primary-200 rounded-lg shadow-xl max-h-64 overflow-hidden"
+                        dir="rtl"
+                      >
+                        {/* Search Input */}
+                        <div className="p-3 border-b border-primary-200">
+                          <div className="relative">
+                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
+                            <input
+                              type="text"
+                              value={teacherSearchTerm}
+                              onChange={(e) => setTeacherSearchTerm(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              placeholder="ابحث عن معلم..."
+                              className="w-full pr-10 pl-3 py-2 border-2 border-primary-200 rounded-lg focus:outline-none focus:border-primary-500 text-sm text-right"
+                              dir="rtl"
+                              autoFocus
+                            />
+                          </div>
+                        </div>
+
+                        {/* Options List */}
+                        <div className="max-h-48 overflow-y-auto">
+                          {/* All Teachers Option */}
+                          <button
+                            type="button"
+                            onClick={() => handleTeacherSelect('')}
+                            className={`w-full px-4 py-2 text-right hover:bg-primary-50 transition-colors ${
+                              selectedTeacherId === '' ? 'bg-primary-100 text-primary-900 font-semibold' : 'text-primary-700'
+                            }`}
+                          >
+                            جميع المعلمين
+                          </button>
+
+                          {/* Filtered Teachers */}
+                          {filteredTeachers.length === 0 ? (
+                            <div className="px-4 py-8 text-center text-primary-600 text-sm">
+                              لا توجد نتائج
+                            </div>
+                          ) : (
+                            filteredTeachers.map((teacher) => (
+                              <button
+                                key={teacher.id}
+                                type="button"
+                                onClick={() => handleTeacherSelect(teacher.id.toString())}
+                                className={`w-full px-4 py-2 text-right hover:bg-primary-50 transition-colors ${
+                                  selectedTeacherId === teacher.id.toString()
+                                    ? 'bg-primary-100 text-primary-900 font-semibold'
+                                    : 'text-primary-700'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span>{teacher.name}</span>
+                                  {teacher.specialization && (
+                                    <span className="text-xs text-primary-500 mr-2">{teacher.specialization}</span>
+                                  )}
+                                </div>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </div>
 
