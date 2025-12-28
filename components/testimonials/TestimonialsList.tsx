@@ -178,7 +178,6 @@ export default function TestimonialsList({ showTitle = true, headingLevel = 'h1'
                             className="w-full h-48 object-cover rounded-lg"
                             controls
                             preload="none"
-                            loading="lazy"
                             onError={(e) => {
                               const target = e.target as HTMLVideoElement
                               target.style.display = 'none'
@@ -275,7 +274,6 @@ export default function TestimonialsList({ showTitle = true, headingLevel = 'h1'
                         className="w-full h-48 object-cover rounded-lg"
                         controls
                         preload="none"
-                        loading="lazy"
                         onError={(e) => {
                           const target = e.target as HTMLVideoElement
                           target.style.display = 'none'

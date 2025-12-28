@@ -187,7 +187,6 @@ export default function LessonsList({ showTitle = true, headingLevel = 'h1', lim
                           controls
                           preload="none"
                           playsInline
-                          loading="lazy"
                           onError={(e) => {
                             const target = e.target as HTMLVideoElement
                             console.error('Video loading error:', lesson.video)
@@ -296,7 +295,6 @@ export default function LessonsList({ showTitle = true, headingLevel = 'h1', lim
                       controls
                       preload="none"
                       playsInline
-                      loading="lazy"
                       onError={(e) => {
                         const target = e.target as HTMLVideoElement
                         console.error('Video loading error:', lesson.video)
