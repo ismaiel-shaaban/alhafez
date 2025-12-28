@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { useTranslation } from '@/hooks/useTranslation'
 import { MessageCircle, ArrowLeft, Sparkles, BookOpen, Users, Award } from 'lucide-react'
 import { motion, useReducedMotion } from 'framer-motion'
@@ -103,20 +102,13 @@ export default function Hero() {
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
       {/* Cover Image Background */}
       <div className="absolute inset-0 z-0">
-        {/* Cover Image - Optimized with Next.js Image */}
-        <div className="absolute inset-0">
-          <Image
-            src="/images/cover.jfif"
-            alt="Al-Hafez Academy"
-            fill
-            priority
-            quality={isMobile ? 75 : 85}
-            className="object-cover"
-            sizes="100vw"
-            placeholder="blur"
-            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
-          />
-        </div>
+        {/* Cover Image - Using CSS background for reliable mobile support */}
+        <div 
+          className="absolute inset-0 w-full h-full bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: 'url(/images/cover.jfif)',
+          }}
+        />
         
         {/* Animated gradient mesh overlay - Simplified on mobile */}
         <div className="absolute inset-0">
