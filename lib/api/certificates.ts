@@ -74,3 +74,25 @@ export const updateStudentCertificateStatus = async (
   })
 }
 
+// Delete parent certificate
+export const deleteParentCertificate = async (
+  id: number,
+  locale?: string
+): Promise<void> => {
+  return apiRequest(`/api/parent-certificates/${id}`, {
+    method: 'DELETE',
+    locale,
+  })
+}
+
+// Delete student certificate
+export const deleteStudentCertificate = async (
+  id: number,
+  locale?: string
+): Promise<void> => {
+  return apiRequest(`/api/student-certificates/${id}`, {
+    method: 'DELETE',
+    locale,
+  })
+}
+

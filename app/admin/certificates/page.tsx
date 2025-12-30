@@ -1,12 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Award, CheckCircle, XCircle, Clock, User, RefreshCw, GraduationCap, ChevronRight, ChevronLeft, BookOpen, Image as ImageIcon } from 'lucide-react'
+import { Award, CheckCircle, XCircle, Clock, User, RefreshCw, GraduationCap, ChevronRight, ChevronLeft, BookOpen, Image as ImageIcon, Trash2 } from 'lucide-react'
 import {
   getParentCertificates,
   getStudentCertificates,
   updateParentCertificateStatus,
   updateStudentCertificateStatus,
+  deleteParentCertificate,
+  deleteStudentCertificate,
   Certificate,
   CertificatesResponse,
 } from '@/lib/api/certificates'
@@ -23,6 +25,7 @@ export default function CertificatesPage() {
   const [studentPage, setStudentPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [updatingId, setUpdatingId] = useState<number | null>(null)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
 
   // Load certificates based on active tab
   useEffect(() => {
@@ -85,6 +88,37 @@ export default function CertificatesPage() {
       alert('حدث خطأ أثناء تحديث حالة الشهادة')
     } finally {
       setUpdatingId(null)
+    }
+  }
+
+  const handleDelete = async (
+    id: number,
+    type: 'parent' | 'student'
+  ) => {
+    if (!confirm('هل أنت متأكد من حذف هذه الشهادة؟ سيتم حذفها بشكل دائم.')) return
+    
+    setDeletingId(id)
+    try {
+      if (type === 'parent') {
+        await deleteParentCertificate(id)
+      } else {
+        await deleteStudentCertificate(id)
+      }
+      // Reload certificates - keep current page
+      if (type === 'parent') {
+        const data = await getParentCertificates(parentPage)
+        setParentCertificates(data?.certificates || [])
+        setParentPagination(data?.pagination || null)
+      } else {
+        const data = await getStudentCertificates(studentPage)
+        setStudentCertificates(data?.certificates || [])
+        setStudentPagination(data?.pagination || null)
+      }
+    } catch (error: any) {
+      console.error('Error deleting certificate:', error)
+      alert(error.message || 'حدث خطأ أثناء حذف الشهادة')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -249,46 +283,65 @@ export default function CertificatesPage() {
                       {getStatusBadge(certificate.status, certificate.status_label)}
 
                       {/* Status Actions */}
-                      <div className="flex gap-2">
-                        {certificate.status !== 'pending' && (
-                          <button
-                            onClick={() => handleStatusUpdate(certificate.id, 'pending', activeTab)}
-                            disabled={updatingId === certificate.id}
-                            className="px-3 py-1.5 text-sm bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {updatingId === certificate.id ? (
+                      <div className="flex flex-col gap-2">
+                        <div className="flex gap-2">
+                          {certificate.status !== 'pending' && (
+                            <button
+                              onClick={() => handleStatusUpdate(certificate.id, 'pending', activeTab)}
+                              disabled={updatingId === certificate.id || deletingId === certificate.id}
+                              className="px-3 py-1.5 text-sm bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {updatingId === certificate.id ? (
+                                <RefreshCw className="w-4 h-4 animate-spin" />
+                              ) : (
+                                'قيد الانتظار'
+                              )}
+                            </button>
+                          )}
+                          {certificate.status !== 'accept' && (
+                            <button
+                              onClick={() => handleStatusUpdate(certificate.id, 'accept', activeTab)}
+                              disabled={updatingId === certificate.id || deletingId === certificate.id}
+                              className="px-3 py-1.5 text-sm bg-green-100 text-green-800 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {updatingId === certificate.id ? (
+                                <RefreshCw className="w-4 h-4 animate-spin" />
+                              ) : (
+                                'قبول'
+                              )}
+                            </button>
+                          )}
+                          {certificate.status !== 'cancel' && (
+                            <button
+                              onClick={() => handleStatusUpdate(certificate.id, 'cancel', activeTab)}
+                              disabled={updatingId === certificate.id || deletingId === certificate.id}
+                              className="px-3 py-1.5 text-sm bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {updatingId === certificate.id ? (
+                                <RefreshCw className="w-4 h-4 animate-spin" />
+                              ) : (
+                                'إلغاء'
+                              )}
+                            </button>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleDelete(certificate.id, activeTab)}
+                          disabled={deletingId === certificate.id || updatingId === certificate.id}
+                          className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                          {deletingId === certificate.id ? (
+                            <>
                               <RefreshCw className="w-4 h-4 animate-spin" />
-                            ) : (
-                              'قيد الانتظار'
-                            )}
-                          </button>
-                        )}
-                        {certificate.status !== 'accept' && (
-                          <button
-                            onClick={() => handleStatusUpdate(certificate.id, 'accept', activeTab)}
-                            disabled={updatingId === certificate.id}
-                            className="px-3 py-1.5 text-sm bg-green-100 text-green-800 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {updatingId === certificate.id ? (
-                              <RefreshCw className="w-4 h-4 animate-spin" />
-                            ) : (
-                              'قبول'
-                            )}
-                          </button>
-                        )}
-                        {certificate.status !== 'cancel' && (
-                          <button
-                            onClick={() => handleStatusUpdate(certificate.id, 'cancel', activeTab)}
-                            disabled={updatingId === certificate.id}
-                            className="px-3 py-1.5 text-sm bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {updatingId === certificate.id ? (
-                              <RefreshCw className="w-4 h-4 animate-spin" />
-                            ) : (
-                              'إلغاء'
-                            )}
-                          </button>
-                        )}
+                              جاري الحذف...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="w-4 h-4" />
+                              حذف
+                            </>
+                          )}
+                        </button>
                       </div>
                     </div>
                   </div>

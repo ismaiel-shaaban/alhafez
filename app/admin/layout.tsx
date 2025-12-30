@@ -71,6 +71,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
     { href: '/admin/sessions', label: 'حصص اليوم', icon: Calendar },
     { href: '/admin/website-students', label: 'الطلاب الجدد من الموقع', icon: Users },
+    { href: '/admin/app-students', label: 'الطلاب الجدد من التطبيق', icon: Users },
     { href: '/admin/students', label: 'الطلاب', icon: Users },
     { href: '/admin/teachers', label: 'المعلمين', icon: GraduationCap },
     { href: '/admin/teacher-salary', label: 'الرواتب', icon: DollarSign },
@@ -78,6 +79,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/features', label: 'المميزات', icon: BookOpen },
     { href: '/admin/lessons', label: 'فيديوهات من الحصص', icon: Video },
     { href: '/admin/certificates', label: 'شهادات التقدير', icon: FileText },
+    { href: '/admin/schedule-change-requests', label: 'طلبات تغيير المواعيد', icon: Calendar },
+    { href: '/admin/student-deletion-requests', label: 'طلبات حذف الطلاب', icon: Users },
+    { href: '/admin/payment-receipts', label: 'إيصالات الدفع', icon: DollarSign },
     { href: '/admin/testimonials', label: 'آراء الطلاب', icon: MessageSquare },
     { href: '/admin/honor-board', label: 'لوحة الشرف', icon: Award },
   ]

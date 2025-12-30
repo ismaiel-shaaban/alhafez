@@ -2,7 +2,7 @@ import { apiRequest, PaginatedResponse } from '../api-client'
 
 export interface Student {
   id: number
-  type?: 'website' | 'admin' // Registration type
+  type?: 'website' | 'admin' | 'app' // Registration type
   name: string
   email?: string // Optional
   phone: string
@@ -19,6 +19,11 @@ export interface Student {
   session_duration?: number
   hourly_rate?: number
   notes?: string
+  trial_session_attendance?: 'not_booked' | 'booked' | 'attended' // Trial session attendance status
+  trial_session_attendance_label?: string // Localized label
+  monthly_subscription_price?: number // Monthly subscription price
+  country?: string // Student's country
+  currency?: string // Currency code (e.g., "EGP", "USD", "SAR")
   package?: {
     id: number
     name: string
@@ -35,6 +40,12 @@ export interface Student {
     total_subscriptions: number
     paid_subscriptions: number
     unpaid_subscriptions: number
+    first_subscription_date?: string
+    last_subscription_date?: string
+    monthly_sessions?: number
+    total_sessions_count?: number
+    completed_sessions_count?: number
+    remaining_sessions_count?: number
   }
   past_months_count?: number // Optional, may be returned by API
   paid_months_count?: number // Optional, may be returned by API
@@ -44,13 +55,14 @@ export interface Student {
 }
 
 export interface StudentFilters {
-  type?: 'website' | 'admin' // Filter by registration type
+  type?: 'website' | 'admin' | 'app' // Filter by registration type
   package_id?: number
   gender?: 'male' | 'female'
   teacher_id?: number
   search?: string // Search term
   unpaid_months_count?: number // Number of unpaid months
   payment_status?: 'all_paid' | 'has_unpaid' // Payment status filter
+  trial_session_attendance?: 'not_booked' | 'booked' | 'attended' // Filter by trial session attendance
   per_page?: number
   page?: number
 }
@@ -72,9 +84,14 @@ export interface CreateStudentRequest {
   hourly_rate?: number
   notes?: string
   password?: string // Optional, min: 6 characters. Password will be automatically hashed.
+  trial_session_attendance?: 'not_booked' | 'booked' | 'attended' // Trial session attendance status
+  monthly_subscription_price?: number // Monthly subscription price (numeric, min: 0)
+  country?: string // Student's country
+  currency?: string // Currency code (e.g., "EGP", "USD", "SAR")
   past_months_count?: number // Optional, integer, min: 0, max: 120. Number of past months to create subscriptions for.
   paid_months_count?: number // Optional, integer, min: 0, max: 120. Number of paid months.
   subscription_start_date?: string // Optional, YYYY-MM-DD format. Required if past_months_count is provided. Used to calculate past subscriptions.
+  paid_subscriptions_count?: number // Optional, integer, min: 0. Number of paid subscriptions (for update only)
 }
 
 // List students
@@ -91,6 +108,7 @@ export const listStudents = async (
   if (filters.search) params.append('search', filters.search)
   if (filters.unpaid_months_count !== undefined) params.append('unpaid_months_count', filters.unpaid_months_count.toString())
   if (filters.payment_status) params.append('payment_status', filters.payment_status)
+  if (filters.trial_session_attendance) params.append('trial_session_attendance', filters.trial_session_attendance)
   if (filters.per_page) params.append('per_page', filters.per_page.toString())
   if (filters.page) params.append('page', filters.page.toString())
 
@@ -141,6 +159,30 @@ export const updateSubscriptionPaymentStatus = async (
   return apiRequest(`/api/student-subscriptions/${subscriptionId}`, {
     method: 'POST',
     body: { is_paid: isPaid },
+  })
+}
+
+// Pause subscription
+export const pauseSubscription = async (
+  subscriptionId: number,
+  locale?: string
+): Promise<any> => {
+  return apiRequest(`/api/student-subscriptions/${subscriptionId}/pause`, {
+    method: 'POST',
+    locale,
+  })
+}
+
+// Resume subscription
+export const resumeSubscription = async (
+  subscriptionId: number,
+  resumeDate?: string,
+  locale?: string
+): Promise<any> => {
+  return apiRequest(`/api/student-subscriptions/${subscriptionId}/resume`, {
+    method: 'POST',
+    body: resumeDate ? { resume_date: resumeDate } : {},
+    locale,
   })
 }
 
