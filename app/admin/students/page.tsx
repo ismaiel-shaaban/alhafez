@@ -981,7 +981,7 @@ export default function StudentsPage() {
                       <table className="border-collapse bg-white rounded-lg overflow-hidden shadow-sm" style={{ tableLayout: 'auto', minWidth: '100%' }}>
                         <thead className="bg-primary-100">
                           <tr>
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">رمز الاشتراك</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">رقم الاشتراك</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">تاريخ البدء</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">تاريخ الانتهاء</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">الحصص/الأسبوع</th>
@@ -993,9 +993,9 @@ export default function StudentsPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {viewedStudent.subscriptions.map((subscription: any) => (
+                          {viewedStudent.subscriptions.map((subscription: any , index: number) => (
                             <tr key={subscription.id} className="border-b border-primary-100 hover:bg-primary-50 transition-colors">
-                              <td className="px-4 py-3 text-primary-900 font-medium text-sm whitespace-nowrap">{subscription.subscription_code}</td>
+                              <td className="px-4 py-3 text-primary-900 font-medium text-sm whitespace-nowrap">{index + 1}</td>
                               <td className="px-4 py-3 text-primary-700 text-sm whitespace-nowrap">{subscription.start_date}</td>
                               <td className="px-4 py-3 text-primary-700 text-sm whitespace-nowrap">{subscription.end_date}</td>
                               <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{subscription.sessions_per_week || '-'}</td>
