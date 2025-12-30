@@ -25,6 +25,8 @@ export interface TeacherPayment {
   total_amount: number
   is_paid: boolean
   payment_proof_image?: string
+  payment_method_id?: number
+  payment_method?: TeacherPaymentMethod
   paid_at?: string
   notes?: string
   created_at?: string
@@ -48,9 +50,18 @@ export interface TeacherSalaryResponse {
   payment: TeacherPayment | null
 }
 
+export interface TeacherPaymentMethod {
+  id: number
+  type: 'wallet' | 'insta' | 'instapay' // API returns 'insta', but we support both for compatibility
+  type_label?: string
+  name: string
+  phone?: string
+}
+
 export interface MarkPaymentRequest {
   month: string // YYYY-MM, required
   payment_proof_image: File // Required, payment proof image file (image file: jpeg, png, jpg, gif, max: 5MB)
+  payment_method_id?: number // Optional, ID of the teacher's payment method
   notes?: string // Optional
 }
 
@@ -66,6 +77,18 @@ export const getTeacherSalary = async (
   )
 }
 
+// Get teacher payment methods
+export const getTeacherPaymentMethods = async (
+  teacherId: number,
+  locale?: string
+): Promise<TeacherPaymentMethod[]> => {
+  const response = await apiRequest<{ payment_methods: TeacherPaymentMethod[] }>(
+    `/api/teachers/${teacherId}/payment-methods`,
+    { locale }
+  )
+  return response.payment_methods || []
+}
+
 // Mark payment as paid
 export const markPaymentAsPaid = async (
   teacherId: number,
@@ -75,6 +98,7 @@ export const markPaymentAsPaid = async (
   const formData = new FormData()
   formData.append('month', data.month)
   formData.append('payment_proof_image', data.payment_proof_image)
+  if (data.payment_method_id) formData.append('payment_method_id', data.payment_method_id.toString())
   if (data.notes) formData.append('notes', data.notes)
   
   return apiRequest<TeacherPayment>(`/api/teachers/${teacherId}/salary/pay`, {

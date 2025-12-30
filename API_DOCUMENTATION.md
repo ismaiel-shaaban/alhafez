@@ -336,6 +336,10 @@ Accept: application/json
     "hourly_rate": 100.00,
     "notes": "طالب مجتهد",
     "password": "password123",
+    "trial_session_attendance": "not_booked",
+    "monthly_subscription_price": 500.00,
+    "country": "Egypt",
+    "currency": "EGP",
     "past_months_count": 7,
     "paid_months_count": 5,
     "subscription_start_date": "2025-05-10"
@@ -359,6 +363,10 @@ Accept: application/json
 - `hourly_rate` (optional): Hourly rate for the teacher (numeric, min: 0)
 - `notes` (optional): Notes
 - `password` (optional): Password for student login (min: 6 characters). Password will be automatically hashed.
+- `trial_session_attendance` (optional): Trial session attendance status - `not_booked`, `booked`, or `attended` (default: `not_booked`)
+- `monthly_subscription_price` (optional): Monthly subscription price (numeric, min: 0)
+- `country` (optional): Student's country (string)
+- `currency` (optional): Currency code (string, e.g., "EGP", "USD", "SAR")
 - `past_months_count` (optional): Number of past months to create subscriptions for (integer, min: 0, max: 120). If provided along with `subscription_start_date`, past subscriptions will be created with all sessions marked as completed but subscriptions marked as unpaid.
 - `paid_months_count` (optional): Number of paid months (integer, min: 0, max: 120). The first N subscriptions (including past ones if applicable) will be marked as paid.
 - `subscription_start_date` (optional): Subscription start date (YYYY-MM-DD). Required if `past_months_count` is provided. Used to calculate past subscriptions.
@@ -399,6 +407,11 @@ Accept: application/json
         "session_duration": 60,
         "hourly_rate": 100.00,
         "notes": "طالب مجتهد",
+        "trial_session_attendance": "not_booked",
+        "trial_session_attendance_label": "غير محجوز",
+        "monthly_subscription_price": 500.00,
+        "country": "Egypt",
+        "currency": "EGP",
         "subscriptions": [],
         "subscriptions_statistics": {
             "total_subscriptions": 0,
@@ -473,6 +486,11 @@ lang: ar (optional)
         "session_duration": 60,
         "hourly_rate": 100.00,
         "notes": "طالب مجتهد",
+        "trial_session_attendance": "not_booked",
+        "trial_session_attendance_label": "غير محجوز",
+        "monthly_subscription_price": 500.00,
+        "country": "Egypt",
+        "currency": "EGP",
         "subscriptions": [],
         "subscriptions_statistics": {
             "total_subscriptions": 19,
@@ -654,6 +672,7 @@ lang: ar (optional)
 - `is_completed` (optional) - Filter by completion status: `true` or `false`
 - `date_from` (optional) - Filter from date (YYYY-MM-DD)
 - `date_to` (optional) - Filter to date (YYYY-MM-DD)
+- `date` (optional) - Filter by specific date (YYYY-MM-DD)
 - `day_of_week` (optional) - Filter by day: `saturday`, `sunday`, `monday`, `tuesday`, `wednesday`, `thursday`, `friday`
 - `per_page` (optional) - Results per page (default: 15)
 - `page` (optional) - Page number
@@ -910,6 +929,90 @@ Accept: application/json
     "status": true,
     "number": 1,
     "message": "Session deleted successfully"
+}
+```
+
+---
+
+### 3.7 Get Sessions by Date
+**GET** `/api/dashboard/student-sessions/by-date`
+
+**Description:** Get all sessions for a specific date with optional filters and statistics
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+lang: ar (optional)
+```
+
+**Query Parameters:**
+- `date` (required) - Filter by specific date (format: YYYY-MM-DD, example: 2024-01-15)
+- `student_id` (optional) - Filter by student ID
+- `teacher_id` (optional) - Filter by teacher ID
+- `is_completed` (optional) - Filter by completion status: `true` or `false`
+
+**Example Requests:**
+```
+GET /api/dashboard/student-sessions/by-date?date=2024-01-15
+GET /api/dashboard/student-sessions/by-date?date=2024-01-15&teacher_id=1
+GET /api/dashboard/student-sessions/by-date?date=2024-01-15&is_completed=true
+```
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Sessions retrieved successfully",
+    "data": {
+        "date": "2024-01-15",
+        "sessions": [
+            {
+                "id": 1,
+                "student": {
+                    "id": 1,
+                    "name": "محمد أحمد"
+                },
+                "student_id": 1,
+                "teacher": {
+                    "id": 1,
+                    "name": "أحمد محمد"
+                },
+                "teacher_id": 1,
+                "session_date": "2024-01-15",
+                "session_time": "10:00",
+                "day_of_week": "saturday",
+                "day_of_week_label": "السبت",
+                "is_completed": false,
+                "completed_at": null,
+                "notes": null,
+                "created_at": "2024-01-01 00:00:00"
+            }
+        ],
+        "statistics": {
+            "total_sessions": 10,
+            "completed_sessions": 7,
+            "pending_sessions": 3
+        }
+    }
+}
+```
+
+**Error Response (400) - Invalid Date Format:**
+```json
+{
+    "status": false,
+    "code": "E400",
+    "message": "Invalid date format"
+}
+```
+
+**Error Response (422) - Missing Date:**
+```json
+{
+    "status": false,
+    "code": "E400",
+    "message": "The date field is required."
 }
 ```
 
@@ -1658,6 +1761,7 @@ Accept: application/json
 {
     "month": "2024-01",
     "payment_proof_image": "file",
+    "payment_method_id": 1,
     "notes": "تم التحويل بنجاح"
 }
 ```
@@ -1665,6 +1769,7 @@ Accept: application/json
 **Field Descriptions:**
 - `month` (required): Month in YYYY-MM format
 - `payment_proof_image` (required): Payment proof image file (image file: jpeg, png, jpg, gif, max: 5MB)
+- `payment_method_id` (optional): ID of the teacher's payment method (wallet or InstaPay). If provided, the payment will be linked to this method.
 - `notes` (optional): Notes
 
 **Success Response (200):**
@@ -1684,6 +1789,14 @@ Accept: application/json
         "total_amount": 1340.00,
         "is_paid": true,
         "payment_proof_image": "https://example.com/payment-proof.jpg",
+        "payment_method_id": 1,
+        "payment_method": {
+            "id": 1,
+            "type": "wallet",
+            "type_label": "محفظة",
+            "name": "محفظة فودافون كاش",
+            "phone": "01012345678"
+        },
         "paid_at": "2024-01-15T10:30:00.000000Z",
         "notes": "تم التحويل بنجاح",
         "created_at": "2024-01-15 10:30:00"
@@ -2252,7 +2365,103 @@ Accept: application/json
 
 ---
 
-### 9.5 Delete Student Subscription
+### 9.5 Pause Student Subscription
+**POST** `/api/student-subscriptions/{id}/pause`
+
+**Description:** Pause an active student subscription. When paused, all future incomplete sessions will be removed. The subscription status will be set to `paused`, and the number of remaining sessions at the time of pause will be saved.
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+```
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Subscription paused successfully",
+    "data": {
+        "id": 1,
+        "student_id": 1,
+        "subscription_code": "SUB-1-202401-01",
+        "start_date": "2024-01-01",
+        "end_date": "2024-02-05",
+        "status": "paused",
+        "paused_at": "2024-01-15 10:30:00",
+        "remaining_sessions_at_pause": 5,
+        "is_active": false,
+        "created_at": "2024-01-01 00:00:00",
+        "updated_at": "2024-01-15 10:30:00"
+    }
+}
+```
+
+**Error Response (400):**
+```json
+{
+    "status": false,
+    "number": "E400",
+    "message": "Subscription is not active and cannot be paused"
+}
+```
+
+---
+
+### 9.6 Resume Student Subscription
+**POST** `/api/student-subscriptions/{id}/resume`
+
+**Description:** Resume a paused student subscription. New sessions will be generated from the resume date, considering the remaining sessions at the time of pause and the student's current schedule.
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+```
+
+**Request Body:**
+```json
+{
+    "resume_date": "2024-02-01"
+}
+```
+
+**Field Descriptions:**
+- `resume_date` (optional): Date to resume the subscription (YYYY-MM-DD). If not provided, the current date will be used.
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Subscription resumed successfully",
+    "data": {
+        "id": 1,
+        "student_id": 1,
+        "subscription_code": "SUB-1-202401-01",
+        "start_date": "2024-01-01",
+        "end_date": "2024-02-05",
+        "status": "active",
+        "paused_at": null,
+        "remaining_sessions_at_pause": null,
+        "is_active": true,
+        "created_at": "2024-01-01 00:00:00",
+        "updated_at": "2024-02-01 10:30:00"
+    }
+}
+```
+
+**Error Response (400):**
+```json
+{
+    "status": false,
+    "number": "E400",
+    "message": "Subscription is not paused and cannot be resumed"
+}
+```
+
+---
+
+### 9.7 Delete Student Subscription
 **DELETE** `/api/student-subscriptions/{id}`
 
 **Description:** Delete a student subscription
@@ -2791,6 +3000,884 @@ Accept: application/json
 
 ---
 
+## 12. Appreciation Certificates (شهادات التقدير) - Dashboard
+
+### 12.1 Get All Parent Certificates
+**GET** `/api/dashboard/parent-certificates`
+
+**Description:** Get all parent appreciation certificate requests with filtering and pagination options
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+lang: ar (optional)
+```
+
+**Query Parameters:**
+- `teacher_id` (optional) - Filter by teacher ID
+- `status` (optional) - Filter by status: `pending`, `accept`, or `cancel`
+- `date` (optional) - Filter by specific date (format: YYYY-MM-DD, example: 2024-01-15)
+- `date_from` (optional) - Filter from date (format: YYYY-MM-DD)
+- `date_to` (optional) - Filter to date (format: YYYY-MM-DD)
+- `per_page` (optional) - Results per page (default: 15)
+- `page` (optional) - Page number
+
+**Example Requests:**
+```
+GET /api/dashboard/parent-certificates
+GET /api/dashboard/parent-certificates?status=pending
+GET /api/dashboard/parent-certificates?teacher_id=1
+GET /api/dashboard/parent-certificates?date=2024-01-15
+GET /api/dashboard/parent-certificates?date_from=2024-01-01&date_to=2024-01-31
+GET /api/dashboard/parent-certificates?status=accept&teacher_id=1&per_page=20
+```
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Certificates retrieved successfully",
+    "data": {
+        "certificates": [
+            {
+                "id": 1,
+                "teacher_id": 1,
+                "teacher_name": "أحمد محمد",
+                "parent_name": "محمد علي",
+                "student_name": "سارة محمد",
+                "status": "pending",
+                "status_label": "قيد الانتظار",
+                "teacher": {
+                    "id": 1,
+                    "name": "أحمد محمد",
+                    "specialization": "القرآن الكريم"
+                },
+                "created_at": "2024-01-15 10:30:00",
+                "updated_at": "2024-01-15 10:30:00"
+            }
+        ],
+        "pagination": {
+            "total": 25,
+            "per_page": 15,
+            "current_page": 1,
+            "total_pages": 2
+        }
+    }
+}
+```
+
+**Error Response (400) - Invalid Date Format:**
+```json
+{
+    "status": false,
+    "number": "E400",
+    "message": "Invalid date format"
+}
+```
+
+---
+
+### 12.2 Update Parent Certificate Status
+**POST** `/api/dashboard/parent-certificates/{id}/status`
+
+**Description:** Update parent appreciation certificate status (accept or cancel)
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+Accept: application/json
+lang: ar (optional)
+```
+
+**URL Parameters:**
+- `id` (required): Certificate ID
+
+**Request Body:**
+```json
+{
+    "status": "accept"
+}
+```
+
+**Field Descriptions:**
+- `status` (required): Certificate status - `accept` or `cancel`
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Certificate status updated successfully",
+    "data": {
+        "id": 1,
+        "teacher_id": 1,
+        "teacher_name": "أحمد محمد",
+        "parent_name": "محمد علي",
+        "student_name": "سارة محمد",
+        "status": "accept",
+        "status_label": "مقبول",
+        "teacher": {
+            "id": 1,
+            "name": "أحمد محمد",
+            "specialization": "القرآن الكريم"
+        },
+        "created_at": "2024-01-15 10:30:00",
+        "updated_at": "2024-01-15 11:00:00"
+    }
+}
+```
+
+**Error Response (404) - Certificate Not Found:**
+```json
+{
+    "status": false,
+    "number": "E404",
+    "message": "Resource not found"
+}
+```
+
+**Error Response (422) - Validation Error:**
+```json
+{
+    "status": false,
+    "number": "E400",
+    "message": "The status field is required."
+}
+```
+
+---
+
+### 12.3 Delete Parent Certificate
+**DELETE** `/api/dashboard/parent-certificates/{id}`
+
+**Description:** Delete a parent appreciation certificate
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+```
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "number": 1,
+    "message": "Certificate deleted successfully"
+}
+```
+
+**Error Response (404):**
+```json
+{
+    "status": false,
+    "number": "E404",
+    "message": "Resource not found"
+}
+```
+
+---
+
+### 12.4 Get All Student Certificates
+**GET** `/api/dashboard/student-certificates`
+
+**Description:** Get all student appreciation certificate requests with filtering and pagination options
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+lang: ar (optional)
+```
+
+**Query Parameters:**
+- `teacher_id` (optional) - Filter by teacher ID
+- `status` (optional) - Filter by status: `pending`, `accept`, or `cancel`
+- `date` (optional) - Filter by specific date (format: YYYY-MM-DD, example: 2024-01-15)
+- `date_from` (optional) - Filter from date (format: YYYY-MM-DD)
+- `date_to` (optional) - Filter to date (format: YYYY-MM-DD)
+- `per_page` (optional) - Results per page (default: 15)
+- `page` (optional) - Page number
+
+**Example Requests:**
+```
+GET /api/dashboard/student-certificates
+GET /api/dashboard/student-certificates?status=pending
+GET /api/dashboard/student-certificates?teacher_id=1
+GET /api/dashboard/student-certificates?date=2024-01-15
+GET /api/dashboard/student-certificates?date_from=2024-01-01&date_to=2024-01-31
+GET /api/dashboard/student-certificates?status=accept&teacher_id=1&per_page=20
+```
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Certificates retrieved successfully",
+    "data": {
+        "certificates": [
+            {
+                "id": 1,
+                "teacher_id": 1,
+                "student_name": "سارة محمد",
+                "teacher_name": "أحمد محمد",
+                "memorization_amount": "5 أجزاء",
+                "student_image": "http://domain.com/Admin/images/certificates/students/1234567890_abc123.jpg",
+                "status": "pending",
+                "status_label": "قيد الانتظار",
+                "teacher": {
+                    "id": 1,
+                    "name": "أحمد محمد",
+                    "specialization": "القرآن الكريم"
+                },
+                "created_at": "2024-01-15 10:30:00",
+                "updated_at": "2024-01-15 10:30:00"
+            }
+        ],
+        "pagination": {
+            "total": 25,
+            "per_page": 15,
+            "current_page": 1,
+            "total_pages": 2
+        }
+    }
+}
+```
+
+**Error Response (400) - Invalid Date Format:**
+```json
+{
+    "status": false,
+    "number": "E400",
+    "message": "Invalid date format"
+}
+```
+
+---
+
+### 12.4 Update Student Certificate Status
+**POST** `/api/dashboard/student-certificates/{id}/status`
+
+**Description:** Update student appreciation certificate status (accept or cancel)
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+Accept: application/json
+lang: ar (optional)
+```
+
+**URL Parameters:**
+- `id` (required): Certificate ID
+
+**Request Body:**
+```json
+{
+    "status": "accept"
+}
+```
+
+**Field Descriptions:**
+- `status` (required): Certificate status - `accept` or `cancel`
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Certificate status updated successfully",
+    "data": {
+        "id": 1,
+        "teacher_id": 1,
+        "student_name": "سارة محمد",
+        "teacher_name": "أحمد محمد",
+        "memorization_amount": "5 أجزاء",
+        "student_image": "http://domain.com/Admin/images/certificates/students/1234567890_abc123.jpg",
+        "status": "accept",
+        "status_label": "مقبول",
+        "teacher": {
+            "id": 1,
+            "name": "أحمد محمد",
+            "specialization": "القرآن الكريم"
+        },
+        "created_at": "2024-01-15 10:30:00",
+        "updated_at": "2024-01-15 11:00:00"
+    }
+}
+```
+
+**Error Response (404) - Certificate Not Found:**
+```json
+{
+    "status": false,
+    "number": "E404",
+    "message": "Resource not found"
+}
+```
+
+**Error Response (422) - Validation Error:**
+```json
+{
+    "status": false,
+    "number": "E400",
+    "message": "The status field is required."
+}
+```
+
+**Note:** Certificate statuses:
+- `pending` - قيد الانتظار / Pending (default status when created)
+- `accept` - مقبول / Accepted
+- `cancel` - ملغي / Canceled
+
+---
+
+### 12.5 Delete Student Certificate
+**DELETE** `/api/dashboard/student-certificates/{id}`
+
+**Description:** Delete a student appreciation certificate. This will also delete the associated student image if it exists.
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+```
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "number": 1,
+    "message": "Certificate deleted successfully"
+}
+```
+
+**Error Response (404):**
+```json
+{
+    "status": false,
+    "number": "E404",
+    "message": "Resource not found"
+}
+```
+
+---
+
+## 13. Schedule Change Requests (طلبات تغيير المواعيد) - Dashboard
+
+### 13.1 Get All Schedule Change Requests
+**GET** `/api/dashboard/schedule-change-requests`
+
+**Description:** Get all schedule change requests submitted by teachers with filtering and pagination options
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+lang: ar (optional)
+```
+
+**Query Parameters:**
+- `teacher_id` (optional) - Filter by teacher ID
+- `student_id` (optional) - Filter by student ID
+- `status` (optional) - Filter by status: `pending`, `approved`, or `rejected`
+- `per_page` (optional) - Results per page (default: 15)
+- `page` (optional) - Page number
+
+**Example Requests:**
+```
+GET /api/dashboard/schedule-change-requests
+GET /api/dashboard/schedule-change-requests?status=pending
+GET /api/dashboard/schedule-change-requests?teacher_id=1&student_id=5
+```
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Schedule change requests retrieved successfully",
+    "data": {
+        "requests": [
+            {
+                "id": 1,
+                "teacher_id": 1,
+                "student_id": 5,
+                "old_schedule": [
+                    {"day": "saturday", "time": "17:00"},
+                    {"day": "tuesday", "time": "10:00"}
+                ],
+                "new_schedule": [
+                    {"day": "sunday", "time": "18:00"},
+                    {"day": "wednesday", "time": "14:00"}
+                ],
+                "status": "pending",
+                "status_label": "قيد الانتظار",
+                "teacher": {
+                    "id": 1,
+                    "name": "أحمد محمد",
+                    "specialization": "القرآن الكريم"
+                },
+                "student": {
+                    "id": 5,
+                    "name": "محمد علي",
+                    "phone": "01012345678"
+                },
+                "created_at": "2024-01-15 10:30:00",
+                "updated_at": "2024-01-15 10:30:00"
+            }
+        ],
+        "pagination": {
+            "total": 25,
+            "per_page": 15,
+            "current_page": 1,
+            "total_pages": 2
+        }
+    }
+}
+```
+
+---
+
+### 13.2 Approve Schedule Change Request
+**POST** `/api/dashboard/schedule-change-requests/{id}/approve`
+
+**Description:** Approve a schedule change request. This will update the student's schedule and regenerate incomplete sessions in active subscriptions. Notifications will be sent to both the teacher and student.
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+lang: ar (optional)
+```
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Schedule change request approved successfully",
+    "data": {
+        "id": 1,
+        "teacher_id": 1,
+        "student_id": 5,
+        "old_schedule": [
+            {"day": "saturday", "time": "17:00"},
+            {"day": "tuesday", "time": "10:00"}
+        ],
+        "new_schedule": [
+            {"day": "sunday", "time": "18:00"},
+            {"day": "wednesday", "time": "14:00"}
+        ],
+        "status": "approved",
+        "status_label": "موافق عليه",
+        "approved_by": 1,
+        "approved_at": "2024-01-15 11:00:00",
+        "teacher": {
+            "id": 1,
+            "name": "أحمد محمد"
+        },
+        "student": {
+            "id": 5,
+            "name": "محمد علي"
+        }
+    }
+}
+```
+
+**Error Response (400):**
+```json
+{
+    "status": false,
+    "number": "E400",
+    "message": "Request is not pending and cannot be approved"
+}
+```
+
+---
+
+### 13.3 Reject Schedule Change Request
+**POST** `/api/dashboard/schedule-change-requests/{id}/reject`
+
+**Description:** Reject a schedule change request. A notification with the rejection reason will be sent to the teacher.
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+Accept: application/json
+lang: ar (optional)
+```
+
+**Request Body:**
+```json
+{
+    "rejection_reason": "المواعيد المطلوبة غير متاحة"
+}
+```
+
+**Field Descriptions:**
+- `rejection_reason` (optional): Reason for rejection
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Schedule change request rejected successfully",
+    "data": {
+        "id": 1,
+        "teacher_id": 1,
+        "student_id": 5,
+        "status": "rejected",
+        "status_label": "مرفوض",
+        "rejected_by": 1,
+        "rejected_at": "2024-01-15 11:00:00",
+        "rejection_reason": "المواعيد المطلوبة غير متاحة"
+    }
+}
+```
+
+**Error Response (400):**
+```json
+{
+    "status": false,
+    "number": "E400",
+    "message": "Request is not pending and cannot be rejected"
+}
+```
+
+---
+
+## 14. Student Deletion Requests (طلبات حذف الطلاب) - Dashboard
+
+### 14.1 Get All Student Deletion Requests
+**GET** `/api/dashboard/student-deletion-requests`
+
+**Description:** Get all student deletion requests submitted by teachers with filtering and pagination options
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+lang: ar (optional)
+```
+
+**Query Parameters:**
+- `teacher_id` (optional) - Filter by teacher ID
+- `student_id` (optional) - Filter by student ID
+- `status` (optional) - Filter by status: `pending`, `approved`, or `rejected`
+- `per_page` (optional) - Results per page (default: 15)
+- `page` (optional) - Page number
+
+**Example Requests:**
+```
+GET /api/dashboard/student-deletion-requests
+GET /api/dashboard/student-deletion-requests?status=pending
+GET /api/dashboard/student-deletion-requests?teacher_id=1
+```
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Student deletion requests retrieved successfully",
+    "data": {
+        "requests": [
+            {
+                "id": 1,
+                "teacher_id": 1,
+                "student_id": 5,
+                "reason": "الطالب لم يعد يرغب في الاستمرار",
+                "status": "pending",
+                "status_label": "قيد الانتظار",
+                "teacher": {
+                    "id": 1,
+                    "name": "أحمد محمد",
+                    "specialization": "القرآن الكريم"
+                },
+                "student": {
+                    "id": 5,
+                    "name": "محمد علي",
+                    "phone": "01012345678"
+                },
+                "created_at": "2024-01-15 10:30:00",
+                "updated_at": "2024-01-15 10:30:00"
+            }
+        ],
+        "pagination": {
+            "total": 25,
+            "per_page": 15,
+            "current_page": 1,
+            "total_pages": 2
+        }
+    }
+}
+```
+
+---
+
+### 14.2 Approve Student Deletion Request
+**POST** `/api/dashboard/student-deletion-requests/{id}/approve`
+
+**Description:** Approve a student deletion request. This will permanently delete the student and all associated data (sessions, subscriptions, reviews, etc.). A notification will be sent to the teacher.
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+lang: ar (optional)
+```
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Student deletion request approved and student deleted successfully",
+    "data": {
+        "id": 1,
+        "teacher_id": 1,
+        "student_id": 5,
+        "status": "approved",
+        "status_label": "موافق عليه",
+        "approved_by": 1,
+        "approved_at": "2024-01-15 11:00:00"
+    }
+}
+```
+
+**Error Response (400):**
+```json
+{
+    "status": false,
+    "number": "E400",
+    "message": "Request is not pending and cannot be approved"
+}
+```
+
+---
+
+### 14.3 Reject Student Deletion Request
+**POST** `/api/dashboard/student-deletion-requests/{id}/reject`
+
+**Description:** Reject a student deletion request. A notification with the rejection reason will be sent to the teacher.
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+Accept: application/json
+lang: ar (optional)
+```
+
+**Request Body:**
+```json
+{
+    "rejection_reason": "الطالب لديه اشتراكات نشطة"
+}
+```
+
+**Field Descriptions:**
+- `rejection_reason` (optional): Reason for rejection
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Student deletion request rejected successfully",
+    "data": {
+        "id": 1,
+        "teacher_id": 1,
+        "student_id": 5,
+        "status": "rejected",
+        "status_label": "مرفوض",
+        "rejected_by": 1,
+        "rejected_at": "2024-01-15 11:00:00",
+        "rejection_reason": "الطالب لديه اشتراكات نشطة"
+    }
+}
+```
+
+**Error Response (400):**
+```json
+{
+    "status": false,
+    "number": "E400",
+    "message": "Request is not pending and cannot be rejected"
+}
+```
+
+---
+
+## 15. Payment Receipts (إيصالات الدفع) - Dashboard
+
+### 15.1 Get All Payment Receipts
+**GET** `/api/dashboard/payment-receipts`
+
+**Description:** Get all payment receipts submitted by students with filtering and pagination options
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+lang: ar (optional)
+```
+
+**Query Parameters:**
+- `student_id` (optional) - Filter by student ID
+- `status` (optional) - Filter by status: `pending`, `approved`, or `rejected`
+- `date_from` (optional) - Filter from date (format: YYYY-MM-DD)
+- `date_to` (optional) - Filter to date (format: YYYY-MM-DD)
+- `per_page` (optional) - Results per page (default: 15)
+- `page` (optional) - Page number
+
+**Example Requests:**
+```
+GET /api/dashboard/payment-receipts
+GET /api/dashboard/payment-receipts?status=pending
+GET /api/dashboard/payment-receipts?student_id=5&date_from=2024-01-01&date_to=2024-01-31
+```
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Payment receipts retrieved successfully",
+    "data": {
+        "receipts": [
+            {
+                "id": 1,
+                "student_id": 5,
+                "amount": 500.00,
+                "payment_date": "2024-01-15",
+                "receipt_image": "http://domain.com/Admin/images/payment-receipts/1234567890_abc123.jpg",
+                "notes": "دفع رسوم شهر يناير",
+                "status": "pending",
+                "status_label": "قيد الانتظار",
+                "student": {
+                    "id": 5,
+                    "name": "محمد علي",
+                    "phone": "01012345678"
+                },
+                "created_at": "2024-01-15 10:30:00",
+                "updated_at": "2024-01-15 10:30:00"
+            }
+        ],
+        "pagination": {
+            "total": 25,
+            "per_page": 15,
+            "current_page": 1,
+            "total_pages": 2
+        }
+    }
+}
+```
+
+---
+
+### 15.2 Approve Payment Receipt
+**POST** `/api/dashboard/payment-receipts/{id}/approve`
+
+**Description:** Approve a payment receipt
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+lang: ar (optional)
+```
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Payment receipt approved successfully",
+    "data": {
+        "id": 1,
+        "student_id": 5,
+        "amount": 500.00,
+        "payment_date": "2024-01-15",
+        "receipt_image": "http://domain.com/Admin/images/payment-receipts/1234567890_abc123.jpg",
+        "notes": "دفع رسوم شهر يناير",
+        "status": "approved",
+        "status_label": "موافق عليه",
+        "approved_by": 1,
+        "approved_at": "2024-01-15 11:00:00",
+        "student": {
+            "id": 5,
+            "name": "محمد علي"
+        }
+    }
+}
+```
+
+**Error Response (400):**
+```json
+{
+    "status": false,
+    "number": "E400",
+    "message": "Receipt is not pending and cannot be approved"
+}
+```
+
+---
+
+### 15.3 Reject Payment Receipt
+**POST** `/api/dashboard/payment-receipts/{id}/reject`
+
+**Description:** Reject a payment receipt. A notification with the rejection reason will be sent to the student.
+
+**Request Headers:**
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+Accept: application/json
+lang: ar (optional)
+```
+
+**Request Body:**
+```json
+{
+    "rejection_reason": "الصورة غير واضحة"
+}
+```
+
+**Field Descriptions:**
+- `rejection_reason` (optional): Reason for rejection
+
+**Success Response (200):**
+```json
+{
+    "status": true,
+    "message": "Payment receipt rejected successfully",
+    "data": {
+        "id": 1,
+        "student_id": 5,
+        "amount": 500.00,
+        "payment_date": "2024-01-15",
+        "receipt_image": "http://domain.com/Admin/images/payment-receipts/1234567890_abc123.jpg",
+        "notes": "دفع رسوم شهر يناير",
+        "status": "rejected",
+        "status_label": "مرفوض",
+        "rejected_by": 1,
+        "rejected_at": "2024-01-15 11:00:00",
+        "rejection_reason": "الصورة غير واضحة",
+        "student": {
+            "id": 5,
+            "name": "محمد علي"
+        }
+    }
+}
+```
+
+**Error Response (400):**
+```json
+{
+    "status": false,
+    "number": "E400",
+    "message": "Receipt is not pending and cannot be rejected"
+}
+```
+
+---
+
 ## Language Support
 
 All endpoints support Arabic and English translation. Send the following header to control the language:
@@ -2894,3 +3981,13 @@ The Response will return data according to the specified language, with both ver
 21. Lessons (جزء من حصصنا / دروسنا) - CRUD operations available for managing lesson content with bilingual support (Arabic/English) and video upload functionality.
 22. When updating a student, you can use `paid_subscriptions_count` field to update payment status for multiple subscriptions at once. The system will mark the first N subscriptions (ordered by start_date, oldest first) as paid, and the remaining subscriptions as unpaid. This is useful when you want to update payment status for multiple subscriptions in a single operation.
 23. To update payment status for a single subscription, use the Update Student Subscription endpoint (`POST /api/student-subscriptions/{id}`) with the `is_paid` field.
+24. Student Sessions List endpoint (`GET /api/student-sessions`) supports filtering by specific date using the `date` query parameter (format: YYYY-MM-DD).
+25. Appreciation Certificates (شهادات التقدير) - Dashboard APIs are available for managing parent and student appreciation certificate requests. Certificates can be filtered by teacher, status (pending/accept/cancel), and date ranges. Status can be updated to accept or cancel certificates. Certificates can also be deleted using DELETE endpoints.
+26. Get Sessions by Date endpoint (`GET /api/dashboard/student-sessions/by-date`) retrieves all sessions for a specific date with optional filters and statistics. The date parameter is required (format: YYYY-MM-DD).
+27. Student Subscriptions can be paused and resumed. When paused, all future incomplete sessions are removed. When resumed, new sessions are generated from the resume date, considering the remaining sessions at the time of pause.
+28. Schedule Change Requests - Teachers can request schedule changes for students from the app. These requests require admin approval from the dashboard. Upon approval, the student's schedule is updated and incomplete sessions in active subscriptions are regenerated.
+29. Student Deletion Requests - Teachers can request student deletion from the app. These requests require admin approval from the dashboard. Upon approval, the student and all associated data are permanently deleted.
+30. Payment Receipts - Students can upload payment receipts from the app. Admins can review, approve, or reject these receipts from the dashboard.
+31. Teacher Payment Methods - Teachers can add payment methods (wallet or InstaPay) from the app. When processing teacher payments in the dashboard, admins can select one of the teacher's registered payment methods.
+32. Student fields: `trial_session_attendance` (not_booked, booked, attended), `monthly_subscription_price`, `country`, and `currency` are available for tracking student information.
+33. Student `type` field includes three values: `website` (registered from website), `admin` (added/modified by admin), and `app` (registered from mobile application).

@@ -15,7 +15,7 @@ const DAYS_OF_WEEK = [
   { value: 'friday', label: 'الجمعة', arName: 'الجمعة' },
 ]
 
-export default function WebsiteStudentsPage() {
+export default function AppStudentsPage() {
   const { 
     students, 
     isLoadingStudents, 
@@ -64,8 +64,8 @@ export default function WebsiteStudentsPage() {
   })
 
   useEffect(() => {
-    // Fetch only website students with filters
-    const filters: any = { type: 'website' }
+    // Fetch only app students with filters
+    const filters: any = { type: 'app' }
     if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
     fetchStudents(filters)
     fetchPackages()
@@ -168,14 +168,14 @@ export default function WebsiteStudentsPage() {
           hourly_rate: '',
           notes: '',
           password: '',
-          trial_session_attendance: '' as 'not_booked' | 'booked' | 'attended' | '',
+          trial_session_attendance: '',
           monthly_subscription_price: '',
           country: '',
           currency: '',
         })
         setShowEditModal(false)
         // Refresh the list
-        const filters: any = { type: 'website' }
+        const filters: any = { type: 'app' }
         if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
         fetchStudents(filters)
       } catch (error: any) {
@@ -207,7 +207,7 @@ export default function WebsiteStudentsPage() {
       hourly_rate: '',
       notes: '',
       password: '',
-      trial_session_attendance: '' as 'not_booked' | 'booked' | 'attended' | '',
+      trial_session_attendance: '',
       monthly_subscription_price: '',
       country: '',
       currency: '',
@@ -219,7 +219,7 @@ export default function WebsiteStudentsPage() {
       try {
         await deleteStudent(id)
         // Refresh the list
-        const filters: any = { type: 'website' }
+        const filters: any = { type: 'app' }
         if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
         fetchStudents(filters)
       } catch (error: any) {
@@ -233,7 +233,7 @@ export default function WebsiteStudentsPage() {
     try {
       await updateStudent(studentId, { trial_session_attendance: newStatus })
       // Refresh the list
-      const filters: any = { type: 'website' }
+      const filters: any = { type: 'app' }
       if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
       fetchStudents(filters)
       // Update viewed student if it's the same
@@ -286,14 +286,14 @@ export default function WebsiteStudentsPage() {
     )
   })
 
-  // Filter to only show website students (double check)
-  const websiteStudents = filteredStudents.filter(student => student.type === 'website')
+  // Filter to only show app students (double check)
+  const appStudents = filteredStudents.filter(student => student.type === 'app')
 
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-4xl font-bold text-primary-900">طلاب الموقع</h1>
-        <div className="text-primary-600 font-medium">إجمالي: {websiteStudents.length}</div>
+        <h1 className="text-4xl font-bold text-primary-900">الطلاب الجدد من التطبيق</h1>
+        <div className="text-primary-600 font-medium">إجمالي: {appStudents.length}</div>
       </div>
 
       {/* Error Message */}
@@ -364,14 +364,14 @@ export default function WebsiteStudentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {websiteStudents.length === 0 ? (
+                {appStudents.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="px-6 py-8 text-center text-primary-600">
-                      {searchTerm || trialSessionFilter ? 'لا توجد نتائج' : 'لا يوجد طلاب مسجلون من الموقع بعد'}
+                      {searchTerm || trialSessionFilter ? 'لا توجد نتائج' : 'لا يوجد طلاب مسجلون من التطبيق بعد'}
                     </td>
                   </tr>
                 ) : (
-                  websiteStudents.map((student) => (
+                  appStudents.map((student) => (
                     <tr
                       key={student.id}
                       className="border-b border-primary-200 hover:bg-primary-50 transition-colors"
@@ -503,9 +503,31 @@ export default function WebsiteStudentsPage() {
                   {viewedStudent.trial_session_attendance && (
                     <div>
                       <label className="block text-primary-600 text-sm mb-1">حالة جلسة التجربة</label>
-                      <div className="mt-1">
-                        {getTrialAttendanceBadge(viewedStudent.trial_session_attendance)}
-                      </div>
+                      <p className="text-primary-900 font-semibold text-lg">
+                        {viewedStudent.trial_session_attendance_label || 
+                         (viewedStudent.trial_session_attendance === 'not_booked' ? 'غير محجوز' :
+                          viewedStudent.trial_session_attendance === 'booked' ? 'محجوز' : 'حضر')}
+                      </p>
+                    </div>
+                  )}
+                  {viewedStudent.monthly_subscription_price && (
+                    <div>
+                      <label className="block text-primary-600 text-sm mb-1">سعر الاشتراك الشهري</label>
+                      <p className="text-primary-900 font-semibold text-lg">
+                        {viewedStudent.monthly_subscription_price} {viewedStudent.currency || 'EGP'}
+                      </p>
+                    </div>
+                  )}
+                  {viewedStudent.country && (
+                    <div>
+                      <label className="block text-primary-600 text-sm mb-1">البلد</label>
+                      <p className="text-primary-900 font-semibold text-lg">{viewedStudent.country}</p>
+                    </div>
+                  )}
+                  {viewedStudent.currency && (
+                    <div>
+                      <label className="block text-primary-600 text-sm mb-1">العملة</label>
+                      <p className="text-primary-900 font-semibold text-lg">{viewedStudent.currency}</p>
                     </div>
                   )}
                   {viewedStudent.hour && (
@@ -715,6 +737,69 @@ export default function WebsiteStudentsPage() {
                     </select>
                   </div>
                   <div>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">حالة جلسة التجربة</label>
+                    <select
+                      value={editForm.trial_session_attendance}
+                      onChange={(e) => setEditForm({ ...editForm, trial_session_attendance: e.target.value as 'not_booked' | 'booked' | 'attended' | '' })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                      dir="rtl"
+                    >
+                      <option value="">اختر الحالة</option>
+                      <option value="not_booked">غير محجوز</option>
+                      <option value="booked">محجوز</option>
+                      <option value="attended">حضر</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">سعر الاشتراك الشهري</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={editForm.monthly_subscription_price}
+                      onChange={(e) => setEditForm({ ...editForm, monthly_subscription_price: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">البلد</label>
+                    <select
+                      value={editForm.country}
+                      onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                      dir="rtl"
+                    >
+                      <option value="">اختر البلد</option>
+                      <option value="الأردن">الأردن</option>
+                      <option value="مصر">مصر</option>
+                      <option value="السعودية">السعودية</option>
+                      <option value="الإمارات">الإمارات</option>
+                      <option value="قطر">قطر</option>
+                      <option value="أجنبي">أجنبي</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">العملة</label>
+                    <select
+                      value={editForm.currency}
+                      onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                      dir="rtl"
+                    >
+                      <option value="">اختر العملة</option>
+                      <option value="JOD">دينار أردني (JOD)</option>
+                      <option value="EGP">جنيه مصري (EGP)</option>
+                      <option value="SAR">ريال سعودي (SAR)</option>
+                      <option value="AED">درهم إماراتي (AED)</option>
+                      <option value="QAR">ريال قطري (QAR)</option>
+                      <option value="KWD">دينار كويتي (KWD)</option>
+                      <option value="USD">دولار أمريكي (USD)</option>
+                      <option value="CAD">دولار كندي (CAD)</option>
+                      <option value="EUR">يورو (EUR)</option>
+                    </select>
+                  </div>
+                  <div>
                     <label className="block text-primary-900 font-semibold mb-2 text-right">وقت الحصة</label>
                     <input
                       type="time"
@@ -770,73 +855,6 @@ export default function WebsiteStudentsPage() {
                       placeholder="0.00"
                     />
                   </div>
-                  <div>
-                    <label className="block text-primary-900 font-semibold mb-2 text-right">سعر الاشتراك الشهري</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={editForm.monthly_subscription_price}
-                      onChange={(e) => setEditForm({ ...editForm, monthly_subscription_price: e.target.value })}
-                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-primary-900 font-semibold mb-2 text-right">حالة جلسة التجربة</label>
-                    <select
-                      value={editForm.trial_session_attendance}
-                      onChange={(e) => setEditForm({ ...editForm, trial_session_attendance: e.target.value as 'not_booked' | 'booked' | 'attended' | '' })}
-                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
-                      dir="rtl"
-                    >
-                      <option value="">اختر الحالة</option>
-                      <option value="not_booked">غير محجوز</option>
-                      <option value="booked">محجوز</option>
-                      <option value="attended">حضر</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-primary-900 font-semibold mb-2 text-right">البلد</label>
-                    <select
-                      value={editForm.country}
-                      onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
-                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
-                      dir="rtl"
-                    >
-                      <option value="">اختر البلد</option>
-                      <option value="الأردن">الأردن</option>
-                      <option value="مصر">مصر</option>
-                      <option value="السعودية">السعودية</option>
-                      <option value="الإمارات">الإمارات</option>
-                      <option value="قطر">قطر</option>
-                      <option value="الكويت">الكويت</option>
-                      <option value="أمريكا">أمريكا</option>
-                      <option value="كندا">كندا</option>
-                      <option value="ألمانيا">ألمانيا</option>
-                      <option value="أجنبي">أجنبي</option>
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-primary-900 font-semibold mb-2 text-right">العملة</label>
-                  <select
-                    value={editForm.currency}
-                    onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })}
-                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
-                    dir="rtl"
-                  >
-                    <option value="">اختر العملة</option>
-                    <option value="JOD">دينار أردني (JOD)</option>
-                    <option value="EGP">جنيه مصري (EGP)</option>
-                    <option value="SAR">ريال سعودي (SAR)</option>
-                    <option value="AED">درهم إماراتي (AED)</option>
-                    <option value="QAR">ريال قطري (QAR)</option>
-                    <option value="KWD">دينار كويتي (KWD)</option>
-                    <option value="USD">دولار أمريكي (USD)</option>
-                    <option value="CAD">دولار كندي (CAD)</option>
-                    <option value="EUR">يورو (EUR)</option>
-                  </select>
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-4">
@@ -965,3 +983,4 @@ export default function WebsiteStudentsPage() {
     </div>
   )
 }
+

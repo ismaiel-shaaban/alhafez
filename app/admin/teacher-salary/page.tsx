@@ -15,6 +15,7 @@ export default function TeacherSalaryPage() {
     getTeacherSalary,
     markPaymentAsPaid,
     getTeacherPayments,
+    getTeacherPaymentMethods,
     error 
   } = useAdminStore()
   const [selectedTeacher, setSelectedTeacher] = useState<number | null>(null)
@@ -30,8 +31,11 @@ export default function TeacherSalaryPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [paymentForm, setPaymentForm] = useState({
     payment_proof_image: null as File | null,
+    payment_method_id: '' as string | '',
     notes: '',
   })
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([])
+  const [isLoadingPaymentMethods, setIsLoadingPaymentMethods] = useState(false)
 
   // Set default month to current month
   useEffect(() => {
@@ -66,10 +70,25 @@ export default function TeacherSalaryPage() {
       setSalaryData(data)
       setShowSalaryModal(true)
       setShowPaymentForm(false)
+      // Load payment methods for this teacher
+      loadPaymentMethods(teacherId)
     } catch (error: any) {
       alert(error.message || 'فشل تحميل حساب الراتب')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const loadPaymentMethods = async (teacherId: number) => {
+    setIsLoadingPaymentMethods(true)
+    try {
+      const methods = await getTeacherPaymentMethods(teacherId)
+      setPaymentMethods(methods || [])
+    } catch (error: any) {
+      console.error('Error loading payment methods:', error)
+      setPaymentMethods([])
+    } finally {
+      setIsLoadingPaymentMethods(false)
     }
   }
 
@@ -103,11 +122,12 @@ export default function TeacherSalaryPage() {
       await markPaymentAsPaid(selectedTeacher, {
         month: selectedMonth,
         payment_proof_image: paymentForm.payment_proof_image,
+        payment_method_id: paymentForm.payment_method_id ? parseInt(paymentForm.payment_method_id) : undefined,
         notes: paymentForm.notes || undefined,
       })
       alert('تم تسجيل السداد بنجاح')
       setShowPaymentForm(false)
-      setPaymentForm({ payment_proof_image: null, notes: '' })
+      setPaymentForm({ payment_proof_image: null, payment_method_id: '', notes: '' })
       // Refresh salary data
       if (selectedTeacher && selectedMonth) {
         const data = await getTeacherSalary(selectedTeacher, selectedMonth)
@@ -389,6 +409,15 @@ export default function TeacherSalaryPage() {
                         <p className="text-primary-600 text-sm mb-1">المبلغ المدفوع</p>
                         <p className="text-primary-900 font-bold text-xl">{salaryData.payment.total_amount.toFixed(2)} جنيه</p>
                       </div>
+                      {salaryData.payment.payment_method && (
+                        <div>
+                          <p className="text-primary-600 text-sm mb-1">طريقة الدفع</p>
+                          <p className="text-primary-900 font-medium">
+                            {salaryData.payment.payment_method.type_label || (salaryData.payment.payment_method.type === 'wallet' ? 'محفظة' : (salaryData.payment.payment_method.type === 'insta' || salaryData.payment.payment_method.type === 'instapay' ? 'انستا' : 'InstaPay'))} - {salaryData.payment.payment_method.name}
+                            {salaryData.payment.payment_method.phone && ` (${salaryData.payment.payment_method.phone})`}
+                          </p>
+                        </div>
+                      )}
                     </div>
                     {salaryData.payment.notes && (
                       <div className="mt-4">
@@ -424,6 +453,26 @@ export default function TeacherSalaryPage() {
                       </button>
                     ) : (
                       <form onSubmit={handleMarkAsPaid} className="mt-4 space-y-4">
+                        {paymentMethods.length > 0 && (
+                          <div>
+                            <label className="block text-primary-900 font-semibold mb-2 text-right">طريقة الدفع (اختياري)</label>
+                            <select
+                              value={paymentForm.payment_method_id}
+                              onChange={(e) => setPaymentForm({ ...paymentForm, payment_method_id: e.target.value })}
+                              className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                              dir="rtl"
+                            >
+                              <option value="">اختر طريقة الدفع (اختياري)</option>
+                              {paymentMethods.map((method) => (
+                                <option key={method.id} value={method.id}>
+                                  {method.type_label || (method.type === 'wallet' ? 'محفظة' : (method.type === 'insta' || method.type === 'instapay' ? 'انستا' : 'InstaPay'))} - {method.name}
+                                  {method.phone && ` (${method.phone})`}
+                                </option>
+                              ))}
+                            </select>
+                            <p className="text-xs text-primary-600 mt-1">اختر طريقة الدفع المسجلة للمعلم (اختياري)</p>
+                          </div>
+                        )}
                         <div>
                           <label className="block text-primary-900 font-semibold mb-2 text-right">صورة إثبات الدفع *</label>
                           <input
@@ -458,7 +507,7 @@ export default function TeacherSalaryPage() {
                             type="button"
                             onClick={() => {
                               setShowPaymentForm(false)
-                              setPaymentForm({ payment_proof_image: null, notes: '' })
+                              setPaymentForm({ payment_proof_image: null, payment_method_id: '', notes: '' })
                             }}
                             className="flex-1 px-6 py-3 border-2 border-primary-300 text-primary-700 rounded-lg hover:bg-primary-50 transition-all"
                           >
@@ -537,6 +586,15 @@ export default function TeacherSalaryPage() {
                                       hour: '2-digit',
                                       minute: '2-digit'
                                     })}
+                                  </p>
+                                </div>
+                              )}
+                              {payment.payment_method && (
+                                <div>
+                                  <p className="text-primary-600 text-sm mb-1">طريقة الدفع</p>
+                                  <p className="text-primary-700">
+                                    {payment.payment_method.type_label || (payment.payment_method.type === 'wallet' ? 'محفظة' : (payment.payment_method.type === 'insta' || payment.payment_method.type === 'instapay' ? 'انستا' : 'InstaPay'))} - {payment.payment_method.name}
+                                    {payment.payment_method.phone && ` (${payment.payment_method.phone})`}
                                   </p>
                                 </div>
                               )}

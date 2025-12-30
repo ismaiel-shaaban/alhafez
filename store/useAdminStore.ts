@@ -157,6 +157,7 @@ interface AdminState {
   getTeacherSalary: (teacherId: number, month: string) => Promise<teacherSalaryAPI.TeacherSalaryResponse>
   markPaymentAsPaid: (teacherId: number, data: teacherSalaryAPI.MarkPaymentRequest) => Promise<void>
   getTeacherPayments: (teacherId: number, page?: number) => Promise<{ payments: teacherSalaryAPI.TeacherPayment[]; pagination: any }>
+  getTeacherPaymentMethods: (teacherId: number) => Promise<teacherSalaryAPI.TeacherPaymentMethod[]>
 }
 
 export const useAdminStore = create<AdminState>()(
@@ -962,6 +963,21 @@ export const useAdminStore = create<AdminState>()(
           set({
             isLoading: false,
             error: error.message || 'فشل تحميل سجل المدفوعات',
+          })
+          throw error
+        }
+      },
+      getTeacherPaymentMethods: async (teacherId) => {
+        set({ isLoading: true, error: null })
+        try {
+          const locale = getCurrentLocale()
+          const response = await teacherSalaryAPI.getTeacherPaymentMethods(teacherId, locale)
+          set({ isLoading: false })
+          return response
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل تحميل طرق الدفع',
           })
           throw error
         }
