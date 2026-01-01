@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAdminStore } from '@/store/useAdminStore'
 import { Plus, Edit, Trash2, X, Eye, Trophy, Search, Filter } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import SearchableStudentSelect from '@/components/admin/SearchableStudentSelect'
 
 export default function HonorBoardPage() {
   const { 
@@ -212,19 +213,12 @@ export default function HonorBoardPage() {
           </div>
           <div>
             <label className="block text-primary-900 font-semibold mb-2 text-right">الطالب</label>
-            <select
+            <SearchableStudentSelect
               value={filterStudentId}
-              onChange={(e) => setFilterStudentId(e.target.value)}
-              className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
-              dir="rtl"
-            >
-              <option value="">جميع الطلاب</option>
-              {students.map((student) => (
-                <option key={student.id} value={student.id}>
-                  {student.name}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setFilterStudentId(value)}
+              students={students}
+              placeholder="جميع الطلاب"
+            />
           </div>
         </div>
       </div>
@@ -448,20 +442,13 @@ export default function HonorBoardPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-primary-900 font-semibold mb-2 text-right">الطالب</label>
-                  <select
+                  <SearchableStudentSelect
                     value={formData.student_id}
-                    onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
-                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
-                    dir="rtl"
+                    onChange={(value) => setFormData({ ...formData, student_id: value })}
+                    students={students}
+                    placeholder="اختر الطالب"
                     required
-                  >
-                    <option value="">اختر الطالب</option>
-                    {students.map((student) => (
-                      <option key={student.id} value={student.id}>
-                        {student.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div>
                   <label className="block text-primary-900 font-semibold mb-2 text-right">المستوى (عربي)</label>
