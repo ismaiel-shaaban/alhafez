@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAdminStore } from '@/store/useAdminStore'
 import { Search, Eye, X, Edit, Trash2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import SearchableTeacherSelect from '@/components/admin/SearchableTeacherSelect'
 
 const DAYS_OF_WEEK = [
   { value: 'saturday', label: 'السبت', arName: 'السبت' },
@@ -14,6 +15,8 @@ const DAYS_OF_WEEK = [
   { value: 'thursday', label: 'الخميس', arName: 'الخميس' },
   { value: 'friday', label: 'الجمعة', arName: 'الجمعة' },
 ]
+
+type TabType = 'website' | 'app'
 
 export default function WebsiteStudentsPage() {
   const { 
@@ -30,6 +33,7 @@ export default function WebsiteStudentsPage() {
     error 
   } = useAdminStore()
   
+  const [activeTab, setActiveTab] = useState<TabType>('website')
   const [searchTerm, setSearchTerm] = useState('')
   const [trialSessionFilter, setTrialSessionFilter] = useState<'not_booked' | 'booked' | 'attended' | ''>('')
   const [viewingId, setViewingId] = useState<number | null>(null)
@@ -39,6 +43,7 @@ export default function WebsiteStudentsPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [editingStudentHasSubscriptions, setEditingStudentHasSubscriptions] = useState(false)
   const [editForm, setEditForm] = useState({
     name: '',
     email: '',
@@ -61,16 +66,20 @@ export default function WebsiteStudentsPage() {
     monthly_subscription_price: '',
     country: '',
     currency: '',
+    past_months_count: '',
+    paid_months_count: '',
+    subscription_start_date: '',
+    paid_subscriptions_count: '',
   })
 
   useEffect(() => {
-    // Fetch only website students with filters
-    const filters: any = { type: 'website' }
+    // Fetch students based on active tab with filters
+    const filters: any = { type: activeTab }
     if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
     fetchStudents(filters)
     fetchPackages()
     fetchTeachers()
-  }, [fetchStudents, fetchPackages, fetchTeachers, trialSessionFilter])
+  }, [fetchStudents, fetchPackages, fetchTeachers, activeTab, trialSessionFilter])
 
   const handleViewStudent = async (id: number) => {
     try {
@@ -83,34 +92,71 @@ export default function WebsiteStudentsPage() {
     }
   }
 
-  const handleEdit = (student: any) => {
-    setEditingId(student.id)
-    // Check if student has weekly_schedule (takes precedence)
-    const hasWeeklySchedule = student.weekly_schedule && typeof student.weekly_schedule === 'object' && Object.keys(student.weekly_schedule).length > 0
-    setEditForm({
-      name: student.name || '',
-      email: student.email || '',
-      phone: student.phone || '',
-      age: student.age?.toString() || '',
-      gender: student.gender || '',
-      package_id: student.package_id?.toString() || '',
-      teacher_id: student.teacher_id?.toString() || '',
-      hour: student.hour || '',
-      monthly_sessions: student.monthly_sessions?.toString() || '',
-      weekly_sessions: student.weekly_sessions?.toString() || '',
-      weekly_days: Array.isArray(student.weekly_days) ? [...student.weekly_days] : [],
-      weekly_schedule: hasWeeklySchedule ? { ...student.weekly_schedule } : {},
-      useWeeklySchedule: hasWeeklySchedule,
-      session_duration: student.session_duration?.toString() || '',
-      hourly_rate: student.hourly_rate?.toString() || '',
-      notes: student.notes || '',
-      password: '', // Don't populate password field for security
-      trial_session_attendance: student.trial_session_attendance || '',
-      monthly_subscription_price: student.monthly_subscription_price?.toString() || '',
-      country: student.country || '',
-      currency: student.currency || '',
-    })
-    setShowEditModal(true)
+  const handleEdit = async (student: any) => {
+    try {
+      // Fetch full student data to check for subscriptions
+      const fullStudent = await getStudent(student.id)
+      
+      // Check if student has subscriptions
+      const hasSubscriptions = !!(fullStudent.subscriptions && Array.isArray(fullStudent.subscriptions) && fullStudent.subscriptions.length > 0)
+      setEditingStudentHasSubscriptions(!!hasSubscriptions)
+      
+      // Check if student has weekly_schedule (takes precedence)
+      const hasWeeklySchedule = !!(fullStudent.weekly_schedule && typeof fullStudent.weekly_schedule === 'object' && Object.keys(fullStudent.weekly_schedule).length > 0)
+      
+      // Get subscription start date from earliest subscription if available
+      let subscriptionStartDate = ''
+      if (hasSubscriptions && Array.isArray(fullStudent.subscriptions)) {
+        // Sort subscriptions by start_date and get the earliest one
+        const sortedSubscriptions = [...fullStudent.subscriptions]
+          .filter((sub: any) => sub.start_date) // Filter out subscriptions without start_date
+          .sort((a: any, b: any) => {
+            const dateA = new Date(a.start_date).getTime()
+            const dateB = new Date(b.start_date).getTime()
+            return dateA - dateB
+          })
+        if (sortedSubscriptions.length > 0) {
+          subscriptionStartDate = sortedSubscriptions[0].start_date
+        }
+      }
+      
+      // Get subscription statistics
+      const paidMonthsCount = fullStudent.subscriptions_statistics?.paid_subscriptions?.toString() || ''
+      const totalSubscriptions = fullStudent.subscriptions_statistics?.total_subscriptions || 0
+      
+      setEditingId(fullStudent.id)
+      setEditForm({
+        name: fullStudent.name || '',
+        email: fullStudent.email || '',
+        phone: fullStudent.phone || '',
+        age: fullStudent.age?.toString() || '',
+        gender: fullStudent.gender || '',
+        package_id: fullStudent.package_id?.toString() || '',
+        teacher_id: fullStudent.teacher_id?.toString() || '',
+        hour: fullStudent.hour || '',
+        monthly_sessions: fullStudent.monthly_sessions?.toString() || '',
+        weekly_sessions: fullStudent.weekly_sessions?.toString() || '',
+        weekly_days: Array.isArray(fullStudent.weekly_days) ? [...fullStudent.weekly_days] : [],
+        weekly_schedule: hasWeeklySchedule ? { ...fullStudent.weekly_schedule } : {},
+        useWeeklySchedule: hasWeeklySchedule,
+        session_duration: fullStudent.session_duration?.toString() || '',
+        hourly_rate: fullStudent.hourly_rate?.toString() || '',
+        notes: fullStudent.notes || '',
+        password: '', // Don't populate password field for security
+        trial_session_attendance: fullStudent.trial_session_attendance || '',
+        monthly_subscription_price: fullStudent.monthly_subscription_price?.toString() || '',
+        country: fullStudent.country || '',
+        currency: fullStudent.currency || '',
+        // Get data from subscriptions_statistics (only if no subscriptions exist)
+        past_months_count: hasSubscriptions ? '' : totalSubscriptions.toString(),
+        paid_months_count: hasSubscriptions ? '' : paidMonthsCount,
+        subscription_start_date: hasSubscriptions ? '' : subscriptionStartDate,
+        paid_subscriptions_count: '',
+      })
+      setShowEditModal(true)
+    } catch (error: any) {
+      alert(error.message || 'فشل تحميل بيانات الطالب')
+    }
   }
 
   const handleSaveEdit = async (e: React.FormEvent) => {
@@ -148,6 +194,22 @@ export default function WebsiteStudentsPage() {
           if (editForm.weekly_days.length > 0) updateData.weekly_days = editForm.weekly_days
         }
 
+        // Add subscription-related fields only if student doesn't have existing subscriptions
+        if (!editingStudentHasSubscriptions) {
+          if (editForm.past_months_count) {
+            updateData.past_months_count = parseInt(editForm.past_months_count)
+          }
+          if (editForm.paid_months_count) {
+            updateData.paid_months_count = parseInt(editForm.paid_months_count)
+          }
+          if (editForm.subscription_start_date) {
+            updateData.subscription_start_date = editForm.subscription_start_date
+          }
+          if (editForm.paid_subscriptions_count) {
+            updateData.paid_subscriptions_count = parseInt(editForm.paid_subscriptions_count)
+          }
+        }
+
         await updateStudent(editingId, updateData)
         setEditingId(null)
         setEditForm({
@@ -172,10 +234,14 @@ export default function WebsiteStudentsPage() {
           monthly_subscription_price: '',
           country: '',
           currency: '',
+          past_months_count: '',
+          paid_months_count: '',
+          subscription_start_date: '',
+          paid_subscriptions_count: '',
         })
         setShowEditModal(false)
         // Refresh the list
-        const filters: any = { type: 'website' }
+        const filters: any = { type: activeTab }
         if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
         fetchStudents(filters)
       } catch (error: any) {
@@ -189,6 +255,7 @@ export default function WebsiteStudentsPage() {
   const handleCloseEditModal = () => {
     setShowEditModal(false)
     setEditingId(null)
+    setEditingStudentHasSubscriptions(false)
     setEditForm({
       name: '',
       email: '',
@@ -211,6 +278,10 @@ export default function WebsiteStudentsPage() {
       monthly_subscription_price: '',
       country: '',
       currency: '',
+      past_months_count: '',
+      paid_months_count: '',
+      subscription_start_date: '',
+      paid_subscriptions_count: '',
     })
   }
 
@@ -219,7 +290,7 @@ export default function WebsiteStudentsPage() {
       try {
         await deleteStudent(id)
         // Refresh the list
-        const filters: any = { type: 'website' }
+        const filters: any = { type: activeTab }
         if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
         fetchStudents(filters)
       } catch (error: any) {
@@ -233,7 +304,7 @@ export default function WebsiteStudentsPage() {
     try {
       await updateStudent(studentId, { trial_session_attendance: newStatus })
       // Refresh the list
-      const filters: any = { type: 'website' }
+      const filters: any = { type: activeTab }
       if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
       fetchStudents(filters)
       // Update viewed student if it's the same
@@ -286,14 +357,40 @@ export default function WebsiteStudentsPage() {
     )
   })
 
-  // Filter to only show website students (double check)
-  const websiteStudents = filteredStudents.filter(student => student.type === 'website')
+  // Filter to only show students of the active tab type
+  const tabStudents = filteredStudents.filter(student => student.type === activeTab)
 
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-4xl font-bold text-primary-900">طلاب الموقع</h1>
-        <div className="text-primary-600 font-medium">إجمالي: {websiteStudents.length}</div>
+        <h1 className="text-4xl font-bold text-primary-900">الطلاب</h1>
+        <div className="text-primary-600 font-medium">إجمالي: {tabStudents.length}</div>
+      </div>
+
+      {/* Tabs */}
+      <div className="bg-white rounded-xl border-2 border-primary-200 p-2 mb-6 shadow-lg">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab('website')}
+            className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all ${
+              activeTab === 'website'
+                ? 'bg-primary-600 text-white shadow-md'
+                : 'bg-primary-50 text-primary-700 hover:bg-primary-100'
+            }`}
+          >
+            طلاب الموقع
+          </button>
+          <button
+            onClick={() => setActiveTab('app')}
+            className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all ${
+              activeTab === 'app'
+                ? 'bg-primary-600 text-white shadow-md'
+                : 'bg-primary-50 text-primary-700 hover:bg-primary-100'
+            }`}
+          >
+            طلاب التطبيق
+          </button>
+        </div>
       </div>
 
       {/* Error Message */}
@@ -364,14 +461,14 @@ export default function WebsiteStudentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {websiteStudents.length === 0 ? (
+                {tabStudents.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="px-6 py-8 text-center text-primary-600">
-                      {searchTerm || trialSessionFilter ? 'لا توجد نتائج' : 'لا يوجد طلاب مسجلون من الموقع بعد'}
+                      {searchTerm || trialSessionFilter ? 'لا توجد نتائج' : `لا يوجد طلاب مسجلون ${activeTab === 'website' ? 'من الموقع' : 'من التطبيق'} بعد`}
                     </td>
                   </tr>
                 ) : (
-                  websiteStudents.map((student) => (
+                  tabStudents.map((student) => (
                     <tr
                       key={student.id}
                       className="border-b border-primary-200 hover:bg-primary-50 transition-colors"
@@ -506,6 +603,26 @@ export default function WebsiteStudentsPage() {
                       <div className="mt-1">
                         {getTrialAttendanceBadge(viewedStudent.trial_session_attendance)}
                       </div>
+                    </div>
+                  )}
+                  {viewedStudent.monthly_subscription_price && (
+                    <div>
+                      <label className="block text-primary-600 text-sm mb-1">سعر الاشتراك الشهري</label>
+                      <p className="text-primary-900 font-semibold text-lg">
+                        {viewedStudent.monthly_subscription_price} {viewedStudent.currency || 'EGP'}
+                      </p>
+                    </div>
+                  )}
+                  {viewedStudent.country && (
+                    <div>
+                      <label className="block text-primary-600 text-sm mb-1">البلد</label>
+                      <p className="text-primary-900 font-semibold text-lg">{viewedStudent.country}</p>
+                    </div>
+                  )}
+                  {viewedStudent.currency && (
+                    <div>
+                      <label className="block text-primary-600 text-sm mb-1">العملة</label>
+                      <p className="text-primary-900 font-semibold text-lg">{viewedStudent.currency}</p>
                     </div>
                   )}
                   {viewedStudent.hour && (
@@ -700,18 +817,58 @@ export default function WebsiteStudentsPage() {
                   </div>
                   <div>
                     <label className="block text-primary-900 font-semibold mb-2 text-right">المعلم</label>
-                    <select
+                    <SearchableTeacherSelect
                       value={editForm.teacher_id}
-                      onChange={(e) => setEditForm({ ...editForm, teacher_id: e.target.value })}
+                      onChange={(value) => setEditForm({ ...editForm, teacher_id: value })}
+                      teachers={teachers}
+                      placeholder="اختر المعلم (اختياري)"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">حالة جلسة التجربة</label>
+                    <select
+                      value={editForm.trial_session_attendance}
+                      onChange={(e) => setEditForm({ ...editForm, trial_session_attendance: e.target.value as 'not_booked' | 'booked' | 'attended' | '' })}
                       className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
                       dir="rtl"
                     >
-                      <option value="">اختر المعلم (اختياري)</option>
-                      {teachers.map((teacher) => (
-                        <option key={teacher.id} value={teacher.id}>
-                          {teacher.name}
-                        </option>
-                      ))}
+                      <option value="">اختر الحالة</option>
+                      <option value="not_booked">غير محجوز</option>
+                      <option value="booked">محجوز</option>
+                      <option value="attended">حضر</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">سعر الاشتراك الشهري</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={editForm.monthly_subscription_price}
+                      onChange={(e) => setEditForm({ ...editForm, monthly_subscription_price: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">البلد</label>
+                    <select
+                      value={editForm.country}
+                      onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                      dir="rtl"
+                    >
+                      <option value="">اختر البلد</option>
+                      <option value="الأردن">الأردن</option>
+                      <option value="مصر">مصر</option>
+                      <option value="السعودية">السعودية</option>
+                      <option value="الإمارات">الإمارات</option>
+                      <option value="قطر">قطر</option>
+                      <option value="الكويت">الكويت</option>
+                      <option value="أمريكا">أمريكا</option>
+                      <option value="كندا">كندا</option>
+                      <option value="ألمانيا">ألمانيا</option>
+                      <option value="أجنبي">أجنبي</option>
                     </select>
                   </div>
                   <div>
@@ -769,53 +926,6 @@ export default function WebsiteStudentsPage() {
                       min="0"
                       placeholder="0.00"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-primary-900 font-semibold mb-2 text-right">سعر الاشتراك الشهري</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={editForm.monthly_subscription_price}
-                      onChange={(e) => setEditForm({ ...editForm, monthly_subscription_price: e.target.value })}
-                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-primary-900 font-semibold mb-2 text-right">حالة جلسة التجربة</label>
-                    <select
-                      value={editForm.trial_session_attendance}
-                      onChange={(e) => setEditForm({ ...editForm, trial_session_attendance: e.target.value as 'not_booked' | 'booked' | 'attended' | '' })}
-                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
-                      dir="rtl"
-                    >
-                      <option value="">اختر الحالة</option>
-                      <option value="not_booked">غير محجوز</option>
-                      <option value="booked">محجوز</option>
-                      <option value="attended">حضر</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-primary-900 font-semibold mb-2 text-right">البلد</label>
-                    <select
-                      value={editForm.country}
-                      onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
-                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
-                      dir="rtl"
-                    >
-                      <option value="">اختر البلد</option>
-                      <option value="الأردن">الأردن</option>
-                      <option value="مصر">مصر</option>
-                      <option value="السعودية">السعودية</option>
-                      <option value="الإمارات">الإمارات</option>
-                      <option value="قطر">قطر</option>
-                      <option value="الكويت">الكويت</option>
-                      <option value="أمريكا">أمريكا</option>
-                      <option value="كندا">كندا</option>
-                      <option value="ألمانيا">ألمانيا</option>
-                      <option value="أجنبي">أجنبي</option>
-                    </select>
                   </div>
                 </div>
                 <div>
@@ -941,6 +1051,66 @@ export default function WebsiteStudentsPage() {
                     placeholder="ملاحظات اختيارية..."
                   />
                 </div>
+                
+                {/* Subscription Fields Section - Only show if student doesn't have existing subscriptions */}
+                {!editingStudentHasSubscriptions && (
+                  <div className="border-t-2 border-primary-200 pt-4 mt-4">
+                    <h3 className="text-lg font-bold text-primary-900 mb-4 text-right">إعدادات الاشتراكات (اختياري)</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-primary-900 font-semibold mb-2 text-right">
+                          تاريخ بداية الاشتراك
+                        </label>
+                        <input
+                          type="date"
+                          value={editForm.subscription_start_date}
+                          onChange={(e) => setEditForm({ ...editForm, subscription_start_date: e.target.value })}
+                          className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                        />
+                        <p className="text-xs text-primary-600 mt-1 text-right">
+                          مطلوب إذا تم تحديد عدد الأشهر السابقة
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-primary-900 font-semibold mb-2 text-right">
+                            عدد الأشهر السابقة
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="120"
+                            value={editForm.past_months_count}
+                            onChange={(e) => setEditForm({ ...editForm, past_months_count: e.target.value })}
+                            className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                            placeholder="0-120"
+                          />
+                          <p className="text-xs text-primary-600 mt-1 text-right">
+                            عدد الأشهر السابقة لإنشاء اشتراكات لها
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-primary-900 font-semibold mb-2 text-right">
+                            عدد الأشهر المدفوعة
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="120"
+                            value={editForm.paid_months_count}
+                            onChange={(e) => setEditForm({ ...editForm, paid_months_count: e.target.value })}
+                            className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                            placeholder="0-120"
+                          />
+                          <p className="text-xs text-primary-600 mt-1 text-right">
+                            عدد الأشهر المدفوعة من أول N اشتراك
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center gap-4 pt-4">
                   <button
                     type="submit"

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAdminStore } from '@/store/useAdminStore'
 import { Plus, Edit, Trash2, Search, X, Eye, Calendar, CheckCircle, Clock, Filter } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import SearchableTeacherSelect from '@/components/admin/SearchableTeacherSelect'
 
 const DAYS_OF_WEEK = [
   { value: 'saturday', label: 'السبت', arName: 'السبت' },
@@ -49,6 +50,7 @@ export default function StudentsPage() {
     search: '',
     unpaid_months_count: '',
     payment_status: '' as 'all_paid' | 'has_unpaid' | '',
+    is_paused: '' as 'true' | 'false' | '',
   })
   const [currentPage, setCurrentPage] = useState(1)
   
@@ -137,7 +139,7 @@ export default function StudentsPage() {
   // Apply filters when they change
   useEffect(() => {
     setCurrentPage(1) // Reset to first page when filters change
-  }, [filters.type, filters.package_id, filters.gender, filters.teacher_id, filters.search, filters.unpaid_months_count, filters.payment_status])
+  }, [filters.type, filters.package_id, filters.gender, filters.teacher_id, filters.search, filters.unpaid_months_count, filters.payment_status, filters.is_paused])
 
   useEffect(() => {
     const apiFilters: any = {}
@@ -148,11 +150,12 @@ export default function StudentsPage() {
     if (filters.search) apiFilters.search = filters.search
     if (filters.unpaid_months_count) apiFilters.unpaid_months_count = parseInt(filters.unpaid_months_count)
     if (filters.payment_status) apiFilters.payment_status = filters.payment_status
+    if (filters.is_paused) apiFilters.is_paused = filters.is_paused === 'true'
     apiFilters.page = currentPage
     apiFilters.per_page = 15
     
     fetchStudents(apiFilters)
-  }, [currentPage, filters.type, filters.package_id, filters.gender, filters.teacher_id, filters.search, filters.unpaid_months_count, filters.payment_status, fetchStudents])
+  }, [currentPage, filters.type, filters.package_id, filters.gender, filters.teacher_id, filters.search, filters.unpaid_months_count, filters.payment_status, filters.is_paused, fetchStudents])
 
   // Students are now filtered on the API side, so we use them directly
   const filteredStudents = students
@@ -623,19 +626,12 @@ export default function StudentsPage() {
           </div>
           <div>
             <label className="block text-primary-900 font-semibold mb-2 text-right">المعلم</label>
-            <select
+            <SearchableTeacherSelect
               value={filters.teacher_id}
-              onChange={(e) => setFilters({ ...filters, teacher_id: e.target.value })}
-              className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
-              dir="rtl"
-            >
-              <option value="">جميع المعلمين</option>
-              {teachers.map((teacher) => (
-                <option key={teacher.id} value={teacher.id}>
-                  {teacher.name}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setFilters({ ...filters, teacher_id: value })}
+              teachers={teachers}
+              placeholder="جميع المعلمين"
+            />
           </div>
           <div>
             <label className="block text-primary-900 font-semibold mb-2 text-right">عدد الشهور الغير مدفوعه</label>
@@ -660,6 +656,19 @@ export default function StudentsPage() {
               <option value="">جميع الحالات</option>
               <option value="all_paid">كلها مدفوعة</option>
               <option value="has_unpaid">يوجد غير مدفوع</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-primary-900 font-semibold mb-2 text-right">حالة الإيقاف</label>
+            <select
+              value={filters.is_paused}
+              onChange={(e) => setFilters({ ...filters, is_paused: e.target.value as 'true' | 'false' | '' })}
+              className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+              dir="rtl"
+            >
+              <option value="">جميع الحالات</option>
+              <option value="true">مُوقّف</option>
+              <option value="false">غير مُوقّف</option>
             </select>
           </div>
         </div>
@@ -690,7 +699,7 @@ export default function StudentsPage() {
                 {filteredStudents.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-6 py-8 text-center text-primary-600">
-                      {filters.search || filters.package_id || filters.gender || filters.teacher_id || filters.unpaid_months_count || filters.payment_status
+                      {filters.search || filters.package_id || filters.gender || filters.teacher_id || filters.unpaid_months_count || filters.payment_status || filters.is_paused
                         ? 'لا توجد نتائج'
                         : 'لا يوجد طلاب مسجلون بعد'}
                     </td>
@@ -699,7 +708,11 @@ export default function StudentsPage() {
                   filteredStudents.map((student) => (
                     <tr
                       key={student.id}
-                      className="border-b border-primary-200 hover:bg-primary-50 transition-colors"
+                      className={`border-b border-primary-200 transition-colors ${
+                        student.is_paused 
+                          ? 'bg-red-100 hover:bg-red-200' 
+                          : 'hover:bg-primary-50'
+                      }`}
                     >
                       <td className="px-6 py-4 text-primary-900">{student.name}</td>
                       <td className="px-6 py-4 text-primary-700">{student.email}</td>
@@ -1445,19 +1458,12 @@ export default function StudentsPage() {
                   </div>
                   <div>
                     <label className="block text-primary-900 font-semibold mb-2 text-right">المعلم</label>
-                    <select
+                    <SearchableTeacherSelect
                       value={newStudent.teacher_id}
-                      onChange={(e) => setNewStudent({ ...newStudent, teacher_id: e.target.value })}
-                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
-                      dir="rtl"
-                    >
-                      <option value="">اختر المعلم (اختياري)</option>
-                      {teachers.map((teacher) => (
-                        <option key={teacher.id} value={teacher.id}>
-                          {teacher.name}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(value) => setNewStudent({ ...newStudent, teacher_id: value })}
+                      teachers={teachers}
+                      placeholder="اختر المعلم (اختياري)"
+                    />
                   </div>
                   <div>
                     <label className="block text-primary-900 font-semibold mb-2 text-right">وقت الحصة</label>
@@ -1876,19 +1882,12 @@ export default function StudentsPage() {
                   </div>
                   <div>
                     <label className="block text-primary-900 font-semibold mb-2 text-right">المعلم</label>
-                    <select
+                    <SearchableTeacherSelect
                       value={editForm.teacher_id}
-                      onChange={(e) => setEditForm({ ...editForm, teacher_id: e.target.value })}
-                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
-                      dir="rtl"
-                    >
-                      <option value="">اختر المعلم (اختياري)</option>
-                      {teachers.map((teacher) => (
-                        <option key={teacher.id} value={teacher.id}>
-                          {teacher.name}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(value) => setEditForm({ ...editForm, teacher_id: value })}
+                      teachers={teachers}
+                      placeholder="اختر المعلم (اختياري)"
+                    />
                   </div>
                   <div>
                     <label className="block text-primary-900 font-semibold mb-2 text-right">وقت الحصة</label>

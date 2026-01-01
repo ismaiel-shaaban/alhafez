@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
-import { CheckCircle, XCircle, Clock, DollarSign, RefreshCw, ChevronRight, ChevronLeft, Image as ImageIcon, Eye } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { CheckCircle, XCircle, Clock, DollarSign, RefreshCw, ChevronRight, ChevronLeft, Image as ImageIcon, Eye, X, List } from 'lucide-react'
 import {
   getPaymentReceipts,
   approvePaymentReceipt,
@@ -10,14 +10,19 @@ import {
   PaymentReceipt,
 } from '@/lib/api/payment-receipts'
 import { Pagination } from '@/lib/api-client'
+import { useAdminStore } from '@/store/useAdminStore'
 
 export default function PaymentReceiptsPage() {
+  const { getStudent, updateSubscriptionPaymentStatus } = useAdminStore()
   const [receipts, setReceipts] = useState<PaymentReceipt[]>([])
   const [pagination, setPagination] = useState<Pagination | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [processingId, setProcessingId] = useState<number | null>(null)
   const [viewingImage, setViewingImage] = useState<string | null>(null)
+  const [viewingSubscriptions, setViewingSubscriptions] = useState<number | null>(null)
+  const [studentSubscriptions, setStudentSubscriptions] = useState<any>(null)
+  const [loadingSubscriptions, setLoadingSubscriptions] = useState(false)
   const [filters, setFilters] = useState({
     status: '' as 'pending' | 'approved' | 'rejected' | '',
     student_id: '',
@@ -77,6 +82,34 @@ export default function PaymentReceiptsPage() {
       alert(error.message || 'فشل رفض الإيصال')
     } finally {
       setProcessingId(null)
+    }
+  }
+
+  const handleViewSubscriptions = async (studentId: number) => {
+    setViewingSubscriptions(studentId)
+    setLoadingSubscriptions(true)
+    try {
+      const student = await getStudent(studentId)
+      setStudentSubscriptions(student)
+    } catch (error: any) {
+      alert(error.message || 'فشل تحميل بيانات الاشتراكات')
+      setViewingSubscriptions(null)
+    } finally {
+      setLoadingSubscriptions(false)
+    }
+  }
+
+  const handleToggleSubscriptionPayment = async (subscriptionId: number, currentPaidStatus: boolean) => {
+    try {
+      const newPaidStatus = !currentPaidStatus
+      await updateSubscriptionPaymentStatus(subscriptionId, newPaidStatus)
+      // Refresh the student data to show updated subscription status
+      if (viewingSubscriptions) {
+        const updatedStudent = await getStudent(viewingSubscriptions)
+        setStudentSubscriptions(updatedStudent)
+      }
+    } catch (error: any) {
+      alert(error.message || 'فشل تحديث حالة الدفع')
     }
   }
 
@@ -210,6 +243,15 @@ export default function PaymentReceiptsPage() {
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-2">
+                  {receipt.student?.id && (
+                    <button
+                      onClick={() => handleViewSubscriptions(receipt.student!.id)}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                    >
+                      <List className="w-4 h-4" />
+                      الاشتراكات
+                    </button>
+                  )}
                   {receipt.receipt_image && (
                     <button
                       onClick={() => setViewingImage(receipt.receipt_image)}
@@ -268,6 +310,132 @@ export default function PaymentReceiptsPage() {
           </div>
         </div>
       )}
+
+      {/* Subscriptions Modal */}
+      <AnimatePresence>
+        {viewingSubscriptions && studentSubscriptions && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setViewingSubscriptions(null)
+              setStudentSubscriptions(null)
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-8 max-w-5xl w-full shadow-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-primary-900">
+                  اشتراكات الطالب: {studentSubscriptions.name}
+                </h2>
+                <button
+                  onClick={() => {
+                    setViewingSubscriptions(null)
+                    setStudentSubscriptions(null)
+                  }}
+                  className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {loadingSubscriptions ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : studentSubscriptions.subscriptions && Array.isArray(studentSubscriptions.subscriptions) && studentSubscriptions.subscriptions.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="border-collapse bg-white rounded-lg overflow-hidden shadow-sm w-full">
+                    <thead className="bg-primary-100">
+                      <tr>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">رقم الاشتراك</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">تاريخ البدء</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">تاريخ الانتهاء</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">الحصص/الأسبوع</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">إجمالي الحصص</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">مكتملة</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">متبقية</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">الحالة</th>
+                        <th className="px-4 py-3 text-center text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">الإجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {studentSubscriptions.subscriptions.map((subscription: any, index: number) => (
+                        <tr key={subscription.id} className="border-b border-primary-100 hover:bg-primary-50 transition-colors">
+                          <td className="px-4 py-3 text-primary-900 font-medium text-sm whitespace-nowrap">{index + 1}</td>
+                          <td className="px-4 py-3 text-primary-700 text-sm whitespace-nowrap">{subscription.start_date}</td>
+                          <td className="px-4 py-3 text-primary-700 text-sm whitespace-nowrap">{subscription.end_date}</td>
+                          <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{subscription.sessions_per_week || '-'}</td>
+                          <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{subscription.total_sessions || '-'}</td>
+                          <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{subscription.completed_sessions_count || 0}</td>
+                          <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{subscription.remaining_sessions_count || 0}</td>
+                          <td className="px-4 py-3 text-sm whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-2 flex-wrap">
+                              {subscription.is_paid ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                                  <CheckCircle className="w-3 h-3" />
+                                  مدفوع
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                                  <XCircle className="w-3 h-3" />
+                                  غير مدفوع
+                                </span>
+                              )}
+                              {subscription.is_active && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                  <Clock className="w-3 h-3" />
+                                  نشط
+                                </span>
+                              )}
+                              {subscription.is_upcoming && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
+                                  <Clock className="w-3 h-3" />
+                                  قادم
+                                </span>
+                              )}
+                              {subscription.is_expired && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+                                  <X className="w-3 h-3" />
+                                  منتهي
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            <button
+                              onClick={() => handleToggleSubscriptionPayment(subscription.id, subscription.is_paid)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                subscription.is_paid
+                                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                  : 'bg-green-100 text-green-700 hover:bg-green-200'
+                              }`}
+                              title={subscription.is_paid ? 'تعيين كغير مدفوع' : 'تعيين كمدفوع'}
+                            >
+                              {subscription.is_paid ? 'غير مدفوع' : 'مدفوع'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-primary-600">
+                  لا توجد اشتراكات لهذا الطالب
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Pagination */}
       {pagination && pagination.total_pages > 1 && (

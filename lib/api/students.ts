@@ -50,6 +50,7 @@ export interface Student {
   past_months_count?: number // Optional, may be returned by API
   paid_months_count?: number // Optional, may be returned by API
   subscription_start_date?: string // Optional, may be returned by API
+  is_paused?: boolean // Whether the student has paused subscriptions
   created_at?: string
   updated_at?: string
 }
@@ -63,6 +64,7 @@ export interface StudentFilters {
   unpaid_months_count?: number // Number of unpaid months
   payment_status?: 'all_paid' | 'has_unpaid' // Payment status filter
   trial_session_attendance?: 'not_booked' | 'booked' | 'attended' // Filter by trial session attendance
+  is_paused?: boolean // Filter by paused status
   per_page?: number
   page?: number
 }
@@ -109,6 +111,7 @@ export const listStudents = async (
   if (filters.unpaid_months_count !== undefined) params.append('unpaid_months_count', filters.unpaid_months_count.toString())
   if (filters.payment_status) params.append('payment_status', filters.payment_status)
   if (filters.trial_session_attendance) params.append('trial_session_attendance', filters.trial_session_attendance)
+  if (filters.is_paused !== undefined) params.append('is_paused', filters.is_paused.toString())
   if (filters.per_page) params.append('per_page', filters.per_page.toString())
   if (filters.page) params.append('page', filters.page.toString())
 

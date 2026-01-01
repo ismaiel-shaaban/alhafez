@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAdminStore } from '@/store/useAdminStore'
 import { Search, Eye, X, Edit, Trash2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import SearchableTeacherSelect from '@/components/admin/SearchableTeacherSelect'
 
 const DAYS_OF_WEEK = [
   { value: 'saturday', label: 'السبت', arName: 'السبت' },
@@ -722,19 +723,12 @@ export default function AppStudentsPage() {
                   </div>
                   <div>
                     <label className="block text-primary-900 font-semibold mb-2 text-right">المعلم</label>
-                    <select
+                    <SearchableTeacherSelect
                       value={editForm.teacher_id}
-                      onChange={(e) => setEditForm({ ...editForm, teacher_id: e.target.value })}
-                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
-                      dir="rtl"
-                    >
-                      <option value="">اختر المعلم (اختياري)</option>
-                      {teachers.map((teacher) => (
-                        <option key={teacher.id} value={teacher.id}>
-                          {teacher.name}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(value) => setEditForm({ ...editForm, teacher_id: value })}
+                      teachers={teachers}
+                      placeholder="اختر المعلم (اختياري)"
+                    />
                   </div>
                   <div>
                     <label className="block text-primary-900 font-semibold mb-2 text-right">حالة جلسة التجربة</label>
