@@ -22,6 +22,7 @@ export default function TeachersPage() {
     phone: '',
     email: '',
     password: '',
+    trial_lesson_price: '',
   })
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -62,12 +63,13 @@ export default function TeachersPage() {
         phone: teacher.phone || '',
         email: teacher.email || '',
         password: '', // Keep empty for security - user can leave it to keep current password
+        trial_lesson_price: teacher.trial_lesson_price?.toString() || '',
       })
       setImageFile(null)
       setImagePreview(teacher.image || null)
     } else {
       setEditingId(null)
-      setFormData({ name: '', name_en: '', specialization: '', specialization_en: '', experience_years: '', phone: '', email: '', password: '' })
+      setFormData({ name: '', name_en: '', specialization: '', specialization_en: '', experience_years: '', phone: '', email: '', password: '', trial_lesson_price: '' })
       setImageFile(null)
       setImagePreview(null)
     }
@@ -77,7 +79,7 @@ export default function TeachersPage() {
   const handleCloseModal = () => {
     setShowModal(false)
     setEditingId(null)
-    setFormData({ name: '', name_en: '', specialization: '', specialization_en: '', experience_years: '', phone: '', email: '', password: '' })
+    setFormData({ name: '', name_en: '', specialization: '', specialization_en: '', experience_years: '', phone: '', email: '', password: '', trial_lesson_price: '' })
     setImageFile(null)
     setImagePreview(null)
   }
@@ -95,7 +97,7 @@ export default function TeachersPage() {
         phone: formData.phone || undefined,
         email: formData.email || undefined,
         password: formData.password || undefined,
-      
+        trial_lesson_price: formData.trial_lesson_price ? parseFloat(formData.trial_lesson_price) : undefined,
       }
       
       // Add image if a new file is selected
@@ -373,6 +375,12 @@ export default function TeachersPage() {
                   <label className="block text-primary-600 text-sm mb-1">سنوات الخبرة</label>
                   <p className="text-primary-900">{viewedTeacher.experience_years} سنة</p>
                 </div>
+                {viewedTeacher.trial_lesson_price !== undefined && viewedTeacher.trial_lesson_price !== null && (
+                  <div>
+                    <label className="block text-primary-600 text-sm mb-1">سعر جلسة التجربة</label>
+                    <p className="text-primary-900">{viewedTeacher.trial_lesson_price} جنيه</p>
+                  </div>
+                )}
               </div>
             </motion.div>
           </motion.div>
@@ -493,6 +501,19 @@ export default function TeachersPage() {
                     className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
                     placeholder={editingId ? "اختياري - اتركه فارغاً للحفاظ على كلمة المرور الحالية" : "اختياري - للدخول للمعلم (الحد الأدنى: 6 أحرف)"}
                     minLength={editingId ? undefined : 6}
+                  />
+                </div>
+                <div>
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">سعر جلسة التجربة</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.trial_lesson_price}
+                    onChange={(e) => setFormData({ ...formData, trial_lesson_price: e.target.value })}
+                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                    dir="rtl"
+                    placeholder="اختياري - سعر جلسة التجربة"
                   />
                 </div>
                 <div>
