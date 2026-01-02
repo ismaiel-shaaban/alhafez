@@ -96,3 +96,14 @@ export const rejectSubscriptionPauseRequest = async (
   )
 }
 
+// Delete subscription pause request
+export const deleteSubscriptionPauseRequest = async (
+  id: number,
+  locale?: string
+): Promise<void> => {
+  return apiRequest(`/api/subscription-pause-requests/${id}`, {
+    method: 'DELETE',
+    locale,
+  })
+}
+

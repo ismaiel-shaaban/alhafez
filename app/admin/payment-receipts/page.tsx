@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CheckCircle, XCircle, Clock, DollarSign, RefreshCw, ChevronRight, ChevronLeft, Image as ImageIcon, Eye, X, List } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, DollarSign, RefreshCw, ChevronRight, ChevronLeft, Image as ImageIcon, Eye, X, List, Trash2 } from 'lucide-react'
 import {
   getPaymentReceipts,
   approvePaymentReceipt,
   rejectPaymentReceipt,
+  deletePaymentReceipt,
   PaymentReceipt,
 } from '@/lib/api/payment-receipts'
 import { Pagination } from '@/lib/api-client'
@@ -19,6 +20,7 @@ export default function PaymentReceiptsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [processingId, setProcessingId] = useState<number | null>(null)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
   const [viewingImage, setViewingImage] = useState<string | null>(null)
   const [viewingSubscriptions, setViewingSubscriptions] = useState<number | null>(null)
   const [studentSubscriptions, setStudentSubscriptions] = useState<any>(null)
@@ -82,6 +84,20 @@ export default function PaymentReceiptsPage() {
       alert(error.message || 'فشل رفض الإيصال')
     } finally {
       setProcessingId(null)
+    }
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('هل أنت متأكد من حذف هذا الإيصال؟')) return
+    
+    setDeletingId(id)
+    try {
+      await deletePaymentReceipt(id)
+      await loadReceipts()
+    } catch (error: any) {
+      alert(error.message || 'فشل حذف الإيصال')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -265,7 +281,7 @@ export default function PaymentReceiptsPage() {
                     <>
                       <button
                         onClick={() => handleApprove(receipt.id)}
-                        disabled={processingId === receipt.id}
+                        disabled={processingId === receipt.id || deletingId === receipt.id}
                         className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                       >
                         <CheckCircle className="w-4 h-4" />
@@ -273,7 +289,7 @@ export default function PaymentReceiptsPage() {
                       </button>
                       <button
                         onClick={() => handleReject(receipt.id)}
-                        disabled={processingId === receipt.id}
+                        disabled={processingId === receipt.id || deletingId === receipt.id}
                         className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                       >
                         <XCircle className="w-4 h-4" />
@@ -281,6 +297,18 @@ export default function PaymentReceiptsPage() {
                       </button>
                     </>
                   )}
+                  <button
+                    onClick={() => handleDelete(receipt.id)}
+                    disabled={processingId === receipt.id || deletingId === receipt.id}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                    title="حذف"
+                  >
+                    {deletingId === receipt.id ? (
+                      <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                  </button>
                 </div>
               </div>
             </motion.div>

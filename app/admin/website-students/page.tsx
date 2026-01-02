@@ -44,6 +44,11 @@ export default function WebsiteStudentsPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [editingStudentHasSubscriptions, setEditingStudentHasSubscriptions] = useState(false)
+  const [showTeacherSelectModal, setShowTeacherSelectModal] = useState(false)
+  const [pendingTrialUpdate, setPendingTrialUpdate] = useState<{ studentId: number; newStatus: 'not_booked' | 'booked' | 'attended' } | null>(null)
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>('')
+  const [trialSessionDate, setTrialSessionDate] = useState<string>('')
+  const [trialSessionTime, setTrialSessionTime] = useState<string>('')
   const [editForm, setEditForm] = useState({
     name: '',
     email: '',
@@ -79,7 +84,8 @@ export default function WebsiteStudentsPage() {
     fetchStudents(filters)
     fetchPackages()
     fetchTeachers()
-  }, [fetchStudents, fetchPackages, fetchTeachers, activeTab, trialSessionFilter])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, trialSessionFilter])
 
   const handleViewStudent = async (id: number) => {
     try {
@@ -161,7 +167,8 @@ export default function WebsiteStudentsPage() {
 
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (editingId) {
+    e.stopPropagation() // Prevent event bubbling
+    if (editingId && !isSubmitting) { // Prevent duplicate submissions
       setIsSubmitting(true)
       try {
         // Build request data - weekly_schedule takes precedence over hour and weekly_days
@@ -300,9 +307,65 @@ export default function WebsiteStudentsPage() {
   }
 
   const handleUpdateTrialAttendance = async (studentId: number, newStatus: 'not_booked' | 'booked' | 'attended') => {
+    try {
+      // Get the student to retrieve teacher_id
+      const student = await getStudent(studentId)
+      
+      // If status is 'booked', we need to show modal to get date, time, and teacher (if needed)
+      if (newStatus === 'booked') {
+        setPendingTrialUpdate({ studentId, newStatus })
+        setSelectedTeacherId(student.teacher_id?.toString() || '')
+        setTrialSessionDate('')
+        setTrialSessionTime('')
+        setShowTeacherSelectModal(true)
+        return
+      }
+      
+      // For other statuses, if student doesn't have a teacher_id, show modal to select one
+      if (!student.teacher_id) {
+        setPendingTrialUpdate({ studentId, newStatus })
+        setSelectedTeacherId('')
+        setTrialSessionDate('')
+        setTrialSessionTime('')
+        setShowTeacherSelectModal(true)
+        return
+      }
+      
+      // If teacher_id exists and status is not 'booked', proceed with update
+      await performTrialAttendanceUpdate(studentId, newStatus, student.teacher_id)
+    } catch (error: any) {
+      alert(error.message || 'فشل تحميل بيانات الطالب')
+    }
+  }
+
+  const performTrialAttendanceUpdate = async (
+    studentId: number, 
+    newStatus: 'not_booked' | 'booked' | 'attended', 
+    teacherId?: number,
+    trialDate?: string,
+    trialTime?: string
+  ) => {
+    // Prevent duplicate requests
+    if (updatingTrialAttendance === studentId) {
+      return
+    }
     setUpdatingTrialAttendance(studentId)
     try {
-      await updateStudent(studentId, { trial_session_attendance: newStatus })
+      const updateData: any = { trial_session_attendance: newStatus }
+      // Include teacher_id if provided
+      if (teacherId) {
+        updateData.teacher_id = teacherId
+      }
+      // Include trial_session_date and trial_session_time only when status is 'booked'
+      if (newStatus === 'booked') {
+        if (trialDate) {
+          updateData.trial_session_date = trialDate
+        }
+        if (trialTime) {
+          updateData.trial_session_time = trialTime
+        }
+      }
+      await updateStudent(studentId, updateData)
       // Refresh the list
       const filters: any = { type: activeTab }
       if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
@@ -317,6 +380,51 @@ export default function WebsiteStudentsPage() {
     } finally {
       setUpdatingTrialAttendance(null)
     }
+  }
+
+  const handleConfirmTeacherSelection = async () => {
+    if (!pendingTrialUpdate) {
+      return
+    }
+    // Prevent duplicate submissions
+    if (updatingTrialAttendance === pendingTrialUpdate.studentId) {
+      return
+    }
+    
+    // If status is 'booked', require teacher, date, and time
+    if (pendingTrialUpdate.newStatus === 'booked') {
+      if (!selectedTeacherId) {
+        alert('يرجى اختيار معلم')
+        return
+      }
+      if (!trialSessionDate) {
+        alert('يرجى اختيار تاريخ جلسة التجربة')
+        return
+      }
+      if (!trialSessionTime) {
+        alert('يرجى اختيار وقت جلسة التجربة')
+        return
+      }
+    } else {
+      // For other statuses, only require teacher if not already set
+      if (!selectedTeacherId) {
+        alert('يرجى اختيار معلم')
+        return
+      }
+    }
+    
+    setShowTeacherSelectModal(false)
+    await performTrialAttendanceUpdate(
+      pendingTrialUpdate.studentId,
+      pendingTrialUpdate.newStatus,
+      parseInt(selectedTeacherId),
+      trialSessionDate || undefined,
+      trialSessionTime || undefined
+    )
+    setPendingTrialUpdate(null)
+    setSelectedTeacherId('')
+    setTrialSessionDate('')
+    setTrialSessionTime('')
   }
 
   const getTrialAttendanceBadge = (status?: string) => {
@@ -362,9 +470,9 @@ export default function WebsiteStudentsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-4xl font-bold text-primary-900">الطلاب</h1>
-        <div className="text-primary-600 font-medium">إجمالي: {tabStudents.length}</div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <h1 className="text-2xl sm:text-4xl font-bold text-primary-900">الطلاب</h1>
+        <div className="text-primary-600 font-medium text-sm sm:text-base">إجمالي: {tabStudents.length}</div>
       </div>
 
       {/* Tabs */}
@@ -372,7 +480,7 @@ export default function WebsiteStudentsPage() {
         <div className="flex gap-2">
           <button
             onClick={() => setActiveTab('website')}
-            className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all ${
+            className={`flex-1 px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition-all text-sm sm:text-base ${
               activeTab === 'website'
                 ? 'bg-primary-600 text-white shadow-md'
                 : 'bg-primary-50 text-primary-700 hover:bg-primary-100'
@@ -382,7 +490,7 @@ export default function WebsiteStudentsPage() {
           </button>
           <button
             onClick={() => setActiveTab('app')}
-            className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all ${
+            className={`flex-1 px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition-all text-sm sm:text-base ${
               activeTab === 'app'
                 ? 'bg-primary-600 text-white shadow-md'
                 : 'bg-primary-50 text-primary-700 hover:bg-primary-100'
@@ -402,7 +510,7 @@ export default function WebsiteStudentsPage() {
 
       {/* Search and Filters */}
       <div className="bg-white rounded-xl border-2 border-primary-200 p-4 mb-6 shadow-lg">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div className="relative">
             <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-primary-400 w-5 h-5" />
             <input
@@ -443,37 +551,124 @@ export default function WebsiteStudentsPage() {
         <div className="flex items-center justify-center py-12">
           <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
         </div>
+      ) : tabStudents.length === 0 ? (
+        <div className="bg-white rounded-xl border-2 border-primary-200 p-8 text-center text-primary-600 shadow-lg">
+          {searchTerm || trialSessionFilter ? 'لا توجد نتائج' : `لا يوجد طلاب مسجلون ${activeTab === 'website' ? 'من الموقع' : 'من التطبيق'} بعد`}
+        </div>
       ) : (
-        <div className="bg-white rounded-xl border-2 border-primary-200 overflow-hidden shadow-lg">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-primary-100">
-                <tr>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">الاسم</th>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">البريد</th>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">الهاتف</th>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">العمر</th>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">الجنس</th>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">الباقة</th>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">المعلم</th>
-                  <th className="px-6 py-4 text-center text-primary-900 font-semibold">جلسة التجربة</th>
-                  <th className="px-6 py-4 text-center text-primary-900 font-semibold">الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tabStudents.length === 0 ? (
+        <>
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {tabStudents.map((student) => (
+              <div
+                key={student.id}
+                className="bg-white rounded-xl border-2 border-primary-200 p-4 shadow-lg"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <h3 className="text-lg font-bold text-primary-900">{student.name}</h3>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-primary-600">الهاتف:</span>
+                    <span className="text-primary-900 font-medium">{student.phone}</span>
+                  </div>
+                  {student.email && (
+                    <div className="flex justify-between">
+                      <span className="text-primary-600">البريد:</span>
+                      <span className="text-primary-900">{student.email}</span>
+                    </div>
+                  )}
+                  {student.age && (
+                    <div className="flex justify-between">
+                      <span className="text-primary-600">العمر:</span>
+                      <span className="text-primary-900">{student.age}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-primary-600">الجنس:</span>
+                    <span className="text-primary-900">{student.gender_label || (student.gender === 'male' ? 'ذكر' : 'أنثى')}</span>
+                  </div>
+                  {student.package?.name && (
+                    <div className="flex justify-between">
+                      <span className="text-primary-600">الباقة:</span>
+                      <span className="text-primary-900">{student.package.name}</span>
+                    </div>
+                  )}
+                  {student.teacher?.name && (
+                    <div className="flex justify-between">
+                      <span className="text-primary-600">المعلم:</span>
+                      <span className="text-primary-900">{student.teacher.name}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center">
+                    <span className="text-primary-600">جلسة التجربة:</span>
+                    <div className="flex flex-col items-end gap-2">
+                      {getTrialAttendanceBadge(student.trial_session_attendance)}
+                      <select
+                        value={student.trial_session_attendance || 'not_booked'}
+                        onChange={(e) => handleUpdateTrialAttendance(student.id, e.target.value as 'not_booked' | 'booked' | 'attended')}
+                        disabled={updatingTrialAttendance === student.id}
+                        className="text-xs px-2 py-1 border border-primary-300 rounded-lg focus:border-primary-500 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                        dir="rtl"
+                      >
+                        <option value="not_booked">غير محجوز</option>
+                        <option value="booked">محجوز</option>
+                        <option value="attended">حضر</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-primary-200">
+                  <button
+                    onClick={() => handleViewStudent(student.id)}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="عرض التفاصيل"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleEdit(student)}
+                    className="p-2 text-primary-600 hover:bg-primary-100 rounded-lg transition-colors"
+                    title="تعديل"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(student.id)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="حذف"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block bg-white rounded-xl border-2 border-primary-200 overflow-hidden shadow-lg">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-primary-100">
                   <tr>
-                    <td colSpan={9} className="px-6 py-8 text-center text-primary-600">
-                      {searchTerm || trialSessionFilter ? 'لا توجد نتائج' : `لا يوجد طلاب مسجلون ${activeTab === 'website' ? 'من الموقع' : 'من التطبيق'} بعد`}
-                    </td>
+                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">الاسم</th>
+                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">البريد</th>
+                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">الهاتف</th>
+                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">العمر</th>
+                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">الجنس</th>
+                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">الباقة</th>
+                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">المعلم</th>
+                    <th className="px-6 py-4 text-center text-primary-900 font-semibold">جلسة التجربة</th>
+                    <th className="px-6 py-4 text-center text-primary-900 font-semibold">الإجراءات</th>
                   </tr>
-                ) : (
-                  tabStudents.map((student) => (
+                </thead>
+                <tbody>
+                  {tabStudents.map((student) => (
                     <tr
                       key={student.id}
                       className="border-b border-primary-200 hover:bg-primary-50 transition-colors"
                     >
-                      <td className="px-6 py-4 text-primary-900">{student.name}</td>
+                      <td className="px-6 py-4 text-primary-900 font-medium">{student.name}</td>
                       <td className="px-6 py-4 text-primary-700">{student.email || '-'}</td>
                       <td className="px-6 py-4 text-primary-700">{student.phone}</td>
                       <td className="px-6 py-4 text-primary-700">{student.age || '-'}</td>
@@ -522,12 +717,12 @@ export default function WebsiteStudentsPage() {
                         </div>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* View Student Details Modal */}
@@ -1128,6 +1323,117 @@ export default function WebsiteStudentsPage() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Teacher Selection Modal for Trial Attendance */}
+      <AnimatePresence>
+        {showTeacherSelectModal && pendingTrialUpdate && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowTeacherSelectModal(false)
+              setPendingTrialUpdate(null)
+              setSelectedTeacherId('')
+              setTrialSessionDate('')
+              setTrialSessionTime('')
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-primary-900">
+                  {pendingTrialUpdate.newStatus === 'booked' ? 'حجز جلسة التجربة' : 'اختر المعلم'}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowTeacherSelectModal(false)
+                    setPendingTrialUpdate(null)
+                    setSelectedTeacherId('')
+                    setTrialSessionDate('')
+                    setTrialSessionTime('')
+                  }}
+                  className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-primary-700 text-right">
+                  {pendingTrialUpdate.newStatus === 'booked' 
+                    ? 'يرجى اختيار المعلم وتاريخ ووقت جلسة التجربة'
+                    : 'يجب اختيار معلم لتحديث حالة جلسة التجربة'}
+                </p>
+                <div>
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">المعلم</label>
+                  <SearchableTeacherSelect
+                    value={selectedTeacherId}
+                    onChange={(value) => setSelectedTeacherId(value)}
+                    teachers={teachers}
+                    placeholder="اختر المعلم"
+                  />
+                </div>
+                {pendingTrialUpdate.newStatus === 'booked' && (
+                  <>
+                    <div>
+                      <label className="block text-primary-900 font-semibold mb-2 text-right">تاريخ جلسة التجربة</label>
+                      <input
+                        type="date"
+                        value={trialSessionDate}
+                        onChange={(e) => setTrialSessionDate(e.target.value)}
+                        className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-primary-900 font-semibold mb-2 text-right">وقت جلسة التجربة</label>
+                      <input
+                        type="time"
+                        value={trialSessionTime}
+                        onChange={(e) => setTrialSessionTime(e.target.value)}
+                        className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                        required
+                      />
+                    </div>
+                  </>
+                )}
+                <div className="flex items-center gap-4 pt-4">
+                  <button
+                    onClick={handleConfirmTeacherSelection}
+                    disabled={
+                      !selectedTeacherId || 
+                      (pendingTrialUpdate.newStatus === 'booked' && (!trialSessionDate || !trialSessionTime))
+                    }
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-primary-700 to-primary-600 text-white rounded-lg hover:from-primary-800 hover:to-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    تأكيد
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowTeacherSelectModal(false)
+                      setPendingTrialUpdate(null)
+                      setSelectedTeacherId('')
+                      setTrialSessionDate('')
+                      setTrialSessionTime('')
+                    }}
+                    className="flex-1 px-6 py-3 border-2 border-primary-300 text-primary-700 rounded-lg hover:bg-primary-50 transition-all"
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              </div>
             </motion.div>
           </motion.div>
         )}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAdminStore } from '@/store/useAdminStore'
-import { Plus, Edit, Trash2, Search, X, Eye, Calendar, CheckCircle, Clock, Filter } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, X, Eye, Calendar, CheckCircle, Clock, Filter, ChevronDown, ChevronUp } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import SearchableTeacherSelect from '@/components/admin/SearchableTeacherSelect'
 
@@ -53,6 +53,7 @@ export default function StudentsPage() {
     is_paused: '' as 'true' | 'false' | '',
   })
   const [currentPage, setCurrentPage] = useState(1)
+  const [filtersExpanded, setFiltersExpanded] = useState(false)
   
   // Student modals
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -539,16 +540,17 @@ export default function StudentsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-4xl font-bold text-primary-900">إدارة الطلاب</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <h1 className="text-2xl sm:text-4xl font-bold text-primary-900">إدارة الطلاب</h1>
         <div className="flex items-center gap-4">
-          <div className="text-primary-600 font-medium">إجمالي: {students.length}</div>
+          <div className="text-primary-600 font-medium text-sm sm:text-base">إجمالي: {studentsMeta?.total}</div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-700 to-primary-600 text-white rounded-lg hover:from-primary-800 hover:to-primary-700 transition-all shadow-lg"
+            className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-primary-700 to-primary-600 text-white rounded-lg hover:from-primary-800 hover:to-primary-700 transition-all shadow-lg text-sm sm:text-base"
           >
-            <Plus className="w-5 h-5" />
-            إضافة طالب
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">إضافة طالب</span>
+            <span className="sm:hidden">إضافة</span>
           </button>
         </div>
       </div>
@@ -561,12 +563,31 @@ export default function StudentsPage() {
       )}
 
       {/* Filters */}
-      <div className="bg-white rounded-xl border-2 border-primary-200 p-6 mb-6 shadow-lg">
-        <div className="flex items-center gap-2 mb-4">
-          <Filter className="w-5 h-5 text-primary-600" />
-          <h3 className="text-lg font-semibold text-primary-900">فلترة الطلاب</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="bg-white rounded-xl border-2 border-primary-200 p-4 sm:p-6 mb-6 shadow-lg">
+        <button
+          onClick={() => setFiltersExpanded(!filtersExpanded)}
+          className="flex items-center justify-between w-full gap-2 mb-4"
+        >
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600" />
+            <h3 className="text-base sm:text-lg font-semibold text-primary-900">فلترة الطلاب</h3>
+          </div>
+          {filtersExpanded ? (
+            <ChevronUp className="w-5 h-5 text-primary-600" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-primary-600" />
+          )}
+        </button>
+        <AnimatePresence>
+          {filtersExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="overflow-hidden"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
           <div>
             <label className="block text-primary-900 font-semibold mb-2 text-right">البحث</label>
             <div className="relative">
@@ -671,7 +692,10 @@ export default function StudentsPage() {
               <option value="false">غير مُوقّف</option>
             </select>
           </div>
-        </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Students Table */}
@@ -679,33 +703,115 @@ export default function StudentsPage() {
         <div className="flex items-center justify-center py-12">
           <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
         </div>
+      ) : filteredStudents.length === 0 ? (
+        <div className="bg-white rounded-xl border-2 border-primary-200 p-8 text-center text-primary-600 shadow-lg">
+          {filters.search || filters.package_id || filters.gender || filters.teacher_id || filters.unpaid_months_count || filters.payment_status || filters.is_paused
+            ? 'لا توجد نتائج'
+            : 'لا يوجد طلاب مسجلون بعد'}
+        </div>
       ) : (
-        <div className="bg-white rounded-xl border-2 border-primary-200 overflow-hidden shadow-lg">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-primary-100">
-                <tr>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">الاسم</th>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">البريد</th>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">الهاتف</th>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">العمر</th>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">الجنس</th>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">الباقة</th>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">المعلم</th>
-                  <th className="px-6 py-4 text-center text-primary-900 font-semibold">الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredStudents.length === 0 ? (
+        <>
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {filteredStudents.map((student) => (
+              <div
+                key={student.id}
+                className={`bg-white rounded-xl border-2 border-primary-200 p-4 shadow-lg ${
+                  student.is_paused ? 'bg-red-50 border-red-300' : ''
+                }`}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <h3 className="text-lg font-bold text-primary-900">{student.name}</h3>
+                  {student.is_paused && (
+                    <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">مُوقّف</span>
+                  )}
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-primary-600">الهاتف:</span>
+                    <span className="text-primary-900 font-medium">{student.phone}</span>
+                  </div>
+                  {student.email && (
+                    <div className="flex justify-between">
+                      <span className="text-primary-600">البريد:</span>
+                      <span className="text-primary-900">{student.email}</span>
+                    </div>
+                  )}
+                  {student.age && (
+                    <div className="flex justify-between">
+                      <span className="text-primary-600">العمر:</span>
+                      <span className="text-primary-900">{student.age}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-primary-600">الجنس:</span>
+                    <span className="text-primary-900">{student.gender_label || (student.gender === 'male' ? 'ذكر' : 'أنثى')}</span>
+                  </div>
+                  {student.package?.name && (
+                    <div className="flex justify-between">
+                      <span className="text-primary-600">الباقة:</span>
+                      <span className="text-primary-900">{student.package.name}</span>
+                    </div>
+                  )}
+                  {student.teacher?.name && (
+                    <div className="flex justify-between">
+                      <span className="text-primary-600">المعلم:</span>
+                      <span className="text-primary-900">{student.teacher.name}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-primary-200">
+                  <button
+                    onClick={() => handleViewStudent(student.id)}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="عرض التفاصيل"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleViewSessions(student.id)}
+                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                    title="عرض الحصص"
+                  >
+                    <Calendar className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleEdit(student)}
+                    className="p-2 text-primary-600 hover:bg-primary-100 rounded-lg transition-colors"
+                    title="تعديل"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(student.id)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="حذف"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block bg-white rounded-xl border-2 border-primary-200 overflow-hidden shadow-lg">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-primary-100">
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center text-primary-600">
-                      {filters.search || filters.package_id || filters.gender || filters.teacher_id || filters.unpaid_months_count || filters.payment_status || filters.is_paused
-                        ? 'لا توجد نتائج'
-                        : 'لا يوجد طلاب مسجلون بعد'}
-                    </td>
+                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">الاسم</th>
+                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">البريد</th>
+                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">الهاتف</th>
+                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">العمر</th>
+                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">الجنس</th>
+                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">الباقة</th>
+                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">المعلم</th>
+                    <th className="px-6 py-4 text-center text-primary-900 font-semibold">الإجراءات</th>
                   </tr>
-                ) : (
-                  filteredStudents.map((student) => (
+                </thead>
+                <tbody>
+                  {filteredStudents.map((student) => (
                     <tr
                       key={student.id}
                       className={`border-b border-primary-200 transition-colors ${
@@ -714,7 +820,7 @@ export default function StudentsPage() {
                           : 'hover:bg-primary-50'
                       }`}
                     >
-                      <td className="px-6 py-4 text-primary-900">{student.name}</td>
+                      <td className="px-6 py-4 text-primary-900 font-medium">{student.name}</td>
                       <td className="px-6 py-4 text-primary-700">{student.email}</td>
                       <td className="px-6 py-4 text-primary-700">{student.phone}</td>
                       <td className="px-6 py-4 text-primary-700">{student.age}</td>
@@ -754,14 +860,14 @@ export default function StudentsPage() {
                         </div>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
           {/* Pagination */}
           {studentsMeta && studentsMeta.last_page > 1 && (
-            <div className="flex items-center justify-center gap-2 p-4 border-t border-primary-200">
+            <div className="flex items-center justify-center gap-2 p-4 border-t border-primary-200 mt-4">
               <button
                 onClick={() => setCurrentPage(currentPage - 1)}
                 disabled={currentPage <= 1}
@@ -781,7 +887,7 @@ export default function StudentsPage() {
               </button>
             </div>
           )}
-        </div>
+        </>
       )}
 
       {/* View Student Details Modal */}

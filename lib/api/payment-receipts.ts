@@ -78,3 +78,14 @@ export const rejectPaymentReceipt = async (
   })
 }
 
+// Delete payment receipt
+export const deletePaymentReceipt = async (
+  id: number,
+  locale?: string
+): Promise<void> => {
+  return apiRequest(`/api/payment-receipts/${id}`, {
+    method: 'DELETE',
+    locale,
+  })
+}
+

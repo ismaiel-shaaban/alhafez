@@ -79,3 +79,14 @@ export const rejectStudentDeletionRequest = async (
   })
 }
 
+// Delete student deletion request
+export const deleteStudentDeletionRequest = async (
+  id: number,
+  locale?: string
+): Promise<void> => {
+  return apiRequest(`/api/student-deletion-requests/${id}`, {
+    method: 'DELETE',
+    locale,
+  })
+}
+

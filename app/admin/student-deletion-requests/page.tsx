@@ -7,6 +7,7 @@ import {
   getStudentDeletionRequests,
   approveStudentDeletionRequest,
   rejectStudentDeletionRequest,
+  deleteStudentDeletionRequest,
   StudentDeletionRequest,
 } from '@/lib/api/student-deletion-requests'
 import { Pagination } from '@/lib/api-client'
@@ -17,6 +18,7 @@ export default function StudentDeletionRequestsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [processingId, setProcessingId] = useState<number | null>(null)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
   const [filters, setFilters] = useState({
     status: '' as 'pending' | 'approved' | 'rejected' | '',
     teacher_id: '',
@@ -77,6 +79,20 @@ export default function StudentDeletionRequestsPage() {
       alert(error.message || 'فشل رفض الطلب')
     } finally {
       setProcessingId(null)
+    }
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('هل أنت متأكد من حذف هذا الطلب؟')) return
+    
+    setDeletingId(id)
+    try {
+      await deleteStudentDeletionRequest(id)
+      await loadRequests()
+    } catch (error: any) {
+      alert(error.message || 'فشل حذف الطلب')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -189,26 +205,40 @@ export default function StudentDeletionRequestsPage() {
                     </div>
                   )}
                 </div>
-                {request.status === 'pending' && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleApprove(request.id)}
-                      disabled={processingId === request.id}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-                    >
+                <div className="flex items-center gap-2">
+                  {request.status === 'pending' && (
+                    <>
+                      <button
+                        onClick={() => handleApprove(request.id)}
+                        disabled={processingId === request.id || deletingId === request.id}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        موافقة وحذف
+                      </button>
+                      <button
+                        onClick={() => handleReject(request.id)}
+                        disabled={processingId === request.id || deletingId === request.id}
+                        className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        رفض
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={() => handleDelete(request.id)}
+                    disabled={processingId === request.id || deletingId === request.id}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                    title="حذف"
+                  >
+                    {deletingId === request.id ? (
+                      <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
                       <Trash2 className="w-4 h-4" />
-                      موافقة وحذف
-                    </button>
-                    <button
-                      onClick={() => handleReject(request.id)}
-                      disabled={processingId === request.id}
-                      className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-                    >
-                      <XCircle className="w-4 h-4" />
-                      رفض
-                    </button>
-                  </div>
-                )}
+                    )}
+                  </button>
+                </div>
               </div>
             </motion.div>
           ))}

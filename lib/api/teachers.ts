@@ -10,6 +10,7 @@ export interface Teacher {
   specialization_en?: string
   experience_years: number
   image?: string // Teacher profile image URL
+  trial_lesson_price?: number // Price for trial lesson
   created_at?: string
 }
 
@@ -23,6 +24,7 @@ export interface CreateTeacherRequest {
   phone?: string // Optional, phone number for teacher login
   email?: string // Optional, email address for teacher account
   password?: string // Optional, password for teacher login (min: 6 characters). If provided along with phone or email, a User account will be automatically created/updated for the teacher. Password will be automatically hashed.
+  trial_lesson_price?: number // Optional, price for trial lesson
 }
 
 // List teachers
@@ -64,6 +66,7 @@ export const createTeacher = async (data: CreateTeacherRequest): Promise<Teacher
     if (data.phone) formData.append('phone', data.phone)
     if (data.email) formData.append('email', data.email)
     if (data.password) formData.append('password', data.password)
+    if (data.trial_lesson_price !== undefined) formData.append('trial_lesson_price', data.trial_lesson_price.toString())
     
     return apiRequest<Teacher>('/api/teachers', {
       method: 'POST',
@@ -72,9 +75,13 @@ export const createTeacher = async (data: CreateTeacherRequest): Promise<Teacher
   }
   
   // Otherwise, use JSON
+  const jsonData: any = { ...data }
+  if (jsonData.trial_lesson_price !== undefined) {
+    jsonData.trial_lesson_price = jsonData.trial_lesson_price
+  }
   return apiRequest<Teacher>('/api/teachers', {
     method: 'POST',
-    body: data,
+    body: jsonData,
   })
 }
 
@@ -96,6 +103,7 @@ export const updateTeacher = async (
     if (data.phone) formData.append('phone', data.phone)
     if (data.email) formData.append('email', data.email)
     if (data.password) formData.append('password', data.password)
+    if (data.trial_lesson_price !== undefined) formData.append('trial_lesson_price', data.trial_lesson_price.toString())
     
     return apiRequest<Teacher>(`/api/teachers/${id}`, {
       method: 'POST',
@@ -104,9 +112,13 @@ export const updateTeacher = async (
   }
   
   // Otherwise, use JSON
+  const jsonData: any = { ...data }
+  if (jsonData.trial_lesson_price !== undefined) {
+    jsonData.trial_lesson_price = jsonData.trial_lesson_price
+  }
   return apiRequest<Teacher>(`/api/teachers/${id}`, {
     method: 'POST',
-    body: data,
+    body: jsonData,
   })
 }
 

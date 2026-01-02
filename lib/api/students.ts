@@ -87,6 +87,8 @@ export interface CreateStudentRequest {
   notes?: string
   password?: string // Optional, min: 6 characters. Password will be automatically hashed.
   trial_session_attendance?: 'not_booked' | 'booked' | 'attended' // Trial session attendance status
+  trial_session_date?: string // Optional, YYYY-MM-DD format. Required when trial_session_attendance is 'booked'
+  trial_session_time?: string // Optional, HH:mm format. Required when trial_session_attendance is 'booked'
   monthly_subscription_price?: number // Monthly subscription price (numeric, min: 0)
   country?: string // Student's country
   currency?: string // Currency code (e.g., "EGP", "USD", "SAR")

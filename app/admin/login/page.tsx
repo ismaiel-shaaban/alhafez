@@ -142,11 +142,11 @@ export default function AdminLogin() {
           </form>
 
           {/* Demo Credentials Hint */}
-          <div className="mt-6 p-4 bg-primary-50 rounded-lg border border-primary-200">
+          {/* <div className="mt-6 p-4 bg-primary-50 rounded-lg border border-primary-200">
             <p className="text-xs text-primary-600 text-center">
               <strong>تجريبي:</strong> admin / password
             </p>
-          </div>
+          </div> */}
         </div>
       </motion.div>
     </div>

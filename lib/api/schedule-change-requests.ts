@@ -80,3 +80,14 @@ export const rejectScheduleChangeRequest = async (
   })
 }
 
+// Delete schedule change request
+export const deleteScheduleChangeRequest = async (
+  id: number,
+  locale?: string
+): Promise<void> => {
+  return apiRequest(`/api/schedule-change-requests/${id}`, {
+    method: 'DELETE',
+    locale,
+  })
+}
+
