@@ -107,12 +107,12 @@ export default function ScheduleChangeRequestsPage() {
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-4xl font-bold text-primary-900">طلبات تغيير المواعيد</h1>
+    <div className="px-2 sm:px-0">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-primary-900">طلبات تغيير المواعيد</h1>
         <button
           onClick={loadRequests}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors w-full sm:w-auto"
         >
           <RefreshCw className="w-5 h-5" />
           تحديث
@@ -120,7 +120,7 @@ export default function ScheduleChangeRequestsPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl border-2 border-primary-200 p-6 mb-6 shadow-lg">
+      <div className="bg-white rounded-xl border-2 border-primary-200 p-4 sm:p-6 mb-6 shadow-lg">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-primary-900 font-semibold mb-2 text-right">الحالة</label>
@@ -148,7 +148,7 @@ export default function ScheduleChangeRequestsPage() {
           <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
         </div>
       ) : requests.length === 0 ? (
-        <div className="text-center py-12 text-primary-600 bg-white rounded-xl border-2 border-primary-200">
+        <div className="text-center py-8 sm:py-12 text-sm sm:text-base text-primary-600 bg-white rounded-xl border-2 border-primary-200 px-4">
           لا توجد طلبات
         </div>
       ) : (
@@ -158,42 +158,42 @@ export default function ScheduleChangeRequestsPage() {
               key={request.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-xl border-2 border-primary-200 p-6 shadow-lg"
+              className="bg-white rounded-xl border-2 border-primary-200 p-4 sm:p-6 shadow-lg"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-4 mb-3">
+              <div className="flex flex-col lg:flex-row items-start lg:items-start justify-between gap-4 mb-4">
+                <div className="flex-1 w-full">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mb-3">
                     {getStatusBadge(request.status)}
-                    <span className="text-sm text-primary-600">
+                    <span className="text-xs sm:text-sm text-primary-600">
                       {new Date(request.created_at || '').toLocaleDateString('ar-SA')}
                     </span>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
                     <div>
-                      <p className="text-sm text-primary-600 mb-1">المعلم</p>
-                      <p className="font-semibold text-primary-900">{request.teacher?.name || '-'}</p>
+                      <p className="text-xs sm:text-sm text-primary-600 mb-1">المعلم</p>
+                      <p className="text-sm sm:text-base font-semibold text-primary-900 break-words">{request.teacher?.name || '-'}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-primary-600 mb-1">الطالب</p>
-                      <p className="font-semibold text-primary-900">{request.student?.name}</p>
+                      <p className="text-xs sm:text-sm text-primary-600 mb-1">الطالب</p>
+                      <p className="text-sm sm:text-base font-semibold text-primary-900 break-words">{request.student?.name}</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-red-50 p-4 rounded-lg border-2 border-red-200">
-                      <p className="text-sm font-semibold text-red-700 mb-2">الجدول القديم</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                    <div className="bg-red-50 p-3 sm:p-4 rounded-lg border-2 border-red-200">
+                      <p className="text-xs sm:text-sm font-semibold text-red-700 mb-2">الجدول القديم</p>
                       <div className="space-y-1">
                         {request.old_schedule.map((schedule, idx) => (
-                          <p key={idx} className="text-sm text-red-900">
+                          <p key={idx} className="text-xs sm:text-sm text-red-900 break-words">
                             {schedule.day} - {schedule.time}
                           </p>
                         ))}
                       </div>
                     </div>
-                    <div className="bg-green-50 p-4 rounded-lg border-2 border-green-200">
-                      <p className="text-sm font-semibold text-green-700 mb-2">الجدول الجديد</p>
+                    <div className="bg-green-50 p-3 sm:p-4 rounded-lg border-2 border-green-200">
+                      <p className="text-xs sm:text-sm font-semibold text-green-700 mb-2">الجدول الجديد</p>
                       <div className="space-y-1">
                         {request.new_schedule.map((schedule, idx) => (
-                          <p key={idx} className="text-sm text-green-900">
+                          <p key={idx} className="text-xs sm:text-sm text-green-900 break-words">
                             {schedule.day} - {schedule.time}
                           </p>
                         ))}
@@ -202,36 +202,38 @@ export default function ScheduleChangeRequestsPage() {
                   </div>
                   {request.rejection_reason && (
                     <div className="mt-4 p-3 bg-red-50 rounded-lg border border-red-200">
-                      <p className="text-sm font-semibold text-red-700 mb-1">سبب الرفض</p>
-                      <p className="text-sm text-red-900">{request.rejection_reason}</p>
+                      <p className="text-xs sm:text-sm font-semibold text-red-700 mb-1">سبب الرفض</p>
+                      <p className="text-xs sm:text-sm text-red-900 break-words">{request.rejection_reason}</p>
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-row sm:flex-col lg:flex-row items-center gap-2 w-full sm:w-auto lg:w-auto">
                   {request.status === 'pending' && (
                     <>
                       <button
                         onClick={() => handleApprove(request.id)}
                         disabled={processingId === request.id || deletingId === request.id}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                        className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-sm sm:text-base"
                       >
                         <CheckCircle className="w-4 h-4" />
-                        موافقة
+                        <span className="hidden sm:inline">موافقة</span>
+                        <span className="sm:hidden">موافقة</span>
                       </button>
                       <button
                         onClick={() => handleReject(request.id)}
                         disabled={processingId === request.id || deletingId === request.id}
-                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                        className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-sm sm:text-base"
                       >
                         <XCircle className="w-4 h-4" />
-                        رفض
+                        <span className="hidden sm:inline">رفض</span>
+                        <span className="sm:hidden">رفض</span>
                       </button>
                     </>
                   )}
                   <button
                     onClick={() => handleDelete(request.id)}
                     disabled={processingId === request.id || deletingId === request.id}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
                     title="حذف"
                   >
                     {deletingId === request.id ? (
@@ -249,7 +251,7 @@ export default function ScheduleChangeRequestsPage() {
 
       {/* Pagination */}
       {pagination && pagination.total_pages > 1 && (
-        <div className="flex items-center justify-center gap-4 mt-8">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mt-6 sm:mt-8">
           <button
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             disabled={currentPage === 1}
@@ -257,7 +259,7 @@ export default function ScheduleChangeRequestsPage() {
           >
             <ChevronRight className="w-5 h-5" />
           </button>
-          <span className="text-primary-700">
+          <span className="text-sm sm:text-base text-primary-700 text-center">
             صفحة {currentPage} من {pagination.total_pages}
           </span>
           <button

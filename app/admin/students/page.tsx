@@ -131,18 +131,8 @@ export default function StudentsPage() {
     notes: '',
   })
 
-  useEffect(() => {
-    fetchStudents()
-    fetchPackages()
-    fetchTeachers(1, 1000)
-  }, [fetchStudents, fetchPackages, fetchTeachers])
-
-  // Apply filters when they change
-  useEffect(() => {
-    setCurrentPage(1) // Reset to first page when filters change
-  }, [filters.type, filters.package_id, filters.gender, filters.teacher_id, filters.search, filters.unpaid_months_count, filters.payment_status, filters.is_paused])
-
-  useEffect(() => {
+  // Helper function to build API filters from current state
+  const buildApiFilters = () => {
     const apiFilters: any = {}
     if (filters.type) apiFilters.type = filters.type
     if (filters.package_id) apiFilters.package_id = parseInt(filters.package_id)
@@ -154,8 +144,21 @@ export default function StudentsPage() {
     if (filters.is_paused) apiFilters.is_paused = filters.is_paused === 'true'
     apiFilters.page = currentPage
     apiFilters.per_page = 15
-    
-    fetchStudents(apiFilters)
+    return apiFilters
+  }
+
+  useEffect(() => {
+    fetchPackages()
+    fetchTeachers(1, 1000)
+  }, [fetchPackages, fetchTeachers])
+
+  // Apply filters when they change
+  useEffect(() => {
+    setCurrentPage(1) // Reset to first page when filters change
+  }, [filters.type, filters.package_id, filters.gender, filters.teacher_id, filters.search, filters.unpaid_months_count, filters.payment_status, filters.is_paused])
+
+  useEffect(() => {
+    fetchStudents(buildApiFilters())
   }, [currentPage, filters.type, filters.package_id, filters.gender, filters.teacher_id, filters.search, filters.unpaid_months_count, filters.payment_status, filters.is_paused, fetchStudents])
 
   // Students are now filtered on the API side, so we use them directly
@@ -284,9 +287,10 @@ export default function StudentsPage() {
           currency: editForm.currency || undefined,
         }
 
-        // If using weekly_schedule, send it (takes precedence)
+        // If using weekly_schedule, send it (takes precedence) and set hour to null
         if (editForm.useWeeklySchedule && Object.keys(editForm.weekly_schedule).length > 0) {
           updateData.weekly_schedule = editForm.weekly_schedule
+          updateData.hour = null // Set hour to null when using custom weekly schedule
         } else {
           // Otherwise, use hour and weekly_days
           if (editForm.hour) updateData.hour = editForm.hour
@@ -310,6 +314,8 @@ export default function StudentsPage() {
         }
 
         await updateStudent(editingId, updateData)
+        // Reload students with current filters and pagination
+        await fetchStudents(buildApiFilters())
         setEditingId(null)
         setEditForm({
           name: '',
@@ -385,6 +391,8 @@ export default function StudentsPage() {
     if (confirm('هل أنت متأكد من حذف هذا الطالب؟')) {
       try {
         await deleteStudent(id)
+        // Reload students with current filters and pagination
+        await fetchStudents(buildApiFilters())
       } catch (error: any) {
         alert(error.message || 'حدث خطأ أثناء الحذف')
       }
@@ -437,6 +445,8 @@ export default function StudentsPage() {
       }
 
       await addStudent(createData)
+      // Reload students with current filters and pagination
+      await fetchStudents(buildApiFilters())
       setNewStudent({
         name: '',
         email: '',
@@ -947,10 +957,12 @@ export default function StudentsPage() {
                     <label className="block text-primary-600 text-sm mb-1">المعلم</label>
                     <p className="text-primary-900">{viewedStudent.teacher?.name || '-'}</p>
                   </div>
-                  <div>
-                    <label className="block text-primary-600 text-sm mb-1">وقت الحصة</label>
-                    <p className="text-primary-900">{viewedStudent.hour || '-'}</p>
-                  </div>
+                  {viewedStudent.hour !== null && viewedStudent.hour !== undefined && (
+                    <div>
+                      <label className="block text-primary-600 text-sm mb-1">وقت الحصة</label>
+                      <p className="text-primary-900">{viewedStudent.hour}</p>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-primary-600 text-sm mb-1">الحصص الشهرية</label>
                     <p className="text-primary-900">{viewedStudent.monthly_sessions || '-'}</p>
@@ -969,10 +981,10 @@ export default function StudentsPage() {
                           </p>
                         ))}
                       </div>
-                    ) : (
+                    ) : viewedStudent.hour !== null && viewedStudent.hour !== undefined ? (
                       <div>
                         <p className="text-primary-900 mb-2">
-                          <span className="font-medium">الوقت الافتراضي:</span> {viewedStudent.hour || '-'}
+                          <span className="font-medium">الوقت الافتراضي:</span> {viewedStudent.hour}
                         </p>
                         <p className="text-primary-900">
                           <span className="font-medium">الأيام:</span>{' '}
@@ -984,6 +996,8 @@ export default function StudentsPage() {
                             : '-'}
                         </p>
                       </div>
+                    ) : (
+                      <p className="text-primary-900">-</p>
                     )}
                   </div>
                   <div>
@@ -1287,7 +1301,7 @@ export default function StudentsPage() {
                 <div className="text-center py-12 text-primary-600">لا توجد حصص مسجلة</div>
               ) : (
                 <div className="space-y-4">
-                  {studentSessions.map((session) => (
+                  {studentSessions.map((session, index) => (
                     <div
                       key={session.id}
                       className={`p-4 rounded-lg border-2 ${
@@ -1304,9 +1318,14 @@ export default function StudentsPage() {
                             <Clock className="w-6 h-6 text-primary-600" />
                           )}
                           <div>
-                            <p className="font-semibold text-primary-900">
-                              {session.session_date} - {session.session_time}
-                            </p>
+                            <div className="flex items-center gap-3 mb-1">
+                              <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary-600 text-white font-bold text-base sm:text-lg flex-shrink-0">
+                                {(session as any).session_number || index + 1}
+                              </span>
+                              <p className="font-bold text-lg sm:text-xl text-primary-900">
+                                {session.session_date} - {session.session_time}
+                              </p>
+                            </div>
                             <p className="text-sm text-primary-600">
                               {session.day_of_week_label || session.day_of_week}
                               {session.teacher && ` - ${session.teacher.name}`}

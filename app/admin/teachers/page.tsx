@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAdminStore } from '@/store/useAdminStore'
 import { Plus, Edit, Trash2, X, Eye, Search } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { getSupervisors, Supervisor } from '@/lib/api/supervisors'
 
 export default function TeachersPage() {
   const { teachers, teachersMeta, isLoadingTeachers, fetchTeachers, getTeacher, addTeacher, updateTeacher, deleteTeacher, error } = useAdminStore()
@@ -13,6 +14,7 @@ export default function TeachersPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [supervisors, setSupervisors] = useState<Supervisor[]>([])
   const [formData, setFormData] = useState({
     name: '',
     name_en: '',
@@ -23,10 +25,24 @@ export default function TeachersPage() {
     email: '',
     password: '',
     trial_lesson_price: '',
+    supervisor_id: '',
   })
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
+
+  // Fetch supervisors on mount
+  useEffect(() => {
+    const loadSupervisors = async () => {
+      try {
+        const data = await getSupervisors({ per_page: 1000 })
+        setSupervisors(data?.supervisors || [])
+      } catch (error) {
+        console.error('Error loading supervisors:', error)
+      }
+    }
+    loadSupervisors()
+  }, [])
 
   // Reset page when search changes
   useEffect(() => {
@@ -64,12 +80,13 @@ export default function TeachersPage() {
         email: teacher.email || '',
         password: '', // Keep empty for security - user can leave it to keep current password
         trial_lesson_price: teacher.trial_lesson_price?.toString() || '',
+        supervisor_id: teacher.supervisor_id?.toString() || '',
       })
       setImageFile(null)
       setImagePreview(teacher.image || null)
     } else {
       setEditingId(null)
-      setFormData({ name: '', name_en: '', specialization: '', specialization_en: '', experience_years: '', phone: '', email: '', password: '', trial_lesson_price: '' })
+      setFormData({ name: '', name_en: '', specialization: '', specialization_en: '', experience_years: '', phone: '', email: '', password: '', trial_lesson_price: '', supervisor_id: '' })
       setImageFile(null)
       setImagePreview(null)
     }
@@ -79,7 +96,7 @@ export default function TeachersPage() {
   const handleCloseModal = () => {
     setShowModal(false)
     setEditingId(null)
-    setFormData({ name: '', name_en: '', specialization: '', specialization_en: '', experience_years: '', phone: '', email: '', password: '', trial_lesson_price: '' })
+    setFormData({ name: '', name_en: '', specialization: '', specialization_en: '', experience_years: '', phone: '', email: '', password: '', trial_lesson_price: '', supervisor_id: '' })
     setImageFile(null)
     setImagePreview(null)
   }
@@ -98,6 +115,7 @@ export default function TeachersPage() {
         email: formData.email || undefined,
         password: formData.password || undefined,
         trial_lesson_price: formData.trial_lesson_price ? parseFloat(formData.trial_lesson_price) : undefined,
+        supervisor_id: formData.supervisor_id ? parseInt(formData.supervisor_id) : undefined,
       }
       
       // Add image if a new file is selected
@@ -243,9 +261,14 @@ export default function TeachersPage() {
                   </div>
                   <h3 className="text-xl font-bold text-primary-900 mb-2 text-center">{teacher.name}</h3>
                   <p className="text-primary-700 mb-2 text-center">{teacher.specialization}</p>
-                  <p className="text-accent-green text-sm font-semibold mb-4 text-center">
+                  <p className="text-accent-green text-sm font-semibold mb-2 text-center">
                     {teacher.experience_years} سنة خبرة
                   </p>
+                  {teacher.supervisor && (
+                    <p className="text-primary-600 text-xs mb-4 text-center">
+                      المشرف: {teacher.supervisor.name}
+                    </p>
+                  )}
                   <div className="flex items-center justify-center gap-2">
                     <button
                       onClick={() => handleViewTeacher(teacher.id)}
@@ -379,6 +402,12 @@ export default function TeachersPage() {
                   <div>
                     <label className="block text-primary-600 text-sm mb-1">سعر جلسة التجربة</label>
                     <p className="text-primary-900">{viewedTeacher.trial_lesson_price} جنيه</p>
+                  </div>
+                )}
+                {viewedTeacher.supervisor && (
+                  <div>
+                    <label className="block text-primary-600 text-sm mb-1">المشرف</label>
+                    <p className="text-primary-900">{viewedTeacher.supervisor.name}</p>
                   </div>
                 )}
               </div>
@@ -515,6 +544,22 @@ export default function TeachersPage() {
                     dir="rtl"
                     placeholder="اختياري - سعر جلسة التجربة"
                   />
+                </div>
+                <div>
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">المشرف</label>
+                  <select
+                    value={formData.supervisor_id}
+                    onChange={(e) => setFormData({ ...formData, supervisor_id: e.target.value })}
+                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                    dir="rtl"
+                  >
+                    <option value="">لا يوجد مشرف</option>
+                    {supervisors.filter(s => s.is_active).map((supervisor) => (
+                      <option key={supervisor.id} value={supervisor.id}>
+                        {supervisor.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-primary-900 font-semibold mb-2 text-right">صورة المعلم</label>

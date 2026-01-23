@@ -6,11 +6,14 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
+  type?: string
   user: {
     id: number
     name: string
     username: string
     email: string
+    phone?: string
+    is_active?: boolean
     teacher?: {
       id: number
       name: string
@@ -25,6 +28,8 @@ export interface User {
   name: string
   username: string
   email: string
+  phone?: string
+  is_active?: boolean
   teacher?: {
     id: number
     name: string
@@ -34,8 +39,9 @@ export interface User {
 
 // Login
 export const login = async (credentials: LoginRequest): Promise<LoginResponse> => {
-  // API returns: { status: true, message: "...", data: { user: {...}, token: "..." } }
-  const response = await apiRequest<{ user: LoginResponse['user']; token: string }>(
+  // API returns: { status: true, message: "...", data: { type: "...", user: {...}, token: "..." } }
+  // OR: { type: "...", user: {...}, token: "..." } (if no data wrapper)
+  const response = await apiRequest<{ type?: string; user: LoginResponse['user']; token: string }>(
     '/api/login',
     {
       method: 'POST',
@@ -50,6 +56,7 @@ export const login = async (credentials: LoginRequest): Promise<LoginResponse> =
   }
   
   return {
+    type: response.type,
     user: response.user,
     token: response.token,
   }

@@ -19,6 +19,8 @@ import {
   Video,
   Calendar,
   FileText,
+  Calculator,
+  UserCheck,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -48,7 +50,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (!isCheckingAuth && !admin.isAuthenticated && pathname !== '/admin/login') {
       router.push('/admin/login')
     }
-  }, [admin.isAuthenticated, pathname, router, isCheckingAuth])
+    // Redirect supervisors away from restricted pages
+    if (!isCheckingAuth && admin.isAuthenticated && admin.userType === 'supervisor') {
+      const restrictedPaths = ['/admin/accounting', '/admin/supervisors']
+      if (restrictedPaths.includes(pathname)) {
+        router.push('/admin/dashboard')
+      }
+    }
+  }, [admin.isAuthenticated, admin.userType, pathname, router, isCheckingAuth])
 
   if (isCheckingAuth || (!admin.isAuthenticated && pathname !== '/admin/login')) {
     return (
@@ -67,17 +76,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push('/admin/login')
   }
 
-  const navItems = [
+  // Filter nav items based on user type
+  const allNavItems = [
     { href: '/admin/dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
     { href: '/admin/sessions', label: 'حصص اليوم', icon: Calendar },
     { href: '/admin/website-students', label: '  الطلاب الجدد', icon: Users },
     { href: '/admin/students', label: 'الطلاب', icon: Users },
     { href: '/admin/teachers', label: 'المعلمين', icon: GraduationCap },
     { href: '/admin/teacher-salary', label: 'الرواتب', icon: DollarSign },
+    { href: '/admin/accounting', label: 'المحاسبة', icon: Calculator, restricted: true },
     { href: '/admin/schedule-change-requests', label: 'طلبات تغيير المواعيد', icon: Calendar },
     { href: '/admin/student-deletion-requests', label: 'طلبات حذف الطلاب', icon: Users },
     { href: '/admin/payment-receipts', label: 'إيصالات الدفع', icon: DollarSign },
     { href: '/admin/subscription-pause-requests', label: 'طلبات الإيقاف', icon: Calendar },
+    { href: '/admin/supervisors', label: 'المشرفين', icon: UserCheck, restricted: true },
     { href: '/admin/certificates', label: 'شهادات التقدير', icon: FileText },
     { href: '/admin/packages', label: 'الباقات', icon: Package },
     { href: '/admin/lessons', label: 'فيديوهات من الحصص', icon: Video },
@@ -85,6 +97,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/honor-board', label: 'لوحة الشرف', icon: Award },
     { href: '/admin/features', label: 'المميزات', icon: BookOpen },
   ]
+
+  // Filter out restricted items for supervisors
+  const isSupervisor = admin.userType === 'supervisor'
+  const navItems = isSupervisor
+    ? allNavItems.filter((item: any) => !item.restricted)
+    : allNavItems
 
   return (
     <div className="min-h-screen bg-primary-50 flex">
@@ -128,9 +146,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-            {navItems.map((item) => {
+            {navItems.map((item: any) => {
               const Icon = item.icon
               const isActive = pathname === item.href
+              // Double check: don't render restricted items for supervisors
+              if (isSupervisor && item.restricted) {
+                return null
+              }
               return (
                 <Link
                   key={item.href}

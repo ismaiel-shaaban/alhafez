@@ -9,4 +9,6 @@ export * from './sessions'
 export * from './teacher-salary'
 export * from './features'
 export * from './certificates'
+export * from './accounting'
+export * from './supervisors'
 

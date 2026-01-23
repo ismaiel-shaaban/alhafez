@@ -27,6 +27,7 @@ export type TeacherPayment = teacherSalaryAPI.TeacherPayment
 export interface AdminUser {
   isAuthenticated: boolean
   username: string
+  userType?: string
   user?: authAPI.User
 }
 
@@ -179,6 +180,7 @@ export const useAdminStore = create<AdminState>()(
             admin: {
               isAuthenticated: true,
               username: response.user.username,
+              userType: response.type,
               user: response.user,
             },
             isLoading: false,
@@ -218,11 +220,13 @@ export const useAdminStore = create<AdminState>()(
 
       checkAuth: async () => {
         try {
+          const currentState = get()
           const user = await authAPI.getCurrentUser()
           set({
             admin: {
               isAuthenticated: true,
               username: user.username,
+              userType: currentState.admin.userType, // Preserve userType from login
               user,
             },
           })
@@ -231,6 +235,7 @@ export const useAdminStore = create<AdminState>()(
           admin: {
             isAuthenticated: false,
             username: '',
+            userType: undefined,
               user: undefined,
           },
         })
