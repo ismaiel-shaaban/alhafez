@@ -11,6 +11,11 @@ export interface Teacher {
   experience_years: number
   image?: string // Teacher profile image URL
   trial_lesson_price?: number // Price for trial lesson
+  supervisor_id?: number
+  supervisor?: {
+    id: number
+    name: string
+  }
   created_at?: string
 }
 
@@ -25,6 +30,7 @@ export interface CreateTeacherRequest {
   email?: string // Optional, email address for teacher account
   password?: string // Optional, password for teacher login (min: 6 characters). If provided along with phone or email, a User account will be automatically created/updated for the teacher. Password will be automatically hashed.
   trial_lesson_price?: number // Optional, price for trial lesson
+  supervisor_id?: number // Optional, supervisor ID
 }
 
 // List teachers
@@ -67,6 +73,7 @@ export const createTeacher = async (data: CreateTeacherRequest): Promise<Teacher
     if (data.email) formData.append('email', data.email)
     if (data.password) formData.append('password', data.password)
     if (data.trial_lesson_price !== undefined) formData.append('trial_lesson_price', data.trial_lesson_price.toString())
+    if (data.supervisor_id !== undefined) formData.append('supervisor_id', data.supervisor_id.toString())
     
     return apiRequest<Teacher>('/api/teachers', {
       method: 'POST',
@@ -78,6 +85,9 @@ export const createTeacher = async (data: CreateTeacherRequest): Promise<Teacher
   const jsonData: any = { ...data }
   if (jsonData.trial_lesson_price !== undefined) {
     jsonData.trial_lesson_price = jsonData.trial_lesson_price
+  }
+  if (jsonData.supervisor_id !== undefined) {
+    jsonData.supervisor_id = jsonData.supervisor_id
   }
   return apiRequest<Teacher>('/api/teachers', {
     method: 'POST',
@@ -104,6 +114,7 @@ export const updateTeacher = async (
     if (data.email) formData.append('email', data.email)
     if (data.password) formData.append('password', data.password)
     if (data.trial_lesson_price !== undefined) formData.append('trial_lesson_price', data.trial_lesson_price.toString())
+    if (data.supervisor_id !== undefined) formData.append('supervisor_id', data.supervisor_id.toString())
     
     return apiRequest<Teacher>(`/api/teachers/${id}`, {
       method: 'POST',
@@ -115,6 +126,9 @@ export const updateTeacher = async (
   const jsonData: any = { ...data }
   if (jsonData.trial_lesson_price !== undefined) {
     jsonData.trial_lesson_price = jsonData.trial_lesson_price
+  }
+  if (jsonData.supervisor_id !== undefined) {
+    jsonData.supervisor_id = jsonData.supervisor_id
   }
   return apiRequest<Teacher>(`/api/teachers/${id}`, {
     method: 'POST',

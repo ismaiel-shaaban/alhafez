@@ -99,15 +99,15 @@ export default function SessionsPage() {
   }
 
   return (
-    <div>
-      <h1 className="text-4xl font-bold text-primary-900 mb-8">الحصص اليومية</h1>
+    <div className="px-2 sm:px-0">
+      <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-primary-900 mb-6 sm:mb-8">الحصص اليومية</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar Picker */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-xl border-2 border-primary-200 overflow-hidden shadow-lg">
-            <div className="p-6 border-b border-primary-200">
-              <h2 className="text-xl font-bold text-primary-900 mb-4">الفلترة</h2>
+            <div className="p-4 sm:p-6 border-b border-primary-200">
+              <h2 className="text-lg sm:text-xl font-bold text-primary-900 mb-4">الفلترة</h2>
               
               {/* Date Picker */}
               <div className="mb-4">
@@ -216,19 +216,19 @@ export default function SessionsPage() {
 
             {/* Statistics */}
             {statistics && (
-              <div className="p-6 space-y-3">
-                <h3 className="text-lg font-semibold text-primary-900 mb-3">إحصائيات اليوم</h3>
-                <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
-                  <div className="text-blue-700 text-sm mb-1">إجمالي الحصص</div>
-                  <div className="text-2xl font-bold text-blue-900">{statistics.total_sessions}</div>
+              <div className="p-4 sm:p-6 space-y-3">
+                <h3 className="text-base sm:text-lg font-semibold text-primary-900 mb-3">إحصائيات اليوم</h3>
+                <div className="bg-blue-50 p-3 sm:p-4 rounded-lg border-2 border-blue-200">
+                  <div className="text-blue-700 text-xs sm:text-sm mb-1">إجمالي الحصص</div>
+                  <div className="text-xl sm:text-2xl font-bold text-blue-900">{statistics.total_sessions}</div>
                 </div>
-                <div className="bg-green-50 p-4 rounded-lg border-2 border-green-200">
-                  <div className="text-green-700 text-sm mb-1">الحصص المكتملة</div>
-                  <div className="text-2xl font-bold text-green-900">{statistics.completed_sessions}</div>
+                <div className="bg-green-50 p-3 sm:p-4 rounded-lg border-2 border-green-200">
+                  <div className="text-green-700 text-xs sm:text-sm mb-1">الحصص المكتملة</div>
+                  <div className="text-xl sm:text-2xl font-bold text-green-900">{statistics.completed_sessions}</div>
                 </div>
-                <div className="bg-yellow-50 p-4 rounded-lg border-2 border-yellow-200">
-                  <div className="text-yellow-700 text-sm mb-1">الحصص قيد الانتظار</div>
-                  <div className="text-2xl font-bold text-yellow-900">{statistics.pending_sessions}</div>
+                <div className="bg-yellow-50 p-3 sm:p-4 rounded-lg border-2 border-yellow-200">
+                  <div className="text-yellow-700 text-xs sm:text-sm mb-1">الحصص قيد الانتظار</div>
+                  <div className="text-xl sm:text-2xl font-bold text-yellow-900">{statistics.pending_sessions}</div>
                 </div>
               </div>
             )}
@@ -238,8 +238,8 @@ export default function SessionsPage() {
         {/* Sessions List */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-xl border-2 border-primary-200 overflow-hidden shadow-lg">
-            <div className="p-6 border-b border-primary-200">
-              <h2 className="text-xl font-bold text-primary-900">
+            <div className="p-4 sm:p-6 border-b border-primary-200">
+              <h2 className="text-lg sm:text-xl font-bold text-primary-900">
                 الحصص في {new Date(selectedDate).toLocaleDateString('ar-EG', {
                   year: 'numeric',
                   month: 'long',
@@ -249,74 +249,74 @@ export default function SessionsPage() {
               </h2>
             </div>
 
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               {loading ? (
-                <div className="text-center py-12 text-primary-600">
+                <div className="text-center py-8 sm:py-12 text-primary-600">
                   <div className="inline-block w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-                  <p>جاري تحميل الحصص...</p>
+                  <p className="text-sm sm:text-base">جاري تحميل الحصص...</p>
                 </div>
               ) : sessions.length === 0 ? (
-                <div className="text-center py-12 text-primary-600">
-                  <CalendarIcon className="w-16 h-16 mx-auto mb-4 text-primary-300" />
-                  <p className="text-lg">لا توجد حصص في هذا التاريخ</p>
+                <div className="text-center py-8 sm:py-12 text-primary-600">
+                  <CalendarIcon className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-primary-300" />
+                  <p className="text-base sm:text-lg">لا توجد حصص في هذا التاريخ</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {sessions.map((session) => (
+                  {sessions.map((session, index) => (
                     <div
                       key={session.id}
                       onClick={() => handleSessionClick(session)}
-                      className="bg-primary-50 p-4 rounded-lg border-2 border-primary-200 hover:bg-primary-100 hover:border-primary-300 cursor-pointer transition-all"
+                      className="bg-primary-50 p-3 sm:p-4 rounded-lg border-2 border-primary-200 hover:bg-primary-100 hover:border-primary-300 cursor-pointer transition-all"
                     >
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between gap-3 sm:gap-4">
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-3">
-                            <div className="bg-primary-200 p-2 rounded-lg">
-                              <Clock className="w-5 h-5 text-primary-700" />
-                            </div>
+                          <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                            <span className="inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary-600 text-white font-bold text-base sm:text-lg flex-shrink-0">
+                              {(session as any).session_number || index + 1}
+                            </span>
                             <div>
-                              <div className="text-lg font-bold text-primary-900">{session.session_time}</div>
-                              <div className="text-sm text-primary-600">{session.day_of_week_label || session.day_of_week}</div>
+                              <div className="text-base sm:text-lg font-bold text-primary-900">{session.session_time}</div>
+                              <div className="text-xs sm:text-sm text-primary-600">{session.day_of_week_label || session.day_of_week}</div>
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-                            <div className="flex items-center gap-2">
-                              <User className="w-4 h-4 text-primary-600" />
-                              <span className="text-primary-700 font-medium">الطالب:</span>
-                              <span className="text-primary-900">{session.student?.name || '-'}</span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mt-2 sm:mt-3">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <User className="w-4 h-4 text-primary-600 flex-shrink-0" />
+                              <span className="text-xs sm:text-sm text-primary-700 font-medium">الطالب:</span>
+                              <span className="text-xs sm:text-sm text-primary-900 break-words">{session.student?.name || '-'}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <GraduationCap className="w-4 h-4 text-primary-600" />
-                              <span className="text-primary-700 font-medium">المعلم:</span>
-                              <span className="text-primary-900">{session.teacher?.name || '-'}</span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <GraduationCap className="w-4 h-4 text-primary-600 flex-shrink-0" />
+                              <span className="text-xs sm:text-sm text-primary-700 font-medium">المعلم:</span>
+                              <span className="text-xs sm:text-sm text-primary-900 break-words">{session.teacher?.name || '-'}</span>
                             </div>
                           </div>
 
                           {session.notes && (
-                            <div className="mt-3 text-sm text-primary-600 bg-white p-2 rounded border border-primary-200">
+                            <div className="mt-2 sm:mt-3 text-xs sm:text-sm text-primary-600 bg-white p-2 rounded border border-primary-200">
                               <span className="font-medium">ملاحظات:</span> {session.notes}
                             </div>
                           )}
                         </div>
 
-                        <div className="flex flex-col items-end gap-2">
+                        <div className="flex flex-col items-end gap-2 flex-shrink-0">
                           <span
-                            className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2 ${
+                            className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2 ${
                               session.is_completed
                                 ? 'bg-green-100 text-green-800'
                                 : 'bg-yellow-100 text-yellow-800'
                             }`}
                           >
                             {session.is_completed ? (
-                              <CheckCircle className="w-4 h-4" />
+                              <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                             ) : (
-                              <AlertCircle className="w-4 h-4" />
+                              <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                             )}
-                            {session.status_label || (session.is_completed ? 'مكتملة' : 'قيد الانتظار')}
+                            <span className="whitespace-nowrap">{session.status_label || (session.is_completed ? 'مكتملة' : 'قيد الانتظار')}</span>
                           </span>
                           {session.new_date && (
-                            <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                            <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded whitespace-nowrap">
                               مؤجلة
                             </span>
                           )}
@@ -358,33 +358,40 @@ export default function SessionsPage() {
                 </button>
               </div>
 
-              <div className="p-6 space-y-4">
+              <div className="p-4 sm:p-6 space-y-4">
+                {/* Session Number */}
+                <div className="flex items-center justify-center mb-4">
+                  <span className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-primary-600 text-white font-bold text-xl sm:text-2xl">
+                    {(selectedSession as any).session_number || '-'}
+                  </span>
+                </div>
+
                 {/* Student Info */}
-                <div className="bg-primary-50 p-4 rounded-lg">
+                <div className="bg-primary-50 p-3 sm:p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <User className="w-5 h-5 text-primary-600" />
-                    <h3 className="font-semibold text-primary-900">الطالب</h3>
+                    <User className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600" />
+                    <h3 className="text-sm sm:text-base font-semibold text-primary-900">الطالب</h3>
                   </div>
-                  <p className="text-primary-700">{selectedSession.student?.name || '-'}</p>
+                  <p className="text-sm sm:text-base text-primary-700 break-words">{selectedSession.student?.name || '-'}</p>
                 </div>
 
                 {/* Teacher Info */}
-                <div className="bg-primary-50 p-4 rounded-lg">
+                <div className="bg-primary-50 p-3 sm:p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <GraduationCap className="w-5 h-5 text-primary-600" />
-                    <h3 className="font-semibold text-primary-900">المعلم</h3>
+                    <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600" />
+                    <h3 className="text-sm sm:text-base font-semibold text-primary-900">المعلم</h3>
                   </div>
-                  <p className="text-primary-700">{selectedSession.teacher?.name || '-'}</p>
+                  <p className="text-sm sm:text-base text-primary-700 break-words">{selectedSession.teacher?.name || '-'}</p>
                 </div>
 
                 {/* Date and Time */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-primary-50 p-4 rounded-lg">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="bg-primary-50 p-3 sm:p-4 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <CalendarIcon className="w-5 h-5 text-primary-600" />
-                      <h3 className="font-semibold text-primary-900">التاريخ</h3>
+                      <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600" />
+                      <h3 className="text-sm sm:text-base font-semibold text-primary-900">التاريخ</h3>
                     </div>
-                    <p className="text-primary-700">
+                    <p className="text-xs sm:text-sm text-primary-700">
                       {new Date(selectedSession.session_date).toLocaleDateString('ar-EG', {
                         year: 'numeric',
                         month: 'long',
@@ -392,25 +399,25 @@ export default function SessionsPage() {
                         weekday: 'long'
                       })}
                     </p>
-                    <p className="text-sm text-primary-600 mt-1">
+                    <p className="text-xs text-primary-600 mt-1">
                       {selectedSession.day_of_week_label || selectedSession.day_of_week}
                     </p>
                   </div>
 
-                  <div className="bg-primary-50 p-4 rounded-lg">
+                  <div className="bg-primary-50 p-3 sm:p-4 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <Clock className="w-5 h-5 text-primary-600" />
-                      <h3 className="font-semibold text-primary-900">الوقت</h3>
+                      <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600" />
+                      <h3 className="text-sm sm:text-base font-semibold text-primary-900">الوقت</h3>
                     </div>
-                    <p className="text-primary-700">{selectedSession.session_time}</p>
+                    <p className="text-sm sm:text-base text-primary-700">{selectedSession.session_time}</p>
                   </div>
                 </div>
 
                 {/* Status */}
-                <div className="bg-primary-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-primary-900 mb-2">الحالة</h3>
+                <div className="bg-primary-50 p-3 sm:p-4 rounded-lg">
+                  <h3 className="text-sm sm:text-base font-semibold text-primary-900 mb-2">الحالة</h3>
                   <span
-                    className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                    className={`inline-block px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
                       selectedSession.is_completed
                         ? 'bg-green-100 text-green-800'
                         : 'bg-yellow-100 text-yellow-800'
@@ -419,7 +426,7 @@ export default function SessionsPage() {
                     {selectedSession.status_label || (selectedSession.is_completed ? 'مكتملة' : 'قيد الانتظار')}
                   </span>
                   {selectedSession.completed_at && (
-                    <p className="text-sm text-primary-600 mt-2">
+                    <p className="text-xs sm:text-sm text-primary-600 mt-2">
                       تم الإكمال في: {new Date(selectedSession.completed_at).toLocaleString('ar-EG')}
                     </p>
                   )}
@@ -427,31 +434,31 @@ export default function SessionsPage() {
 
                 {/* Rescheduled Info */}
                 {selectedSession.new_date && (
-                  <div className="bg-yellow-50 p-4 rounded-lg border-2 border-yellow-200">
-                    <h3 className="font-semibold text-primary-900 mb-2">تم تأجيل الحصة</h3>
-                    <p className="text-primary-700">
+                  <div className="bg-yellow-50 p-3 sm:p-4 rounded-lg border-2 border-yellow-200">
+                    <h3 className="text-sm sm:text-base font-semibold text-primary-900 mb-2">تم تأجيل الحصة</h3>
+                    <p className="text-xs sm:text-sm text-primary-700">
                       التاريخ الجديد: {new Date(selectedSession.new_date).toLocaleDateString('ar-EG')}
                     </p>
                     {selectedSession.new_time && (
-                      <p className="text-primary-700">الوقت الجديد: {selectedSession.new_time}</p>
+                      <p className="text-xs sm:text-sm text-primary-700">الوقت الجديد: {selectedSession.new_time}</p>
                     )}
                     {selectedSession.reason && (
-                      <p className="text-primary-700 mt-2">السبب: {selectedSession.reason}</p>
+                      <p className="text-xs sm:text-sm text-primary-700 mt-2 break-words">السبب: {selectedSession.reason}</p>
                     )}
                   </div>
                 )}
 
                 {/* Notes */}
                 {selectedSession.notes && (
-                  <div className="bg-primary-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-primary-900 mb-2">ملاحظات</h3>
-                    <p className="text-primary-700">{selectedSession.notes}</p>
+                  <div className="bg-primary-50 p-3 sm:p-4 rounded-lg">
+                    <h3 className="text-sm sm:text-base font-semibold text-primary-900 mb-2">ملاحظات</h3>
+                    <p className="text-xs sm:text-sm text-primary-700 break-words">{selectedSession.notes}</p>
                   </div>
                 )}
 
                 {/* Created At */}
                 {selectedSession.created_at && (
-                  <div className="text-sm text-primary-600">
+                  <div className="text-xs sm:text-sm text-primary-600">
                     تم الإنشاء: {new Date(selectedSession.created_at).toLocaleString('ar-EG')}
                   </div>
                 )}

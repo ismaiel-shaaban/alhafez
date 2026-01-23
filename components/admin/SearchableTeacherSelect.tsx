@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Search, ChevronDown, X } from 'lucide-react'
 
 interface Teacher {
@@ -26,6 +27,8 @@ export default function SearchableTeacherSelect({
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 })
 
   // Filter teachers based on search term
   const filteredTeachers = teachers.filter((teacher) =>
@@ -35,20 +38,52 @@ export default function SearchableTeacherSelect({
   // Get selected teacher name
   const selectedTeacher = teachers.find((t) => t.id.toString() === value)
 
+  // Calculate dropdown position when opening or scrolling
+  useEffect(() => {
+    const updatePosition = () => {
+      if (isOpen && buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect()
+        setDropdownPosition({
+          top: rect.bottom + window.scrollY + 8,
+          left: rect.left + window.scrollX,
+          width: rect.width,
+        })
+      }
+    }
+
+    if (isOpen) {
+      updatePosition()
+      window.addEventListener('scroll', updatePosition, true)
+      window.addEventListener('resize', updatePosition)
+    }
+
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true)
+      window.removeEventListener('resize', updatePosition)
+    }
+  }, [isOpen])
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current && 
+        !dropdownRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false)
         setSearchTerm('')
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [])
+  }, [isOpen])
 
   const handleSelect = (teacherId: string) => {
     onChange(teacherId)
@@ -62,9 +97,62 @@ export default function SearchableTeacherSelect({
     setSearchTerm('')
   }
 
+  const dropdownContent = isOpen && typeof window !== 'undefined' ? (
+    createPortal(
+      <div
+        ref={dropdownRef}
+        className="fixed z-[9999] bg-white border-2 border-primary-300 rounded-lg shadow-xl max-h-[500px] sm:max-h-[600px] overflow-hidden"
+        style={{
+          top: `${dropdownPosition.top}px`,
+          left: `${dropdownPosition.left}px`,
+          width: `${dropdownPosition.width}px`,
+        }}
+      >
+        <div className="p-3 border-b border-primary-200 bg-primary-50">
+          <div className="relative">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-400 w-5 h-5" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="ابحث عن معلم..."
+              className="w-full pr-11 pl-4 py-2.5 border-2 border-primary-300 rounded-lg focus:border-primary-500 outline-none text-right text-sm sm:text-base"
+              dir="rtl"
+              autoFocus
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+        <div className="overflow-y-auto max-h-[400px] sm:max-h-[500px]">
+          {filteredTeachers.length === 0 ? (
+            <div className="px-4 py-6 text-center text-primary-600 text-sm sm:text-base">
+              لا توجد نتائج
+            </div>
+          ) : (
+            filteredTeachers.map((teacher) => (
+              <button
+                key={teacher.id}
+                type="button"
+                onClick={() => handleSelect(teacher.id.toString())}
+                className={`w-full text-right px-4 py-3 hover:bg-primary-50 transition-colors text-sm sm:text-base ${
+                  value === teacher.id.toString() ? 'bg-primary-100 font-semibold text-primary-900' : 'text-primary-700'
+                }`}
+                dir="rtl"
+              >
+                {teacher.name}
+              </button>
+            ))
+          )}
+        </div>
+      </div>,
+      document.body
+    )
+  ) : null
+
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative">
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right flex items-center justify-between ${
@@ -91,46 +179,7 @@ export default function SearchableTeacherSelect({
         </div>
       </button>
 
-      {isOpen && (
-        <div className="absolute z-50 w-full mt-2 bg-white border-2 border-primary-200 rounded-lg shadow-lg max-h-60 overflow-hidden">
-          <div className="p-2 border-b border-primary-200">
-            <div className="relative">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-400 w-4 h-4" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="ابحث عن معلم..."
-                className="w-full pr-10 pl-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
-                dir="rtl"
-                autoFocus
-                onClick={(e) => e.stopPropagation()}
-              />
-            </div>
-          </div>
-          <div className="overflow-y-auto max-h-48">
-            {filteredTeachers.length === 0 ? (
-              <div className="px-4 py-3 text-center text-primary-600 text-sm">
-                لا توجد نتائج
-              </div>
-            ) : (
-              filteredTeachers.map((teacher) => (
-                <button
-                  key={teacher.id}
-                  type="button"
-                  onClick={() => handleSelect(teacher.id.toString())}
-                  className={`w-full text-right px-4 py-2 hover:bg-primary-50 transition-colors ${
-                    value === teacher.id.toString() ? 'bg-primary-100 font-semibold' : ''
-                  }`}
-                  dir="rtl"
-                >
-                  {teacher.name}
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-      )}
+      {dropdownContent}
 
       {/* Hidden select for form validation */}
       <select
