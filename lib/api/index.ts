@@ -11,4 +11,5 @@ export * from './features'
 export * from './certificates'
 export * from './accounting'
 export * from './supervisors'
+export * from './complaints'
 

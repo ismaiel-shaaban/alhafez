@@ -21,6 +21,7 @@ import {
   FileText,
   Calculator,
   UserCheck,
+  AlertCircle,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -91,6 +92,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/subscription-pause-requests', label: 'طلبات الإيقاف', icon: Calendar },
     { href: '/admin/supervisors', label: 'المشرفين', icon: UserCheck, restricted: true },
     { href: '/admin/certificates', label: 'شهادات التقدير', icon: FileText },
+    { href: '/admin/complaints', label: 'الشكاوى', icon: AlertCircle },
     { href: '/admin/packages', label: 'الباقات', icon: Package },
     { href: '/admin/lessons', label: 'فيديوهات من الحصص', icon: Video },
     { href: '/admin/testimonials', label: 'آراء الطلاب', icon: MessageSquare },

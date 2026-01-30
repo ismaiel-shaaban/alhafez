@@ -1,5 +1,54 @@
 import { apiRequest, PaginatedResponse } from '../api-client'
 
+/** Single report inside a session (reports array) */
+export interface SessionReport {
+  id: number
+  session_id: number
+  student_id: number
+  teacher_id: number
+  new_memorization: string
+  review: string
+  new_memorization_level: string
+  new_memorization_level_label?: string
+  review_level: string
+  review_level_label?: string
+  notes?: string | null
+  student?: { id: number; name: string }
+  teacher?: { id: number; name: string }
+  session?: {
+    id: number
+    session_date: string
+    session_time: string
+  }
+  created_by?: { id: number; name: string }
+  created_at: string
+  updated_at: string
+}
+
+/** Student evaluation for a session (evaluation key on session) */
+export interface SessionEvaluation {
+  id: number
+  session_id: number
+  student_id: number
+  satisfaction_level: string
+  satisfaction_level_label?: string
+  student_progress: string
+  student_progress_label?: string
+  noise_in_session: string
+  noise_in_session_label?: string
+  internet_quality: string
+  internet_quality_label?: string
+  teacher_camera_on: string
+  teacher_camera_on_label?: string
+  screen_sharing_on: string
+  screen_sharing_on_label?: string
+  academy_advantages?: string | null
+  notes?: string | null
+  would_recommend: string
+  would_recommend_label?: string
+  created_at: string
+}
+
 export interface StudentSession {
   id: number
   student_id: number
@@ -25,6 +74,8 @@ export interface StudentSession {
     id: number
     name: string
   }
+  reports?: SessionReport[]
+  evaluation?: SessionEvaluation
   created_at?: string
   updated_at?: string
 }

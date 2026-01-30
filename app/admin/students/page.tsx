@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAdminStore } from '@/store/useAdminStore'
-import { Plus, Edit, Trash2, Search, X, Eye, Calendar, CheckCircle, Clock, Filter, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, X, Eye, Calendar, CheckCircle, Clock, Filter, ChevronDown, ChevronUp, CreditCard, DollarSign } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import SearchableTeacherSelect from '@/components/admin/SearchableTeacherSelect'
 
@@ -131,6 +131,34 @@ export default function StudentsPage() {
     notes: '',
   })
 
+  // Unpaid subscriptions modal
+  const [showUnpaidSubscriptionsModal, setShowUnpaidSubscriptionsModal] = useState(false)
+  const [selectedStudentForUnpaid, setSelectedStudentForUnpaid] = useState<any>(null)
+
+  // Subscriptions-only modal (view just subscriptions table for a student)
+  const [showSubscriptionsOnlyModal, setShowSubscriptionsOnlyModal] = useState(false)
+  const [selectedStudentForSubscriptions, setSelectedStudentForSubscriptions] = useState<any>(null)
+
+  // Pause subscription modal: 'choice' = choose type, 'form' = temporary pause dates form
+  const [showPauseModal, setShowPauseModal] = useState(false)
+  const [pauseModalMode, setPauseModalMode] = useState<'choice' | 'form'>('choice')
+  const [selectedSubscriptionForPause, setSelectedSubscriptionForPause] = useState<{ subscriptionId: number; subscriptionNumber?: number } | null>(null)
+  const [pauseForm, setPauseForm] = useState({
+    pause_from: '',
+    pause_to: '',
+    resume_date: '',
+  })
+
+  // Partial payment modal
+  const [showPartialPaymentModal, setShowPartialPaymentModal] = useState(false)
+  const [selectedSubscriptionForPartialPayment, setSelectedSubscriptionForPartialPayment] = useState<{ subscriptionId: number; subscriptionNumber?: number } | null>(null)
+  const [partialPaymentForm, setPartialPaymentForm] = useState({
+    amount: '',
+    payment_date: '',
+    receiptImage: null as File | null,
+  })
+  const [isSubmittingPartialPayment, setIsSubmittingPartialPayment] = useState(false)
+
   // Helper function to build API filters from current state
   const buildApiFilters = () => {
     const apiFilters: any = {}
@@ -181,13 +209,140 @@ export default function StudentsPage() {
     try {
       const newPaidStatus = !currentPaidStatus
       await updateSubscriptionPaymentStatus(subscriptionId, newPaidStatus)
-      // Refresh the student data to show updated subscription status
       if (viewingId) {
         const updatedStudent = await getStudent(viewingId)
         setViewedStudent(updatedStudent)
       }
+      await fetchStudents(buildApiFilters())
+      if (selectedStudentForUnpaid) {
+        const updatedStudent = await getStudent(selectedStudentForUnpaid.id)
+        setSelectedStudentForUnpaid(updatedStudent)
+      }
+      if (selectedStudentForSubscriptions) {
+        const updatedStudent = await getStudent(selectedStudentForSubscriptions.id)
+        setSelectedStudentForSubscriptions(updatedStudent)
+      }
     } catch (error: any) {
       alert(error.message || 'فشل تحديث حالة الدفع')
+    }
+  }
+
+  const handleViewUnpaidSubscriptions = async (student: any) => {
+    try {
+      const fullStudent = await getStudent(student.id)
+      setSelectedStudentForUnpaid(fullStudent)
+      setShowUnpaidSubscriptionsModal(true)
+    } catch (error: any) {
+      alert(error.message || 'فشل تحميل بيانات الاشتراكات غير المدفوعة')
+    }
+  }
+
+  const handleViewSubscriptionsOnly = async (student: any) => {
+    try {
+      const fullStudent = await getStudent(student.id)
+      setSelectedStudentForSubscriptions(fullStudent)
+      setShowSubscriptionsOnlyModal(true)
+    } catch (error: any) {
+      alert(error.message || 'فشل تحميل الاشتراكات')
+    }
+  }
+
+  const handlePauseImmediate = async () => {
+    if (!selectedSubscriptionForPause) return
+    if (!confirm('هل أنت متأكد من إيقاف هذا الاشتراك؟ سيتم حذف جميع الحصص المستقبلية غير المكتملة.')) return
+    try {
+      const { pauseSubscription } = await import('@/lib/api/students')
+      await pauseSubscription(selectedSubscriptionForPause.subscriptionId)
+      setShowPauseModal(false)
+      setSelectedSubscriptionForPause(null)
+      setPauseModalMode('choice')
+      if (viewingId) {
+        const updatedStudent = await getStudent(viewingId)
+        setViewedStudent(updatedStudent)
+      }
+      if (selectedStudentForSubscriptions) {
+        const updatedStudent = await getStudent(selectedStudentForSubscriptions.id)
+        setSelectedStudentForSubscriptions(updatedStudent)
+      }
+    } catch (error: any) {
+      alert(error.message || 'فشل إيقاف الاشتراك')
+    }
+  }
+
+  const handlePauseTemporarySubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedSubscriptionForPause) return
+    if (!pauseForm.pause_from || !pauseForm.pause_to || !pauseForm.resume_date) {
+      alert('يرجى إدخال تاريخ بداية الإيقاف وتاريخ نهاية الإيقاف وتاريخ الاستئناف')
+      return
+    }
+    try {
+      const { pauseSubscriptionTemporary } = await import('@/lib/api/students')
+      await pauseSubscriptionTemporary(selectedSubscriptionForPause.subscriptionId, {
+        pause_from: pauseForm.pause_from,
+        pause_to: pauseForm.pause_to,
+        resume_date: pauseForm.resume_date,
+      })
+      setShowPauseModal(false)
+      setSelectedSubscriptionForPause(null)
+      setPauseModalMode('choice')
+      setPauseForm({ pause_from: '', pause_to: '', resume_date: '' })
+      if (viewingId) {
+        const updatedStudent = await getStudent(viewingId)
+        setViewedStudent(updatedStudent)
+      }
+      if (selectedStudentForSubscriptions) {
+        const updatedStudent = await getStudent(selectedStudentForSubscriptions.id)
+        setSelectedStudentForSubscriptions(updatedStudent)
+      }
+    } catch (error: any) {
+      alert(error.message || 'فشل إيقاف الاشتراك')
+    }
+  }
+
+  const handlePartialPaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedSubscriptionForPartialPayment) return
+    if (!partialPaymentForm.amount || !partialPaymentForm.payment_date) {
+      alert('يرجى إدخال المبلغ وتاريخ الدفع')
+      return
+    }
+    const amount = parseFloat(partialPaymentForm.amount)
+    if (isNaN(amount) || amount <= 0) {
+      alert('يرجى إدخال مبلغ صحيح')
+      return
+    }
+    setIsSubmittingPartialPayment(true)
+    try {
+      const formData = new FormData()
+      formData.append('subscription_id', selectedSubscriptionForPartialPayment.subscriptionId.toString())
+      formData.append('amount', partialPaymentForm.amount)
+      formData.append('payment_date', partialPaymentForm.payment_date)
+      if (partialPaymentForm.receiptImage) {
+        formData.append('payment_receipt_image', partialPaymentForm.receiptImage)
+      }
+      const { createSubscriptionPartialPayment } = await import('@/lib/api/students')
+      await createSubscriptionPartialPayment(formData)
+      setShowPartialPaymentModal(false)
+      setSelectedSubscriptionForPartialPayment(null)
+      setPartialPaymentForm({ amount: '', payment_date: '', receiptImage: null })
+      if (viewingId) {
+        const updatedStudent = await getStudent(viewingId)
+        setViewedStudent(updatedStudent)
+      }
+      if (selectedStudentForSubscriptions) {
+        const updatedStudent = await getStudent(selectedStudentForSubscriptions.id)
+        setSelectedStudentForSubscriptions(updatedStudent)
+      }
+      if (selectedStudentForUnpaid) {
+        const updatedStudent = await getStudent(selectedStudentForUnpaid.id)
+        setSelectedStudentForUnpaid(updatedStudent)
+      }
+      await fetchStudents(buildApiFilters())
+    } catch (error: any) {
+      alert(error.message || 'فشل تسجيل الدفع الجزئي')
+    } finally {
+      setIsSubmittingPartialPayment(false)
     }
   }
 
@@ -741,12 +896,7 @@ export default function StudentsPage() {
                     <span className="text-primary-600">الهاتف:</span>
                     <span className="text-primary-900 font-medium">{student.phone}</span>
                   </div>
-                  {student.email && (
-                    <div className="flex justify-between">
-                      <span className="text-primary-600">البريد:</span>
-                      <span className="text-primary-900">{student.email}</span>
-                    </div>
-                  )}
+              
                   {student.age && (
                     <div className="flex justify-between">
                       <span className="text-primary-600">العمر:</span>
@@ -769,14 +919,32 @@ export default function StudentsPage() {
                       <span className="text-primary-900">{student.teacher.name}</span>
                     </div>
                   )}
+                  {student.unpaid_subscriptions_list && Array.isArray(student.unpaid_subscriptions_list) && student.unpaid_subscriptions_list.length > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-primary-600">الاشتراكات غير المدفوعة:</span>
+                      <button
+                        onClick={() => handleViewUnpaidSubscriptions(student)}
+                        className="px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
+                      >
+                        {student.unpaid_subscriptions_list.map((sub: any) => sub.subscription_number || sub.id).join('، ')}
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-primary-200">
+                <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-primary-200 flex-wrap">
                   <button
                     onClick={() => handleViewStudent(student.id)}
                     className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                     title="عرض التفاصيل"
                   >
                     <Eye className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleViewSubscriptionsOnly(student)}
+                    className="p-2 text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"
+                    title="الاشتراكات"
+                  >
+                    <CreditCard className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleViewSessions(student.id)}
@@ -811,12 +979,12 @@ export default function StudentsPage() {
                 <thead className="bg-primary-100">
                   <tr>
                     <th className="px-6 py-4 text-right text-primary-900 font-semibold">الاسم</th>
-                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">البريد</th>
                     <th className="px-6 py-4 text-right text-primary-900 font-semibold">الهاتف</th>
                     <th className="px-6 py-4 text-right text-primary-900 font-semibold">العمر</th>
                     <th className="px-6 py-4 text-right text-primary-900 font-semibold">الجنس</th>
                     <th className="px-6 py-4 text-right text-primary-900 font-semibold">الباقة</th>
                     <th className="px-6 py-4 text-right text-primary-900 font-semibold">المعلم</th>
+                    <th className="px-6 py-4 text-center text-primary-900 font-semibold">غير مدفوع</th>
                     <th className="px-6 py-4 text-center text-primary-900 font-semibold">الإجراءات</th>
                   </tr>
                 </thead>
@@ -831,20 +999,39 @@ export default function StudentsPage() {
                       }`}
                     >
                       <td className="px-6 py-4 text-primary-900 font-medium">{student.name}</td>
-                      <td className="px-6 py-4 text-primary-700">{student.email}</td>
                       <td className="px-6 py-4 text-primary-700">{student.phone}</td>
                       <td className="px-6 py-4 text-primary-700">{student.age}</td>
                       <td className="px-6 py-4 text-primary-700">{student.gender_label || (student.gender === 'male' ? 'ذكر' : 'أنثى')}</td>
                       <td className="px-6 py-4 text-primary-700">{student.package?.name || '-'}</td>
                       <td className="px-6 py-4 text-primary-700">{student.teacher?.name || '-'}</td>
+                      <td className="px-6 py-4 text-center">
+                        {student.unpaid_subscriptions_list && Array.isArray(student.unpaid_subscriptions_list) && student.unpaid_subscriptions_list.length > 0 ? (
+                          <button
+                            onClick={() => handleViewUnpaidSubscriptions(student)}
+                            className="px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
+                            title="انقر لعرض التفاصيل"
+                          >
+                            {student.unpaid_subscriptions_list.map((sub: any) => sub.subscription_number || sub.id).join('، ')}
+                          </button>
+                        ) : (
+                          <span className="text-primary-400">-</span>
+                        )}
+                      </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-2 flex-wrap">
                           <button
                             onClick={() => handleViewStudent(student.id)}
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="عرض التفاصيل"
                           >
                             <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleViewSubscriptionsOnly(student)}
+                            className="p-2 text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"
+                            title="الاشتراكات"
+                          >
+                            <CreditCard className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleViewSessions(student.id)}
@@ -1115,12 +1302,15 @@ export default function StudentsPage() {
                         <thead className="bg-primary-100">
                           <tr>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">رقم الاشتراك</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">كود الاشتراك</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">تاريخ البدء</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">تاريخ الانتهاء</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">الحصص/الأسبوع</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">إجمالي الحصص</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">مكتملة</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">متبقية</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">السعر / المتبقي</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">الدفوع الجزئية</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">الحالة</th>
                             <th className="px-4 py-3 text-center text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">الإجراءات</th>
                           </tr>
@@ -1128,78 +1318,125 @@ export default function StudentsPage() {
                         <tbody>
                           {viewedStudent.subscriptions.map((subscription: any , index: number) => (
                             <tr key={subscription.id} className="border-b border-primary-100 hover:bg-primary-50 transition-colors">
-                              <td className="px-4 py-3 text-primary-900 font-medium text-sm whitespace-nowrap">{index + 1}</td>
+                              <td className="px-4 py-3 text-primary-900 font-medium text-sm whitespace-nowrap">{subscription.subscription_number ?? index + 1}</td>
+                              <td className="px-4 py-3 text-primary-700 text-sm whitespace-nowrap font-mono">{subscription.subscription_code || '-'}</td>
                               <td className="px-4 py-3 text-primary-700 text-sm whitespace-nowrap">{subscription.start_date}</td>
                               <td className="px-4 py-3 text-primary-700 text-sm whitespace-nowrap">{subscription.end_date}</td>
                               <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{subscription.sessions_per_week || '-'}</td>
                               <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{subscription.total_sessions || '-'}</td>
-                              <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{subscription.completed_sessions_count || 0}</td>
-                              <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{subscription.remaining_sessions_count || 0}</td>
-                              <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                <div className="flex items-center justify-end gap-2 flex-wrap">
+                              <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{subscription.completed_sessions_count ?? 0}</td>
+                              <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{subscription.remaining_sessions_count ?? 0}</td>
+                              <td className="px-4 py-3 text-primary-700 text-sm whitespace-nowrap">
+                                <div className="flex flex-col gap-0.5 items-end">
+                                  {subscription.subscription_price != null && subscription.subscription_price !== '' && (
+                                    <span>السعر: {typeof subscription.subscription_price === 'number' ? subscription.subscription_price : subscription.subscription_price}</span>
+                                  )}
+                                  {subscription.remaining_amount != null && (
+                                    <span className={subscription.remaining_amount > 0 ? 'text-red-600 font-medium' : 'text-primary-600'}>
+                                      المتبقي: {subscription.remaining_amount}
+                                    </span>
+                                  )}
+                                  {(subscription.subscription_price == null || subscription.subscription_price === '') && subscription.remaining_amount == null && (
+                                    <span className="text-primary-400">-</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 align-top">
+                                <div className="flex flex-col gap-1 items-end min-w-[120px] max-w-[180px]">
+                                  {subscription.partial_payments && Array.isArray(subscription.partial_payments) && subscription.partial_payments.length > 0 ? (
+                                    subscription.partial_payments.map((pp: any) => (
+                                      <span key={pp.id} className="text-xs text-primary-700">
+                                        {pp.amount} في {pp.payment_date}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="text-primary-400 text-sm">-</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 align-top">
+                                <div className="flex flex-col gap-2 items-end min-w-[140px]">
                                   {subscription.is_paid ? (
-                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                                      <CheckCircle className="w-3 h-3" />
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-800 rounded-lg text-xs font-semibold shadow-sm">
+                                      <CheckCircle className="w-4 h-4 flex-shrink-0" />
                                       مدفوع
                                     </span>
                                   ) : (
-                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
-                                      <X className="w-3 h-3" />
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-800 rounded-lg text-xs font-semibold shadow-sm">
+                                      <X className="w-4 h-4 flex-shrink-0" />
                                       غير مدفوع
                                     </span>
                                   )}
                                   {subscription.is_active && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                                      <Clock className="w-3 h-3" />
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-800 rounded-lg text-xs font-semibold shadow-sm">
+                                      <Clock className="w-4 h-4 flex-shrink-0" />
                                       نشط
                                     </span>
                                   )}
                                   {subscription.is_upcoming && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
-                                      <Clock className="w-3 h-3" />
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-800 rounded-lg text-xs font-semibold shadow-sm">
+                                      <Clock className="w-4 h-4 flex-shrink-0" />
                                       قادم
                                     </span>
                                   )}
                                   {subscription.is_expired && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
-                                      <X className="w-3 h-3" />
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-semibold shadow-sm">
+                                      <X className="w-4 h-4 flex-shrink-0" />
                                       منتهي
+                                    </span>
+                                  )}
+                                  {subscription.status === 'paused' && (
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-800 rounded-lg text-xs font-semibold shadow-sm">
+                                      <Clock className="w-4 h-4 flex-shrink-0" />
+                                      مُوقّف
                                     </span>
                                   )}
                                 </div>
                               </td>
-                              <td className="px-4 py-3 text-center whitespace-nowrap">
-                                <div className="flex items-center justify-center gap-2 flex-wrap">
+                              <td className="px-4 py-3 align-top">
+                                <div className="flex flex-col gap-2 items-center min-w-[180px]">
                                   <button
                                     onClick={() => handleToggleSubscriptionPayment(subscription.id, subscription.is_paid)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                    className={`w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all shadow-sm ${
                                       subscription.is_paid
                                         ? 'bg-red-100 text-red-700 hover:bg-red-200'
                                         : 'bg-green-100 text-green-700 hover:bg-green-200'
                                     }`}
                                     title={subscription.is_paid ? 'تعيين كغير مدفوع' : 'تعيين كمدفوع'}
                                   >
+                                    <CheckCircle className="w-4 h-4" />
                                     {subscription.is_paid ? 'غير مدفوع' : 'مدفوع'}
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedSubscriptionForPartialPayment({
+                                        subscriptionId: subscription.id,
+                                        subscriptionNumber: subscription.subscription_number ?? index + 1,
+                                      })
+                                      setPartialPaymentForm({ amount: '', payment_date: '', receiptImage: null })
+                                      setShowPartialPaymentModal(true)
+                                    }}
+                                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 rounded-lg text-xs font-semibold transition-all shadow-sm"
+                                    title="دفع جزئي"
+                                  >
+                                    <DollarSign className="w-4 h-4" />
+                                    دفع جزئي
                                   </button>
                                   {subscription.is_active && subscription.status !== 'paused' && (
                                     <button
-                                      onClick={async () => {
-                                        if (confirm('هل أنت متأكد من إيقاف هذا الاشتراك؟ سيتم حذف جميع الحصص المستقبلية غير المكتملة.')) {
-                                          try {
-                                            const { pauseSubscription } = await import('@/lib/api/students')
-                                            await pauseSubscription(subscription.id)
-                                            if (viewingId) {
-                                              const updatedStudent = await getStudent(viewingId)
-                                              setViewedStudent(updatedStudent)
-                                            }
-                                          } catch (error: any) {
-                                            alert(error.message || 'فشل إيقاف الاشتراك')
-                                          }
-                                        }
+                                      onClick={() => {
+                                        setSelectedSubscriptionForPause({
+                                          subscriptionId: subscription.id,
+                                          subscriptionNumber: index + 1,
+                                        })
+                                        setPauseForm({ pause_from: '', pause_to: '', resume_date: '' })
+                                        setPauseModalMode('choice')
+                                        setShowPauseModal(true)
                                       }}
-                                      className="px-3 py-1.5 bg-yellow-100 text-yellow-700 hover:bg-yellow-200 rounded-lg text-xs font-medium transition-colors"
+                                      className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-100 text-amber-800 hover:bg-amber-200 rounded-lg text-xs font-semibold transition-all shadow-sm"
                                       title="إيقاف الاشتراك"
                                     >
+                                      <Clock className="w-4 h-4" />
                                       إيقاف
                                     </button>
                                   )}
@@ -1207,7 +1444,7 @@ export default function StudentsPage() {
                                     <button
                                       onClick={async () => {
                                         const resumeDate = prompt('أدخل تاريخ الاستئناف (YYYY-MM-DD) أو اتركه فارغاً لاستخدام التاريخ الحالي:')
-                                        if (resumeDate === null) return // User cancelled
+                                        if (resumeDate === null) return
                                         try {
                                           const { resumeSubscription } = await import('@/lib/api/students')
                                           await resumeSubscription(subscription.id, resumeDate || undefined)
@@ -1215,13 +1452,18 @@ export default function StudentsPage() {
                                             const updatedStudent = await getStudent(viewingId)
                                             setViewedStudent(updatedStudent)
                                           }
+                                          if (selectedStudentForSubscriptions) {
+                                            const updatedStudent = await getStudent(selectedStudentForSubscriptions.id)
+                                            setSelectedStudentForSubscriptions(updatedStudent)
+                                          }
                                         } catch (error: any) {
                                           alert(error.message || 'فشل استئناف الاشتراك')
                                         }
                                       }}
-                                      className="px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-xs font-medium transition-colors"
+                                      className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-xs font-semibold transition-all shadow-sm"
                                       title="استئناف الاشتراك"
                                     >
+                                      <Clock className="w-4 h-4" />
                                       استئناف
                                     </button>
                                   )}
@@ -1235,6 +1477,439 @@ export default function StudentsPage() {
                   </div>
                 )}
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Subscriptions-only Modal */}
+      <AnimatePresence>
+        {showSubscriptionsOnlyModal && selectedStudentForSubscriptions && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowSubscriptionsOnlyModal(false)
+              setSelectedStudentForSubscriptions(null)
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-8 max-w-5xl w-full shadow-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-primary-900">
+                  الاشتراكات — {selectedStudentForSubscriptions.name}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowSubscriptionsOnlyModal(false)
+                    setSelectedStudentForSubscriptions(null)
+                  }}
+                  className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {selectedStudentForSubscriptions.subscriptions && Array.isArray(selectedStudentForSubscriptions.subscriptions) && selectedStudentForSubscriptions.subscriptions.length > 0 ? (
+                <div className="overflow-x-auto rounded-xl border-2 border-primary-200">
+                  <table className="w-full border-collapse bg-white" style={{ tableLayout: 'auto', minWidth: '100%' }}>
+                    <thead className="bg-primary-100">
+                      <tr>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">رقم الاشتراك</th>
+
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">تاريخ البدء</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">تاريخ الانتهاء</th>
+
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">إجمالي الحصص</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">مكتملة</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">متبقية</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">السعر / المتبقي</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">الدفوع الجزئية</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">الحالة</th>
+                        <th className="px-4 py-3 text-center text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">الإجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedStudentForSubscriptions.subscriptions.map((subscription: any, index: number) => (
+                        <tr key={subscription.id} className="border-b border-primary-100 hover:bg-primary-50 transition-colors">
+                          <td className="px-4 py-3 text-primary-900 font-medium text-sm whitespace-nowrap">{subscription.subscription_number ?? index + 1}</td>
+
+                          <td className="px-4 py-3 text-primary-700 text-sm whitespace-nowrap">{subscription.start_date}</td>
+                          <td className="px-4 py-3 text-primary-700 text-sm whitespace-nowrap">{subscription.end_date}</td>
+
+                          <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{subscription.total_sessions || '-'}</td>
+                          <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{subscription.completed_sessions_count ?? 0}</td>
+                          <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{subscription.remaining_sessions_count ?? 0}</td>
+                          <td className="px-4 py-3 text-primary-700 text-sm whitespace-nowrap">
+                            <div className="flex flex-col gap-0.5 items-end">
+                              {subscription.subscription_price != null && subscription.subscription_price !== '' && (
+                                <span>السعر: {typeof subscription.subscription_price === 'number' ? subscription.subscription_price : subscription.subscription_price}</span>
+                              )}
+                              {subscription.remaining_amount != null && (
+                                <span className={subscription.remaining_amount > 0 ? 'text-red-600 font-medium' : 'text-primary-600'}>
+                                  المتبقي: {subscription.remaining_amount}
+                                </span>
+                              )}
+                              {(subscription.subscription_price == null || subscription.subscription_price === '') && subscription.remaining_amount == null && (
+                                <span className="text-primary-400">-</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 align-top">
+                            <div className="flex flex-col gap-1 items-end min-w-[120px] max-w-[180px]">
+                              {subscription.partial_payments && Array.isArray(subscription.partial_payments) && subscription.partial_payments.length > 0 ? (
+                                subscription.partial_payments.map((pp: any) => (
+                                  <span key={pp.id} className="text-xs text-primary-700">
+                                    {pp.amount} في {pp.payment_date}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-primary-400 text-sm">-</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 align-top">
+                            <div className="flex flex-col gap-2 items-end min-w-[140px]">
+                              {subscription.is_paid ? (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-800 rounded-lg text-xs font-semibold shadow-sm">
+                                  <CheckCircle className="w-4 h-4 flex-shrink-0" /> مدفوع
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-800 rounded-lg text-xs font-semibold shadow-sm">
+                                  <X className="w-4 h-4 flex-shrink-0" /> غير مدفوع
+                                </span>
+                              )}
+                              {subscription.is_active && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-800 rounded-lg text-xs font-semibold shadow-sm">
+                                  <Clock className="w-4 h-4 flex-shrink-0" /> نشط
+                                </span>
+                              )}
+                              {subscription.is_upcoming && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-800 rounded-lg text-xs font-semibold shadow-sm">
+                                  <Clock className="w-4 h-4 flex-shrink-0" /> قادم
+                                </span>
+                              )}
+                              {subscription.is_expired && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-semibold shadow-sm">
+                                  <X className="w-4 h-4 flex-shrink-0" /> منتهي
+                                </span>
+                              )}
+                              {subscription.status === 'paused' && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-800 rounded-lg text-xs font-semibold shadow-sm">
+                                  <Clock className="w-4 h-4 flex-shrink-0" /> مُوقّف
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 align-top">
+                            <div className="flex flex-col gap-2 items-center min-w-[180px]">
+                              <button
+                                onClick={() => handleToggleSubscriptionPayment(subscription.id, subscription.is_paid)}
+                                className={`w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all shadow-sm ${
+                                  subscription.is_paid ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                }`}
+                                title={subscription.is_paid ? 'تعيين كغير مدفوع' : 'تعيين كمدفوع'}
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                {subscription.is_paid ? 'غير مدفوع' : 'مدفوع'}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedSubscriptionForPartialPayment({
+                                    subscriptionId: subscription.id,
+                                    subscriptionNumber: subscription.subscription_number ?? index + 1,
+                                  })
+                                  setPartialPaymentForm({ amount: '', payment_date: '', receiptImage: null })
+                                  setShowPartialPaymentModal(true)
+                                }}
+                                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 rounded-lg text-xs font-semibold transition-all shadow-sm"
+                                title="دفع جزئي"
+                              >
+                                <DollarSign className="w-4 h-4" /> دفع جزئي
+                              </button>
+                              {subscription.is_active && subscription.status !== 'paused' && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedSubscriptionForPause({ subscriptionId: subscription.id, subscriptionNumber: index + 1 })
+                                    setPauseForm({ pause_from: '', pause_to: '', resume_date: '' })
+                                    setPauseModalMode('choice')
+                                    setShowPauseModal(true)
+                                  }}
+                                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-100 text-amber-800 hover:bg-amber-200 rounded-lg text-xs font-semibold transition-all shadow-sm"
+                                  title="إيقاف الاشتراك"
+                                >
+                                  <Clock className="w-4 h-4" /> إيقاف
+                                </button>
+                              )}
+                              {subscription.status === 'paused' && (
+                                <button
+                                  onClick={async () => {
+                                    const resumeDate = prompt('أدخل تاريخ الاستئناف (YYYY-MM-DD) أو اتركه فارغاً لاستخدام التاريخ الحالي:')
+                                    if (resumeDate === null) return
+                                    try {
+                                      const { resumeSubscription } = await import('@/lib/api/students')
+                                      await resumeSubscription(subscription.id, resumeDate || undefined)
+                                      const updatedStudent = await getStudent(selectedStudentForSubscriptions.id)
+                                      setSelectedStudentForSubscriptions(updatedStudent)
+                                    } catch (error: any) {
+                                      alert(error.message || 'فشل استئناف الاشتراك')
+                                    }
+                                  }}
+                                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-xs font-semibold transition-all shadow-sm"
+                                  title="استئناف الاشتراك"
+                                >
+                                  <Clock className="w-4 h-4" /> استئناف
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-primary-600 rounded-xl border-2 border-primary-200">
+                  لا توجد اشتراكات مسجلة
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Pause Subscription Modal */}
+      <AnimatePresence>
+        {showPauseModal && selectedSubscriptionForPause && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowPauseModal(false)
+              setSelectedSubscriptionForPause(null)
+              setPauseModalMode('choice')
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-primary-900">
+                  {pauseModalMode === 'choice' ? 'اختر نوع الإيقاف' : 'إيقاف الاشتراك مؤقتاً'}
+                  {selectedSubscriptionForPause.subscriptionNumber != null && (
+                    <span className="text-primary-600 font-normal mr-2">(اشتراك رقم {selectedSubscriptionForPause.subscriptionNumber})</span>
+                  )}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowPauseModal(false)
+                    setSelectedSubscriptionForPause(null)
+                    setPauseModalMode('choice')
+                  }}
+                  className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {pauseModalMode === 'choice' ? (
+                <div className="space-y-4">
+                  <p className="text-primary-600 text-sm mb-4">
+                    إيقاف فوري: إيقاف الاشتراك فوراً (سيتم حذف الحصص المستقبلية غير المكتملة). إيقاف مؤقت: تحديد فترة إيقاف بتواريخ وموعد استئناف.
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    <button
+                      type="button"
+                      onClick={handlePauseImmediate}
+                      className="w-full px-6 py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-all font-medium"
+                    >
+                      إيقاف فوري
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPauseModalMode('form')}
+                      className="w-full px-6 py-3 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-all font-medium"
+                    >
+                      إيقاف مؤقت (بتواريخ)
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPauseModal(false)
+                      setSelectedSubscriptionForPause(null)
+                      setPauseModalMode('choice')
+                    }}
+                    className="w-full mt-4 px-6 py-2 border-2 border-primary-300 text-primary-700 rounded-lg hover:bg-primary-50 transition-all"
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handlePauseTemporarySubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">تاريخ بداية الإيقاف (pause_from)</label>
+                    <input
+                      type="date"
+                      value={pauseForm.pause_from}
+                      onChange={(e) => setPauseForm({ ...pauseForm, pause_from: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">تاريخ نهاية الإيقاف (pause_to)</label>
+                    <input
+                      type="date"
+                      value={pauseForm.pause_to}
+                      onChange={(e) => setPauseForm({ ...pauseForm, pause_to: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">تاريخ الاستئناف (resume_date)</label>
+                    <input
+                      type="date"
+                      value={pauseForm.resume_date}
+                      onChange={(e) => setPauseForm({ ...pauseForm, resume_date: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                      required
+                    />
+                  </div>
+                  <div className="flex items-center gap-4 pt-4">
+                    <button
+                      type="submit"
+                      className="flex-1 px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-all"
+                    >
+                      إيقاف مؤقت
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPauseModalMode('choice')}
+                      className="flex-1 px-6 py-3 border-2 border-primary-300 text-primary-700 rounded-lg hover:bg-primary-50 transition-all"
+                    >
+                      رجوع
+                    </button>
+                  </div>
+                </form>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Partial Payment Modal */}
+      <AnimatePresence>
+        {showPartialPaymentModal && selectedSubscriptionForPartialPayment && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowPartialPaymentModal(false)
+              setSelectedSubscriptionForPartialPayment(null)
+              setPartialPaymentForm({ amount: '', payment_date: '', receiptImage: null })
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-primary-900">
+                  دفع جزئي
+                  {selectedSubscriptionForPartialPayment.subscriptionNumber != null && (
+                    <span className="text-primary-600 font-normal mr-2">(اشتراك رقم {selectedSubscriptionForPartialPayment.subscriptionNumber})</span>
+                  )}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowPartialPaymentModal(false)
+                    setSelectedSubscriptionForPartialPayment(null)
+                    setPartialPaymentForm({ amount: '', payment_date: '', receiptImage: null })
+                  }}
+                  className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handlePartialPaymentSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">المبلغ (amount)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={partialPaymentForm.amount}
+                    onChange={(e) => setPartialPaymentForm({ ...partialPaymentForm, amount: e.target.value })}
+                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                    dir="rtl"
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">تاريخ الدفع (payment_date)</label>
+                  <input
+                    type="date"
+                    value={partialPaymentForm.payment_date}
+                    onChange={(e) => setPartialPaymentForm({ ...partialPaymentForm, payment_date: e.target.value })}
+                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">صورة إيصال الدفع (اختياري)</label>
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      setPartialPaymentForm({ ...partialPaymentForm, receiptImage: file || null })
+                    }}
+                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right file:ml-2 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-primary-100 file:text-primary-700"
+                  />
+                </div>
+                <div className="flex items-center gap-4 pt-4">
+                  <button
+                    type="submit"
+                    disabled={isSubmittingPartialPayment}
+                    className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmittingPartialPayment ? 'جاري الحفظ...' : 'تسجيل الدفع'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPartialPaymentModal(false)
+                      setSelectedSubscriptionForPartialPayment(null)
+                      setPartialPaymentForm({ amount: '', payment_date: '', receiptImage: null })
+                    }}
+                    className="flex-1 px-6 py-3 border-2 border-primary-300 text-primary-700 rounded-lg hover:bg-primary-50 transition-all"
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </motion.div>
         )}
@@ -2320,6 +2995,169 @@ export default function StudentsPage() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Unpaid Subscriptions Modal */}
+      <AnimatePresence>
+        {showUnpaidSubscriptionsModal && selectedStudentForUnpaid && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowUnpaidSubscriptionsModal(false)
+              setSelectedStudentForUnpaid(null)
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-8 max-w-4xl w-full shadow-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-primary-900">
+                  الاشتراكات غير المدفوعة - {selectedStudentForUnpaid.name}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowUnpaidSubscriptionsModal(false)
+                    setSelectedStudentForUnpaid(null)
+                  }}
+                  className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {selectedStudentForUnpaid.unpaid_subscriptions_list &&
+               Array.isArray(selectedStudentForUnpaid.unpaid_subscriptions_list) &&
+               selectedStudentForUnpaid.unpaid_subscriptions_list.length > 0 ? (
+                <div className="overflow-x-auto border border-primary-200 rounded-xl">
+                  <table className="border-collapse bg-white w-full" style={{ tableLayout: 'auto', minWidth: '100%' }}>
+                    <thead className="bg-primary-100">
+                      <tr>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">رقم الاشتراك</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">تاريخ البدء</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">تاريخ الانتهاء</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">إجمالي الحصص</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">مكتملة</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">متبقية</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">السعر / المتبقي</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">الدفوع الجزئية</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">الحالة</th>
+                        <th className="px-4 py-3 text-center text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">الإجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedStudentForUnpaid.unpaid_subscriptions_list.map((unpaidSub: any) => {
+                        const sub = selectedStudentForUnpaid.subscriptions?.find((s: any) => s.id === unpaidSub.id)
+                        return (
+                          <tr key={unpaidSub.id} className="border-b border-primary-100 hover:bg-red-50/50 transition-colors">
+                            <td className="px-4 py-3 text-primary-900 font-medium text-sm whitespace-nowrap">{unpaidSub.subscription_number ?? unpaidSub.id}</td>
+                            <td className="px-4 py-3 text-primary-700 text-sm whitespace-nowrap">{sub?.start_date ?? '-'}</td>
+                            <td className="px-4 py-3 text-primary-700 text-sm whitespace-nowrap">{sub?.end_date ?? '-'}</td>
+                            <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{sub?.total_sessions ?? '-'}</td>
+                            <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{sub?.completed_sessions_count ?? 0}</td>
+                            <td className="px-4 py-3 text-primary-700 text-sm text-center whitespace-nowrap">{sub?.remaining_sessions_count ?? 0}</td>
+                            <td className="px-4 py-3 text-primary-700 text-sm whitespace-nowrap">
+                              <div className="flex flex-col gap-0.5 items-end">
+                                {sub && sub.subscription_price != null && sub.subscription_price !== '' && (
+                                  <span>السعر: {typeof sub.subscription_price === 'number' ? sub.subscription_price : sub.subscription_price}</span>
+                                )}
+                                {sub && sub.remaining_amount != null && (
+                                  <span className={sub.remaining_amount > 0 ? 'text-red-600 font-medium' : 'text-primary-600'}>
+                                    المتبقي: {sub.remaining_amount}
+                                  </span>
+                                )}
+                                {(!sub || ((sub.subscription_price == null || sub.subscription_price === '') && sub.remaining_amount == null)) && (
+                                  <span className="text-primary-400">-</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 align-top">
+                              <div className="flex flex-col gap-1 items-end min-w-[100px] max-w-[160px]">
+                                {sub?.partial_payments && Array.isArray(sub.partial_payments) && sub.partial_payments.length > 0 ? (
+                                  sub.partial_payments.map((pp: any) => (
+                                    <span key={pp.id} className="text-xs text-primary-700">
+                                      {pp.amount} في {pp.payment_date}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-primary-400 text-sm">-</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 align-top">
+                              <div className="flex flex-col gap-1.5 items-end min-w-[100px]">
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-800 rounded-lg text-xs font-semibold">
+                                  <X className="w-3.5 h-3.5 flex-shrink-0" />
+                                  غير مدفوع
+                                </span>
+                                {sub?.is_active && (
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-100 text-blue-800 rounded-lg text-xs font-semibold">
+                                    <Clock className="w-3.5 h-3.5 flex-shrink-0" /> نشط
+                                  </span>
+                                )}
+                                {sub?.is_upcoming && (
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 text-amber-800 rounded-lg text-xs font-semibold">
+                                    <Clock className="w-3.5 h-3.5 flex-shrink-0" /> قادم
+                                  </span>
+                                )}
+                                {sub?.is_expired && (
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-semibold">
+                                    <X className="w-3.5 h-3.5 flex-shrink-0" /> منتهي
+                                  </span>
+                                )}
+                                {sub?.status === 'paused' && (
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-orange-100 text-orange-800 rounded-lg text-xs font-semibold">
+                                    <Clock className="w-3.5 h-3.5 flex-shrink-0" /> مُوقّف
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 align-top">
+                              <div className="flex flex-col gap-2 items-center min-w-[140px]">
+                                <button
+                                  onClick={() => {
+                                    setSelectedSubscriptionForPartialPayment({
+                                      subscriptionId: unpaidSub.id,
+                                      subscriptionNumber: unpaidSub.subscription_number ?? unpaidSub.id,
+                                    })
+                                    setPartialPaymentForm({ amount: '', payment_date: '', receiptImage: null })
+                                    setShowPartialPaymentModal(true)
+                                  }}
+                                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 rounded-lg text-xs font-semibold transition-colors"
+                                  title="دفع جزئي"
+                                >
+                                  <DollarSign className="w-4 h-4" />
+                                  دفع جزئي
+                                </button>
+                                <button
+                                  onClick={() => handleToggleSubscriptionPayment(unpaidSub.id, false)}
+                                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg text-xs font-semibold transition-colors"
+                                >
+                                  <CheckCircle className="w-4 h-4" />
+                                  تعيين كمدفوع
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-primary-600">
+                  لا توجد اشتراكات غير مدفوعة
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

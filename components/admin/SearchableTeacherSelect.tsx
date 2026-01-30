@@ -38,14 +38,14 @@ export default function SearchableTeacherSelect({
   // Get selected teacher name
   const selectedTeacher = teachers.find((t) => t.id.toString() === value)
 
-  // Calculate dropdown position when opening or scrolling
+  // Calculate dropdown position relative to button
   useEffect(() => {
     const updatePosition = () => {
       if (isOpen && buttonRef.current) {
         const rect = buttonRef.current.getBoundingClientRect()
         setDropdownPosition({
-          top: rect.bottom + window.scrollY + 8,
-          left: rect.left + window.scrollX,
+          top: rect.bottom, // Use viewport position for fixed positioning
+          left: rect.left,
           width: rect.width,
         })
       }
@@ -101,7 +101,7 @@ export default function SearchableTeacherSelect({
     createPortal(
       <div
         ref={dropdownRef}
-        className="fixed z-[9999] bg-white border-2 border-primary-300 rounded-lg shadow-xl max-h-[500px] sm:max-h-[600px] overflow-hidden"
+        className="fixed z-[9999] bg-white border-2 border-primary-300 rounded-lg shadow-xl max-h-[500px] sm:max-h-[600px] overflow-hidden mt-1"
         style={{
           top: `${dropdownPosition.top}px`,
           left: `${dropdownPosition.left}px`,
