@@ -79,7 +79,7 @@ export default function WebsiteStudentsPage() {
 
   useEffect(() => {
     // Fetch students based on active tab with filters
-    const filters: any = { type: activeTab }
+    const filters: any = { type: activeTab, per_page: 10000 }
     if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
     fetchStudents(filters)
     fetchPackages()
@@ -248,7 +248,7 @@ export default function WebsiteStudentsPage() {
         })
         setShowEditModal(false)
         // Refresh the list
-        const filters: any = { type: activeTab }
+        const filters: any = { type: activeTab, per_page: 10000 }
         if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
         fetchStudents(filters)
       } catch (error: any) {
@@ -367,7 +367,7 @@ export default function WebsiteStudentsPage() {
       }
       await updateStudent(studentId, updateData)
       // Refresh the list
-      const filters: any = { type: activeTab }
+      const filters: any = { type: activeTab, per_page: 10000 }
       if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
       fetchStudents(filters)
       // Update viewed student if it's the same

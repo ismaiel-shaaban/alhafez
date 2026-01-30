@@ -14,6 +14,7 @@ export default function TeachersPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [supervisorFilterId, setSupervisorFilterId] = useState<string>('')
   const [supervisors, setSupervisors] = useState<Supervisor[]>([])
   const [formData, setFormData] = useState({
     name: '',
@@ -44,15 +45,16 @@ export default function TeachersPage() {
     loadSupervisors()
   }, [])
 
-  // Reset page when search changes
+  // Reset page when search or supervisor filter changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm])
+  }, [searchTerm, supervisorFilterId])
 
   useEffect(() => {
     const search = searchTerm.trim() || undefined
-    fetchTeachers(currentPage, 15, search)
-  }, [fetchTeachers, currentPage, searchTerm])
+    const supervisorId = supervisorFilterId ? parseInt(supervisorFilterId) : undefined
+    fetchTeachers(currentPage, 15, search, supervisorId)
+  }, [fetchTeachers, currentPage, searchTerm, supervisorFilterId])
 
   // Teachers are now filtered on the API side, so we use them directly
   const filteredTeachers = teachers
@@ -174,7 +176,7 @@ export default function TeachersPage() {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-4xl font-bold text-primary-900">إدارة المعلمين</h1>
         <div className="flex items-center gap-4">
-          <div className="text-primary-600 font-medium">إجمالي: {teachers.length}</div>
+          <div className="text-primary-600 font-medium">إجمالي: { teachersMeta?.total || 0 }</div>
           <button
             onClick={() => handleOpenModal()}
             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-700 to-primary-600 text-white rounded-lg hover:from-primary-800 hover:to-primary-700 transition-all shadow-lg"
@@ -192,26 +194,46 @@ export default function TeachersPage() {
         </div>
       )}
 
-      {/* Search Bar */}
+      {/* Search and Filters */}
       <div className="bg-white rounded-xl border-2 border-primary-200 p-4 mb-6 shadow-lg">
-        <div className="relative">
-          <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-primary-400 w-5 h-5" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="ابحث عن معلم..."
-            className="w-full pr-12 pl-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
-            dir="rtl"
-          />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-primary-400 hover:text-primary-600"
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="relative">
+            <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-primary-400 w-5 h-5" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="ابحث عن معلم..."
+              className="w-full pr-12 pl-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+              dir="rtl"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-primary-400 hover:text-primary-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+          <div>
+            <select
+              value={supervisorFilterId}
+              onChange={(e) => {
+                setSupervisorFilterId(e.target.value)
+                setCurrentPage(1)
+              }}
+              className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+              dir="rtl"
             >
-              <X className="w-5 h-5" />
-            </button>
-          )}
+              <option value="">جميع المشرفين</option>
+              {supervisors.map((sup) => (
+                <option key={sup.id} value={sup.id}>
+                  {sup.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

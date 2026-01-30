@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { Calendar as CalendarIcon, Clock, X, User, GraduationCap, CheckCircle, AlertCircle, Filter, Search, ChevronDown } from 'lucide-react'
-import { getSessionsByDate, StudentSession } from '@/lib/api/sessions'
+import { Calendar as CalendarIcon, Clock, X, User, GraduationCap, CheckCircle, AlertCircle, Filter, Search, ChevronDown, FileText, Star } from 'lucide-react'
+import { getSessionsByDate, StudentSession, SessionReport, SessionEvaluation } from '@/lib/api/sessions'
 import { useAdminStore } from '@/store/useAdminStore'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -298,6 +298,18 @@ export default function SessionsPage() {
                               <span className="font-medium">ملاحظات:</span> {session.notes}
                             </div>
                           )}
+                          {session.reports && session.reports.length > 0 && (
+                            <div className="mt-2 sm:mt-3 flex items-center gap-1.5 text-xs sm:text-sm text-primary-600">
+                              <FileText className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span>{session.reports.length} تقرير</span>
+                            </div>
+                          )}
+                          {session.evaluation && (
+                            <div className="mt-2 sm:mt-3 flex items-center gap-1.5 text-xs sm:text-sm text-amber-600">
+                              <Star className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span>تقييم الطالب</span>
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex flex-col items-end gap-2 flex-shrink-0">
@@ -453,6 +465,134 @@ export default function SessionsPage() {
                   <div className="bg-primary-50 p-3 sm:p-4 rounded-lg">
                     <h3 className="text-sm sm:text-base font-semibold text-primary-900 mb-2">ملاحظات</h3>
                     <p className="text-xs sm:text-sm text-primary-700 break-words">{selectedSession.notes}</p>
+                  </div>
+                )}
+
+                {/* Student Evaluation */}
+                {selectedSession.evaluation && (
+                  <div className="border-2 border-amber-200 rounded-xl overflow-hidden bg-amber-50/50">
+                    <div className="bg-amber-100 px-4 py-3 flex items-center gap-2">
+                      <Star className="w-5 h-5 text-amber-700" />
+                      <h3 className="text-base font-bold text-primary-900">تقييم الطالب</h3>
+                      {selectedSession.evaluation.created_at && (
+                        <span className="mr-auto text-xs text-amber-700">
+                          {new Date(selectedSession.evaluation.created_at).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })}
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-4 sm:p-5 space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        {selectedSession.evaluation.satisfaction_level_label && (
+                          <div>
+                            <p className="text-primary-600 font-medium mb-0.5">مستوى الرضا</p>
+                            <p className="text-primary-900 font-medium">{selectedSession.evaluation.satisfaction_level_label}</p>
+                          </div>
+                        )}
+                        {selectedSession.evaluation.student_progress_label && (
+                          <div>
+                            <p className="text-primary-600 font-medium mb-0.5">تقدم الطالب</p>
+                            <p className="text-primary-900 font-medium">{selectedSession.evaluation.student_progress_label}</p>
+                          </div>
+                        )}
+                        {selectedSession.evaluation.noise_in_session_label && (
+                          <div>
+                            <p className="text-primary-600 font-medium mb-0.5">ضجيج في الحصة</p>
+                            <p className="text-primary-900 font-medium">{selectedSession.evaluation.noise_in_session_label}</p>
+                          </div>
+                        )}
+                        {selectedSession.evaluation.internet_quality_label && (
+                          <div>
+                            <p className="text-primary-600 font-medium mb-0.5">جودة الإنترنت</p>
+                            <p className="text-primary-900 font-medium">{selectedSession.evaluation.internet_quality_label}</p>
+                          </div>
+                        )}
+                        {selectedSession.evaluation.teacher_camera_on_label && (
+                          <div>
+                            <p className="text-primary-600 font-medium mb-0.5">كاميرا المعلم</p>
+                            <p className="text-primary-900 font-medium">{selectedSession.evaluation.teacher_camera_on_label}</p>
+                          </div>
+                        )}
+                        {selectedSession.evaluation.screen_sharing_on_label && (
+                          <div>
+                            <p className="text-primary-600 font-medium mb-0.5">مشاركة الشاشة</p>
+                            <p className="text-primary-900 font-medium">{selectedSession.evaluation.screen_sharing_on_label}</p>
+                          </div>
+                        )}
+                        {selectedSession.evaluation.would_recommend_label && (
+                          <div>
+                            <p className="text-primary-600 font-medium mb-0.5">هل تنصح بالأكاديمية</p>
+                            <p className="text-primary-900 font-medium">{selectedSession.evaluation.would_recommend_label}</p>
+                          </div>
+                        )}
+                      </div>
+                      {selectedSession.evaluation.academy_advantages && (
+                        <div className="p-2 bg-white rounded-lg border border-amber-200">
+                          <p className="text-primary-600 font-medium text-xs mb-0.5">مميزات الأكاديمية</p>
+                          <p className="text-primary-800 text-sm break-words">{selectedSession.evaluation.academy_advantages}</p>
+                        </div>
+                      )}
+                      {selectedSession.evaluation.notes && (
+                        <div className="p-2 bg-white rounded-lg border border-amber-200">
+                          <p className="text-primary-600 font-medium text-xs mb-0.5">ملاحظات</p>
+                          <p className="text-primary-800 text-sm break-words">{selectedSession.evaluation.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Reports */}
+                {selectedSession.reports && selectedSession.reports.length > 0 && (
+                  <div className="border-2 border-primary-200 rounded-xl overflow-hidden">
+                    <div className="bg-primary-100 px-4 py-3 flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-primary-700" />
+                      <h3 className="text-base font-bold text-primary-900">تقارير الحصة ({selectedSession.reports.length})</h3>
+                    </div>
+                    <div className="divide-y divide-primary-200">
+                      {selectedSession.reports.map((report: SessionReport, idx: number) => (
+                        <div key={report.id} className="p-4 sm:p-5 bg-white">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-semibold text-primary-600">تقرير #{idx + 1}</span>
+                            {report.created_at && (
+                              <span className="text-xs text-primary-500">
+                                {new Date(report.created_at).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })}
+                              </span>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-sm mb-3">
+                            <div>
+                              <p className="text-primary-600 font-medium mb-0.5">الحفظ الجديد</p>
+                              <p className="text-primary-900 break-words">{report.new_memorization || '-'}</p>
+                              {report.new_memorization_level_label && (
+                                <span className="inline-block mt-1 px-2 py-0.5 bg-primary-100 text-primary-800 rounded text-xs font-medium">
+                                  {report.new_memorization_level_label}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-primary-600 font-medium mb-0.5">المراجعة</p>
+                              <p className="text-primary-900 break-words">{report.review || '-'}</p>
+                              {report.review_level_label && (
+                                <span className="inline-block mt-1 px-2 py-0.5 bg-primary-100 text-primary-800 rounded text-xs font-medium">
+                                  {report.review_level_label}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {report.notes && (
+                            <div className="mb-3 p-2 bg-primary-50 rounded-lg border border-primary-200">
+                              <p className="text-primary-600 font-medium text-xs mb-0.5">ملاحظات</p>
+                              <p className="text-primary-800 text-sm break-words">{report.notes}</p>
+                            </div>
+                          )}
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-primary-600">
+                            {report.student && <span>الطالب: {report.student.name}</span>}
+                            {report.teacher && <span>المعلم: {report.teacher.name}</span>}
+                            {report.created_by && <span>أنشئ بواسطة: {report.created_by.name}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 

@@ -1,5 +1,51 @@
 import { apiRequest, PaginatedResponse } from '../api-client'
 
+/** Single partial payment record inside a subscription */
+export interface SubscriptionPartialPayment {
+  id: number
+  subscription_id: number
+  student_id: number
+  amount: number
+  payment_date: string
+  payment_time?: string | null
+  payment_receipt_image?: string | null
+  notes?: string | null
+  created_by_id?: number
+  created_at: string
+  updated_at: string
+}
+
+/** Subscription object as returned in student.subscriptions */
+export interface StudentSubscription {
+  id: number
+  student_id: number
+  subscription_code?: string
+  subscription_number?: number
+  start_date: string
+  end_date: string
+  sessions_per_week?: number
+  total_sessions?: number
+  completed_sessions_count?: number
+  remaining_sessions_count?: number
+  is_paid: boolean
+  payment_receipt_image?: string | null
+  status?: string // e.g. 'active', 'paused'
+  is_active?: boolean
+  is_upcoming?: boolean
+  is_expired?: boolean
+  notification_sent?: boolean
+  notification_sent_at?: string | null
+  subscription_price?: string | number
+  total_paid?: number
+  remaining_amount?: number
+  is_fully_paid?: boolean
+  is_actually_paid?: boolean
+  partial_payments?: SubscriptionPartialPayment[]
+  partial_payments_count?: number
+  created_at?: string
+  updated_at?: string
+}
+
 export interface Student {
   id: number
   type?: 'website' | 'admin' | 'app' // Registration type
@@ -35,7 +81,7 @@ export interface Student {
     name_en?: string
     specialization?: string
   }
-  subscriptions?: any[] // Student subscriptions
+  subscriptions?: StudentSubscription[]
   subscriptions_statistics?: {
     total_subscriptions: number
     paid_subscriptions: number
@@ -47,6 +93,10 @@ export interface Student {
     completed_sessions_count?: number
     remaining_sessions_count?: number
   }
+  unpaid_subscriptions_list?: Array<{
+    id: number
+    subscription_number: number
+  }> // List of unpaid subscriptions with their numbers
   past_months_count?: number // Optional, may be returned by API
   paid_months_count?: number // Optional, may be returned by API
   subscription_start_date?: string // Optional, may be returned by API
@@ -167,13 +217,32 @@ export const updateSubscriptionPaymentStatus = async (
   })
 }
 
-// Pause subscription
+// Pause subscription (legacy, no dates)
 export const pauseSubscription = async (
   subscriptionId: number,
   locale?: string
 ): Promise<any> => {
   return apiRequest(`/api/student-subscriptions/${subscriptionId}/pause`, {
     method: 'POST',
+    locale,
+  })
+}
+
+export interface PauseSubscriptionTemporaryRequest {
+  pause_from: string // YYYY-MM-DD
+  pause_to: string // YYYY-MM-DD
+  resume_date: string // YYYY-MM-DD
+}
+
+// Pause subscription temporarily with date range
+export const pauseSubscriptionTemporary = async (
+  subscriptionId: number,
+  body: PauseSubscriptionTemporaryRequest,
+  locale?: string
+): Promise<any> => {
+  return apiRequest(`/api/student-subscriptions/${subscriptionId}/pause-temporary`, {
+    method: 'POST',
+    body,
     locale,
   })
 }
@@ -187,6 +256,18 @@ export const resumeSubscription = async (
   return apiRequest(`/api/student-subscriptions/${subscriptionId}/resume`, {
     method: 'POST',
     body: resumeDate ? { resume_date: resumeDate } : {},
+    locale,
+  })
+}
+
+// Create partial payment for a subscription
+export const createSubscriptionPartialPayment = async (
+  formData: FormData,
+  locale?: string
+): Promise<any> => {
+  return apiRequest('/api/subscription-partial-payments', {
+    method: 'POST',
+    body: formData,
     locale,
   })
 }

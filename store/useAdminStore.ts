@@ -78,7 +78,7 @@ interface AdminState {
     last_page: number
   } | null
   isLoadingTeachers: boolean
-  fetchTeachers: (page?: number, perPage?: number, search?: string) => Promise<void>
+  fetchTeachers: (page?: number, perPage?: number, search?: string, supervisorId?: number) => Promise<void>
   getTeacher: (id: number) => Promise<Teacher>
   addTeacher: (teacher: teachersAPI.CreateTeacherRequest) => Promise<void>
   updateTeacher: (id: number, teacher: Partial<teachersAPI.CreateTeacherRequest>) => Promise<void>
@@ -438,11 +438,11 @@ export const useAdminStore = create<AdminState>()(
       teachers: [],
       teachersMeta: null,
       isLoadingTeachers: false,
-      fetchTeachers: async (page = 1, perPage = 15, search?: string) => {
+      fetchTeachers: async (page = 1, perPage = 15, search?: string, supervisorId?: number) => {
         set({ isLoadingTeachers: true, error: null })
         try {
           const locale = getCurrentLocale()
-          const response = await teachersAPI.listTeachers(page, perPage, search, locale)
+          const response = await teachersAPI.listTeachers(page, perPage, search, supervisorId, locale)
           set({
             teachers: response.teachers || [],
             teachersMeta: response.pagination ? {
