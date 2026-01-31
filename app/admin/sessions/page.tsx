@@ -545,51 +545,60 @@ export default function SessionsPage() {
                 {selectedSession.reports && selectedSession.reports.length > 0 && (
                   <div className="border-2 border-primary-200 rounded-xl overflow-hidden">
                     <div className="bg-primary-100 px-4 py-3 flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-primary-700" />
-                      <h3 className="text-base font-bold text-primary-900">تقارير الحصة ({selectedSession.reports.length})</h3>
+                      <FileText className="w-6 h-6 text-primary-700" />
+                      <h3 className="text-lg font-bold text-primary-900">تقارير الحصة ({selectedSession.reports.length})</h3>
                     </div>
                     <div className="divide-y divide-primary-200">
                       {selectedSession.reports.map((report: SessionReport, idx: number) => (
                         <div key={report.id} className="p-4 sm:p-5 bg-white">
                           <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-semibold text-primary-600">تقرير #{idx + 1}</span>
-                            {report.created_at && (
-                              <span className="text-xs text-primary-500">
-                                {new Date(report.created_at).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })}
-                              </span>
-                            )}
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-sm mb-3">
-                            <div>
-                              <p className="text-primary-600 font-medium mb-0.5">الحفظ الجديد</p>
-                              <p className="text-primary-900 break-words">{report.new_memorization || '-'}</p>
-                              {report.new_memorization_level_label && (
-                                <span className="inline-block mt-1 px-2 py-0.5 bg-primary-100 text-primary-800 rounded text-xs font-medium">
-                                  {report.new_memorization_level_label}
-                                </span>
+                            <span className="text-sm font-semibold text-primary-600">تقرير #{idx + 1}</span>
+                            <div className="text-sm text-primary-500">
+                              {report.created_at && (
+                                <span>إنشاء: {new Date(report.created_at).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })}</span>
                               )}
-                            </div>
-                            <div>
-                              <p className="text-primary-600 font-medium mb-0.5">المراجعة</p>
-                              <p className="text-primary-900 break-words">{report.review || '-'}</p>
-                              {report.review_level_label && (
-                                <span className="inline-block mt-1 px-2 py-0.5 bg-primary-100 text-primary-800 rounded text-xs font-medium">
-                                  {report.review_level_label}
-                                </span>
+                              {report.updated_at && report.updated_at !== report.created_at && (
+                                <span className="mr-2">تحديث: {new Date(report.updated_at).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })}</span>
                               )}
                             </div>
                           </div>
-                          {report.notes && (
-                            <div className="mb-3 p-2 bg-primary-50 rounded-lg border border-primary-200">
-                              <p className="text-primary-600 font-medium text-xs mb-0.5">ملاحظات</p>
-                              <p className="text-primary-800 text-sm break-words">{report.notes}</p>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-base text-primary-800 mb-3 font-medium">
+                            <span>📔 الطالب: {report.student_name ? report?.student_name : "-"}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-base text-primary-800 mb-3 font-medium">
+                            <span> 📔 الدرس: {report.session_name }</span>
+                          </div>
+                       
+                          {/* Content lines: 📔 حفظ جديد، 📔 مراجعة */}
+                          <div className="space-y-1.5 text-base text-primary-900 mb-2">
+                            <p className="break-words">
+                              <span className="text-primary-600 ml-1">📔</span> الحفظ الجديد: {(report.new_memorization?.trim() ?? '') || '-'}
+                            </p>
+                            <p className="break-words">
+                              <span className="text-primary-600 ml-1">📔</span> المراجعة: {(report.review?.trim() ?? '') || '-'}
+                            </p>
+                          </div>
+                          {/* Level lines: 📌 مستوى الجديد، 📌 مستوى المراجعة */}
+                          <div className="space-y-1.5 text-base text-primary-900 mb-3">
+                            <p>
+                              <span className="text-primary-600 ml-1">📌</span> مستوى الجديد: {report.new_memorization_level_label ?? '-'}
+                            </p>
+                            <p>
+                              <span className="text-primary-600 ml-1">📌</span> مستوى المراجعة: {report.review_level_label ?? '-'}
+                            </p>
+                          </div>
+                             {/* Notes first */}
+                             {report.notes && (
+                            <div className="mb-3 p-3 bg-primary-50 rounded-lg border border-primary-200">
+                              {/* <p className="text-primary-600 font-medium text-sm mb-1">الملاحظة</p> */}
+                              <p className="text-primary-800 text-base break-words">{report.notes}</p>
                             </div>
                           )}
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-primary-600">
+                          {/* <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-primary-600">
                             {report.student && <span>الطالب: {report.student.name}</span>}
                             {report.teacher && <span>المعلم: {report.teacher.name}</span>}
                             {report.created_by && <span>أنشئ بواسطة: {report.created_by.name}</span>}
-                          </div>
+                          </div> */}
                         </div>
                       ))}
                     </div>

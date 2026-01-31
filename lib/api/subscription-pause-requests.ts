@@ -37,6 +37,7 @@ export interface SubscriptionPauseRequestsResponse {
 }
 
 export interface SubscriptionPauseRequestFilters {
+  type?: 'pause' | 'resume'
   status?: 'pending' | 'approved' | 'rejected'
   teacher_id?: number
   student_id?: number
@@ -53,6 +54,7 @@ export const getSubscriptionPauseRequests = async (
 ): Promise<SubscriptionPauseRequestsResponse> => {
   const params = new URLSearchParams()
   
+  if (filters?.type) params.append('type', filters.type)
   if (filters?.status) params.append('status', filters.status)
   if (filters?.teacher_id) params.append('teacher_id', filters.teacher_id.toString())
   if (filters?.student_id) params.append('student_id', filters.student_id.toString())

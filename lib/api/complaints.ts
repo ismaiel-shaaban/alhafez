@@ -59,3 +59,20 @@ export const getComplaints = async (
     { locale }
   )
 }
+
+export interface UpdateComplaintRequest {
+  status?: ComplaintStatus
+  admin_response?: string | null
+}
+
+export const updateComplaint = async (
+  id: number,
+  body: UpdateComplaintRequest,
+  locale?: string
+): Promise<Complaint> => {
+  return apiRequest<Complaint>(`/api/complaints/${id}`, {
+    method: 'POST',
+    body,
+    locale,
+  })
+}
