@@ -165,7 +165,7 @@ export default function ScheduleChangeRequestsPage() {
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mb-3">
                     {getStatusBadge(request.status)}
                     <span className="text-xs sm:text-sm text-primary-600">
-                      {new Date(request.created_at || '').toLocaleDateString('ar-SA')}
+                      {new Date(request.created_at || '').toLocaleDateString('ar-EG')}
                     </span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">

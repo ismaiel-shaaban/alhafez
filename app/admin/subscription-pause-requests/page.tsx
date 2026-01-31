@@ -15,8 +15,11 @@ import { useAdminStore } from '@/store/useAdminStore'
 import SearchableTeacherSelect from '@/components/admin/SearchableTeacherSelect'
 import SearchableStudentSelect from '@/components/admin/SearchableStudentSelect'
 
+type RequestTypeTab = 'pause' | 'resume'
+
 export default function SubscriptionPauseRequestsPage() {
   const { teachers, fetchTeachers, students, fetchStudents } = useAdminStore()
+  const [activeTab, setActiveTab] = useState<RequestTypeTab>('pause')
   const [requests, setRequests] = useState<SubscriptionPauseRequest[]>([])
   const [pagination, setPagination] = useState<Pagination | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -38,12 +41,13 @@ export default function SubscriptionPauseRequestsPage() {
 
   useEffect(() => {
     loadRequests()
-  }, [currentPage, filters.status, filters.teacher_id, filters.student_id, filters.date_from, filters.date_to])
+  }, [activeTab, currentPage, filters.status, filters.teacher_id, filters.student_id, filters.date_from, filters.date_to])
 
   const loadRequests = async () => {
     setLoading(true)
     try {
       const apiFilters: any = {
+        type: activeTab,
         page: currentPage,
         per_page: 15,
       }
@@ -107,6 +111,11 @@ export default function SubscriptionPauseRequestsPage() {
     }
   }
 
+  const handleTabChange = (tab: RequestTypeTab) => {
+    setActiveTab(tab)
+    setCurrentPage(1)
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -122,7 +131,7 @@ export default function SubscriptionPauseRequestsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <h1 className="text-4xl font-bold text-primary-900">طلبات إيقاف الاشتراكات</h1>
         <button
           onClick={loadRequests}
@@ -131,6 +140,32 @@ export default function SubscriptionPauseRequestsPage() {
           <RefreshCw className="w-5 h-5" />
           تحديث
         </button>
+      </div>
+
+      {/* Tabs: Pause / Resume */}
+      <div className="bg-white rounded-xl border-2 border-primary-200 p-2 mb-6 shadow-lg">
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleTabChange('pause')}
+            className={`flex-1 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold transition-all text-sm sm:text-base ${
+              activeTab === 'pause'
+                ? 'bg-primary-600 text-white shadow-md'
+                : 'bg-primary-50 text-primary-700 hover:bg-primary-100'
+            }`}
+          >
+            طلبات الإيقاف
+          </button>
+          <button
+            onClick={() => handleTabChange('resume')}
+            className={`flex-1 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold transition-all text-sm sm:text-base ${
+              activeTab === 'resume'
+                ? 'bg-primary-600 text-white shadow-md'
+                : 'bg-primary-50 text-primary-700 hover:bg-primary-100'
+            }`}
+          >
+            طلبات الاستئناف
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -227,7 +262,7 @@ export default function SubscriptionPauseRequestsPage() {
                   <div className="flex items-center gap-4 mb-3">
                     {getStatusBadge(request.status)}
                     <span className="text-sm text-primary-600">
-                      {new Date(request.created_at || '').toLocaleDateString('ar-SA')}
+                      {new Date(request.created_at || '').toLocaleDateString('ar-EG')}
                     </span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">

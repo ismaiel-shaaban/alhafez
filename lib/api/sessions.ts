@@ -20,6 +20,8 @@ export interface SessionReport {
     session_date: string
     session_time: string
   }
+  session_name?: string
+  student_name?: string
   created_by?: { id: number; name: string }
   created_at: string
   updated_at: string

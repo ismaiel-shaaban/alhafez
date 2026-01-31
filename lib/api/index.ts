@@ -12,4 +12,9 @@ export * from './certificates'
 export * from './accounting'
 export * from './supervisors'
 export * from './complaints'
-
+export {
+  getSessionEvaluations,
+  type SessionEvaluationsFilters,
+  type SessionEvaluationsResponse,
+  type SessionEvaluation as SessionEvaluationListItem,
+} from './session-evaluations'

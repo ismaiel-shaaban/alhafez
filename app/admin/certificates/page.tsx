@@ -247,6 +247,13 @@ export default function CertificatesPage() {
                             <span className="text-xs sm:text-sm text-primary-900 break-words">{certificate.parent_name}</span>
                           </div>
                         )}
+                        {activeTab === 'parent' && certificate.student_name && (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <User className="w-4 h-4 text-primary-600 flex-shrink-0" />
+                            <span className="text-xs sm:text-sm text-primary-700 font-medium">الطالب:</span>
+                            <span className="text-xs sm:text-sm text-primary-900 break-words">{certificate.student_name}</span>
+                          </div>
+                        )}
                         {activeTab === 'student' && certificate.student_name && (
                           <div className="flex items-center gap-2 flex-wrap">
                             <User className="w-4 h-4 text-primary-600 flex-shrink-0" />

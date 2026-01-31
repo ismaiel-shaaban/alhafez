@@ -175,14 +175,23 @@ export default function SupervisorsPage() {
       {/* Filters and Add Button */}
       <div className="bg-white rounded-xl border-2 border-primary-200 shadow-lg mb-6">
         <div className="p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3 flex-1">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600" />
-                <span className="text-sm sm:text-base font-semibold text-primary-900">الفلترة:</span>
+                <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600 flex-shrink-0" />
+                <span className="text-sm sm:text-base font-semibold text-primary-900">الفلترة</span>
               </div>
-              <div className="relative flex-1 sm:flex-none sm:w-64">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-primary-400" />
+              <button
+                onClick={() => handleOpenModal()}
+                className="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm sm:text-base font-semibold flex items-center justify-center gap-2"
+              >
+                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span>إضافة مشرف</span>
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-stretch sm:items-center gap-3">
+              <div className="relative min-w-0 flex-1 sm:flex-none sm:w-64">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-primary-400 pointer-events-none" />
                 <input
                   type="text"
                   value={searchTerm}
@@ -201,7 +210,8 @@ export default function SupervisorsPage() {
                   setIsActiveFilter(e.target.value)
                   setCurrentPage(1)
                 }}
-                className="px-3 py-2 border-2 border-primary-300 rounded-lg focus:outline-none focus:border-primary-500 text-sm sm:text-base"
+                className="w-full sm:w-auto px-3 py-2 border-2 border-primary-300 rounded-lg focus:outline-none focus:border-primary-500 text-sm sm:text-base"
+                dir="rtl"
               >
                 <option value="">جميع الحالات</option>
                 <option value="true">نشط</option>
@@ -209,19 +219,12 @@ export default function SupervisorsPage() {
               </select>
               <button
                 onClick={resetFilters}
-                className="px-3 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors text-sm sm:text-base flex items-center gap-2"
+                className="w-full sm:w-auto px-3 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors text-sm sm:text-base flex items-center justify-center gap-2"
               >
                 <RefreshCw className="w-4 h-4" />
                 <span>إعادة تعيين</span>
               </button>
             </div>
-            <button
-              onClick={() => handleOpenModal()}
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm sm:text-base font-semibold flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span>إضافة مشرف</span>
-            </button>
           </div>
         </div>
       </div>
@@ -240,14 +243,77 @@ export default function SupervisorsPage() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* Mobile Card View */}
+            <div className="md:hidden divide-y divide-primary-200">
+              {supervisors.map((supervisor) => (
+                <motion.div
+                  key={supervisor.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 hover:bg-primary-50/50 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div>
+                      <h3 className="text-base font-bold text-primary-900">{supervisor.name}</h3>
+                      <p className="text-sm text-primary-600">{supervisor.username}</p>
+                    </div>
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
+                        supervisor.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}
+                    >
+                      {supervisor.is_active ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                      {supervisor.is_active ? 'نشط' : 'غير نشط'}
+                    </span>
+                  </div>
+                  <div className="space-y-1.5 text-sm text-primary-700 mb-4">
+                    {supervisor.email && (
+                      <div className="flex justify-between gap-2">
+                        <span className="text-primary-600">البريد:</span>
+                        <span className="break-all text-left">{supervisor.email}</span>
+                      </div>
+                    )}
+                    {supervisor.phone && (
+                      <div className="flex justify-between gap-2">
+                        <span className="text-primary-600">الهاتف:</span>
+                        <span dir="ltr">{supervisor.phone}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => handleOpenModal(supervisor)}
+                      className="p-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors"
+                      title="تعديل"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(supervisor.id)}
+                      disabled={deletingId === supervisor.id}
+                      className="p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50"
+                      title="حذف"
+                    >
+                      {deletingId === supervisor.id ? (
+                        <div className="w-4 h-4 border-2 border-red-700 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="min-w-full divide-y divide-primary-200">
                 <thead className="bg-primary-100">
                   <tr>
                     <th className="px-4 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-primary-900">الاسم</th>
-                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-primary-900 hidden sm:table-cell">اسم المستخدم</th>
-                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-primary-900 hidden md:table-cell">البريد الإلكتروني</th>
-                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-primary-900 hidden lg:table-cell">الهاتف</th>
+                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-primary-900">اسم المستخدم</th>
+                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-primary-900">البريد الإلكتروني</th>
+                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-primary-900">الهاتف</th>
                     <th className="px-4 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-primary-900">الحالة</th>
                     <th className="px-4 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-primary-900">الإجراءات</th>
                   </tr>
@@ -260,15 +326,18 @@ export default function SupervisorsPage() {
                       animate={{ opacity: 1, y: 0 }}
                       className="hover:bg-primary-50 transition-colors"
                     >
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-primary-900 break-words">
-                        <div className="font-medium">{supervisor.name}</div>
-                        <div className="sm:hidden text-primary-600 text-xs mt-1">{supervisor.username}</div>
-                        <div className="md:hidden sm:block text-primary-600 text-xs mt-1">{supervisor.email}</div>
-                        <div className="lg:hidden md:block text-primary-600 text-xs mt-1">{supervisor.phone}</div>
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-primary-900 break-words font-medium">
+                        {supervisor.name}
                       </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-primary-700 break-words hidden sm:table-cell">{supervisor.username}</td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-primary-700 break-words hidden md:table-cell">{supervisor.email}</td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-primary-700 break-words hidden lg:table-cell">{supervisor.phone}</td>
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-primary-700 break-words">
+                        {supervisor.username}
+                      </td>
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-primary-700 break-words">
+                        {supervisor.email}
+                      </td>
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-primary-700 break-words">
+                        {supervisor.phone}
+                      </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm">
                         <span
                           className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
@@ -301,7 +370,7 @@ export default function SupervisorsPage() {
                             title="حذف"
                           >
                             {deletingId === supervisor.id ? (
-                              <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-red-700 border-t-transparent rounded-full animate-spin"></div>
+                              <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-red-700 border-t-transparent rounded-full animate-spin" />
                             ) : (
                               <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
                             )}
@@ -317,21 +386,21 @@ export default function SupervisorsPage() {
             {/* Pagination */}
             {pagination && pagination.total_pages > 1 && (
               <div className="p-4 sm:p-6 border-t border-primary-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <p className="text-sm sm:text-base text-primary-600">
+                <p className="text-sm sm:text-base text-primary-600 text-center sm:text-right order-2 sm:order-1">
                   صفحة {pagination.current_page} من {pagination.total_pages} ({pagination.total} مشرف)
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-center order-1 sm:order-2">
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={pagination.current_page === 1}
-                    className="px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+                    className="flex-1 sm:flex-none px-4 py-2.5 sm:py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                   >
                     السابق
                   </button>
                   <button
                     onClick={() => setCurrentPage((p) => Math.min(pagination!.total_pages, p + 1))}
                     disabled={pagination.current_page === pagination.total_pages}
-                    className="px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+                    className="flex-1 sm:flex-none px-4 py-2.5 sm:py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                   >
                     التالي
                   </button>
@@ -444,18 +513,18 @@ export default function SupervisorsPage() {
                   </label>
                 </div>
 
-                <div className="flex items-center gap-3 pt-4">
+                <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 pt-4">
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-semibold"
+                    className="flex-1 px-4 py-3 sm:py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-semibold"
                   >
                     {isSubmitting ? 'جاري الحفظ...' : editingSupervisor ? 'تحديث' : 'إضافة'}
                   </button>
                   <button
                     type="button"
                     onClick={handleCloseModal}
-                    className="px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors text-sm sm:text-base"
+                    className="px-4 py-3 sm:py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors text-sm sm:text-base font-medium"
                   >
                     إلغاء
                   </button>
