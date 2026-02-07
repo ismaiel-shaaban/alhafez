@@ -39,6 +39,7 @@ export const listTeachers = async (
   perPage: number = 15,
   search?: string,
   supervisorId?: number,
+  withoutSupervisor?: boolean,
   locale?: string
 ): Promise<{ teachers: Teacher[]; pagination: any }> => {
   const params = new URLSearchParams()
@@ -46,6 +47,7 @@ export const listTeachers = async (
   params.append('per_page', perPage.toString())
   if (search) params.append('search', search)
   if (supervisorId !== undefined && supervisorId !== null) params.append('supervisor_id', supervisorId.toString())
+  if (withoutSupervisor) params.append('without_supervisor', '1')
 
   // API returns: { status: true, message: "...", data: { teachers: [...], pagination: {...} } }
   return apiRequest<{ teachers: Teacher[]; pagination: any }>(

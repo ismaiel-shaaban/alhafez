@@ -15,6 +15,7 @@ export default function TeachersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [supervisorFilterId, setSupervisorFilterId] = useState<string>('')
+  const [withoutSupervisor, setWithoutSupervisor] = useState(false)
   const [supervisors, setSupervisors] = useState<Supervisor[]>([])
   const [formData, setFormData] = useState({
     name: '',
@@ -48,13 +49,13 @@ export default function TeachersPage() {
   // Reset page when search or supervisor filter changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, supervisorFilterId])
+  }, [searchTerm, supervisorFilterId, withoutSupervisor])
 
   useEffect(() => {
     const search = searchTerm.trim() || undefined
-    const supervisorId = supervisorFilterId ? parseInt(supervisorFilterId) : undefined
-    fetchTeachers(currentPage, 15, search, supervisorId)
-  }, [fetchTeachers, currentPage, searchTerm, supervisorFilterId])
+    const supervisorId = withoutSupervisor ? undefined : (supervisorFilterId ? parseInt(supervisorFilterId) : undefined)
+    fetchTeachers(currentPage, 15, search, supervisorId, withoutSupervisor)
+  }, [fetchTeachers, currentPage, searchTerm, supervisorFilterId, withoutSupervisor])
 
   // Teachers are now filtered on the API side, so we use them directly
   const filteredTeachers = teachers
@@ -223,7 +224,8 @@ export default function TeachersPage() {
                 setSupervisorFilterId(e.target.value)
                 setCurrentPage(1)
               }}
-              className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+              disabled={withoutSupervisor}
+              className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right disabled:opacity-60 disabled:bg-primary-50"
               dir="rtl"
             >
               <option value="">جميع المشرفين</option>
@@ -233,6 +235,21 @@ export default function TeachersPage() {
                 </option>
               ))}
             </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="without_supervisor"
+              checked={withoutSupervisor}
+              onChange={(e) => {
+                setWithoutSupervisor(e.target.checked)
+                setCurrentPage(1)
+              }}
+              className="w-4 h-4 rounded border-2 border-primary-300 text-primary-600 focus:ring-primary-500"
+            />
+            <label htmlFor="without_supervisor" className="text-primary-700 font-medium cursor-pointer">
+              بدون مشرف
+            </label>
           </div>
         </div>
       </div>
