@@ -1028,6 +1028,9 @@ GET /api/dashboard/student-sessions/by-date?date=2024-01-15&is_completed=true
 **Query Parameters:**
 - `per_page` (optional) - Results per page (default: 15)
 - `page` (optional) - Page number
+- `search` (optional) - Search by teacher name
+- `supervisor_id` (optional) - Filter by supervisor ID
+- `without_supervisor` (optional) - Set to `1` to return only teachers that have no assigned supervisor
 
 **Success Response (200):**
 ```json

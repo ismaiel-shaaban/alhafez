@@ -431,13 +431,13 @@ export default function AccountingPage() {
                             <p className="text-sm sm:text-base text-primary-700 mt-2 break-words">{expense.description}</p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <button
+                            {/* <button
                               onClick={() => handleEditExpense(expense)}
                               className="p-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors"
                               title="تعديل"
                             >
                               <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
-                            </button>
+                            </button> */}
                             <button
                               onClick={() => handleDeleteExpense(expense.id)}
                               disabled={deletingId === expense.id}
@@ -581,13 +581,13 @@ export default function AccountingPage() {
                             <p className="text-sm sm:text-base text-primary-700 mt-2 break-words">{income.description}</p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <button
+                            {/* <button
                               onClick={() => handleEditIncome(income)}
                               className="p-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors"
                               title="تعديل"
                             >
                               <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
-                            </button>
+                            </button> */}
                             <button
                               onClick={() => handleDeleteIncome(income.id)}
                               disabled={deletingId === income.id}
@@ -791,9 +791,10 @@ export default function AccountingPage() {
                     type="number"
                     step="0.01"
                     min="0"
-                    value={expenseForm.amount}
+                    value={expenseForm.amount === 0 ? '' : expenseForm.amount}
                     onChange={(e) => setExpenseForm({ ...expenseForm, amount: parseFloat(e.target.value) || 0 })}
                     required
+                    placeholder=""
                     className="w-full px-4 py-2 border-2 border-primary-300 rounded-lg focus:outline-none focus:border-primary-500 text-sm sm:text-base"
                   />
                 </div>
@@ -886,9 +887,10 @@ export default function AccountingPage() {
                     type="number"
                     step="0.01"
                     min="0"
-                    value={incomeForm.amount}
+                    value={incomeForm.amount === 0 ? '' : incomeForm.amount}
                     onChange={(e) => setIncomeForm({ ...incomeForm, amount: parseFloat(e.target.value) || 0 })}
                     required
+                    placeholder=""
                     className="w-full px-4 py-2 border-2 border-primary-300 rounded-lg focus:outline-none focus:border-primary-500 text-sm sm:text-base"
                   />
                 </div>
