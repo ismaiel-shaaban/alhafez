@@ -33,6 +33,7 @@ export default function AppStudentsPage() {
   
   const [searchTerm, setSearchTerm] = useState('')
   const [trialSessionFilter, setTrialSessionFilter] = useState<'not_booked' | 'booked' | 'attended' | ''>('')
+  const [teacherFilterId, setTeacherFilterId] = useState<string>('')
   const [viewingId, setViewingId] = useState<number | null>(null)
   const [viewedStudent, setViewedStudent] = useState<any>(null)
   const [showViewModal, setShowViewModal] = useState(false)
@@ -60,6 +61,7 @@ export default function AppStudentsPage() {
     password: '',
     trial_session_attendance: '' as 'not_booked' | 'booked' | 'attended' | '',
     monthly_subscription_price: '',
+    paid_months_count: '',
     country: '',
     currency: '',
   })
@@ -68,10 +70,11 @@ export default function AppStudentsPage() {
     // Fetch only app students with filters
     const filters: any = { type: 'app' }
     if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
+    if (teacherFilterId) filters.teacher_id = parseInt(teacherFilterId)
     fetchStudents(filters)
     fetchPackages()
-    fetchTeachers()
-  }, [fetchStudents, fetchPackages, fetchTeachers, trialSessionFilter])
+    fetchTeachers(1, 1000)
+  }, [fetchStudents, fetchPackages, fetchTeachers, trialSessionFilter, teacherFilterId])
 
   const handleViewStudent = async (id: number) => {
     try {
@@ -108,6 +111,7 @@ export default function AppStudentsPage() {
       password: '', // Don't populate password field for security
       trial_session_attendance: student.trial_session_attendance || '',
       monthly_subscription_price: student.monthly_subscription_price?.toString() || '',
+      paid_months_count: student.paid_months_count?.toString() ?? '',
       country: student.country || '',
       currency: student.currency || '',
     })
@@ -136,6 +140,7 @@ export default function AppStudentsPage() {
           password: editForm.password || undefined,
           trial_session_attendance: editForm.trial_session_attendance || undefined,
           monthly_subscription_price: editForm.monthly_subscription_price ? parseFloat(editForm.monthly_subscription_price) : undefined,
+          paid_months_count: editForm.paid_months_count !== '' ? parseInt(editForm.paid_months_count) : undefined,
           country: editForm.country || undefined,
           currency: editForm.currency || undefined,
         }
@@ -171,6 +176,7 @@ export default function AppStudentsPage() {
           password: '',
           trial_session_attendance: '',
           monthly_subscription_price: '',
+          paid_months_count: '',
           country: '',
           currency: '',
         })
@@ -178,6 +184,7 @@ export default function AppStudentsPage() {
         // Refresh the list
         const filters: any = { type: 'app' }
         if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
+        if (teacherFilterId) filters.teacher_id = parseInt(teacherFilterId)
         fetchStudents(filters)
       } catch (error: any) {
         alert(error.message || 'حدث خطأ أثناء التحديث')
@@ -210,6 +217,7 @@ export default function AppStudentsPage() {
       password: '',
       trial_session_attendance: '',
       monthly_subscription_price: '',
+      paid_months_count: '',
       country: '',
       currency: '',
     })
@@ -222,6 +230,7 @@ export default function AppStudentsPage() {
         // Refresh the list
         const filters: any = { type: 'app' }
         if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
+        if (teacherFilterId) filters.teacher_id = parseInt(teacherFilterId)
         fetchStudents(filters)
       } catch (error: any) {
         alert(error.message || 'حدث خطأ أثناء الحذف')
@@ -236,6 +245,7 @@ export default function AppStudentsPage() {
       // Refresh the list
       const filters: any = { type: 'app' }
       if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
+      if (teacherFilterId) filters.teacher_id = parseInt(teacherFilterId)
       fetchStudents(filters)
       // Update viewed student if it's the same
       if (viewingId === studentId) {
@@ -306,7 +316,7 @@ export default function AppStudentsPage() {
 
       {/* Search and Filters */}
       <div className="bg-white rounded-xl border-2 border-primary-200 p-4 mb-6 shadow-lg">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
             <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-primary-400 w-5 h-5" />
             <input
@@ -338,6 +348,14 @@ export default function AppStudentsPage() {
               <option value="booked">محجوز</option>
               <option value="attended">حضر</option>
             </select>
+          </div>
+          <div>
+            <SearchableTeacherSelect
+              value={teacherFilterId}
+              onChange={(value) => setTeacherFilterId(value)}
+              teachers={teachers}
+              placeholder="جميع المعلمين"
+            />
           </div>
         </div>
       </div>
@@ -753,7 +771,19 @@ export default function AppStudentsPage() {
                       value={editForm.monthly_subscription_price}
                       onChange={(e) => setEditForm({ ...editForm, monthly_subscription_price: e.target.value })}
                       className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
-                      placeholder="0.00"
+                      placeholder=""
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">عدد الأشهر المدفوعة</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editForm.paid_months_count === '' ? '' : editForm.paid_months_count}
+                      onChange={(e) => setEditForm({ ...editForm, paid_months_count: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                      dir="rtl"
+                      placeholder=""
                     />
                   </div>
                   <div>
@@ -770,6 +800,10 @@ export default function AppStudentsPage() {
                       <option value="السعودية">السعودية</option>
                       <option value="الإمارات">الإمارات</option>
                       <option value="قطر">قطر</option>
+                      <option value="الكويت">الكويت</option>
+                      <option value="أمريكا">أمريكا</option>
+                      <option value="كندا">كندا</option>
+                      <option value="ألمانيا">ألمانيا</option>
                       <option value="أجنبي">أجنبي</option>
                     </select>
                   </div>
