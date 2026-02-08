@@ -72,6 +72,7 @@ export default function TeachersPage() {
 
   const handleOpenModal = (teacher?: any) => {
     if (teacher) {
+      
       setEditingId(teacher.id)
       setFormData({
         name: teacher.name_ar || teacher.name || '',
