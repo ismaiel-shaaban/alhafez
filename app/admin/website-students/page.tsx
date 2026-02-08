@@ -36,6 +36,7 @@ export default function WebsiteStudentsPage() {
   const [activeTab, setActiveTab] = useState<TabType>('website')
   const [searchTerm, setSearchTerm] = useState('')
   const [trialSessionFilter, setTrialSessionFilter] = useState<'not_booked' | 'booked' | 'attended' | ''>('')
+  const [teacherFilterId, setTeacherFilterId] = useState<string>('')
   const [viewingId, setViewingId] = useState<number | null>(null)
   const [viewedStudent, setViewedStudent] = useState<any>(null)
   const [showViewModal, setShowViewModal] = useState(false)
@@ -81,11 +82,12 @@ export default function WebsiteStudentsPage() {
     // Fetch students based on active tab with filters
     const filters: any = { type: activeTab, per_page: 10000 }
     if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
+    if (teacherFilterId) filters.teacher_id = parseInt(teacherFilterId)
     fetchStudents(filters)
     fetchPackages()
-    fetchTeachers()
+    fetchTeachers(1, 1000)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, trialSessionFilter])
+  }, [activeTab, trialSessionFilter, teacherFilterId])
 
   const handleViewStudent = async (id: number) => {
     try {
@@ -155,7 +157,7 @@ export default function WebsiteStudentsPage() {
         currency: fullStudent.currency || '',
         // Get data from subscriptions_statistics (only if no subscriptions exist)
         past_months_count: hasSubscriptions ? '' : totalSubscriptions.toString(),
-        paid_months_count: hasSubscriptions ? '' : paidMonthsCount,
+        paid_months_count: fullStudent.paid_months_count?.toString() ?? (hasSubscriptions ? '' : paidMonthsCount),
         subscription_start_date: hasSubscriptions ? '' : subscriptionStartDate,
         paid_subscriptions_count: '',
       })
@@ -188,6 +190,7 @@ export default function WebsiteStudentsPage() {
           password: editForm.password || undefined,
           trial_session_attendance: editForm.trial_session_attendance || undefined,
           monthly_subscription_price: editForm.monthly_subscription_price ? parseFloat(editForm.monthly_subscription_price) : undefined,
+          paid_months_count: editForm.paid_months_count !== '' ? parseInt(editForm.paid_months_count) : undefined,
           country: editForm.country || undefined,
           currency: editForm.currency || undefined,
         }
@@ -205,9 +208,6 @@ export default function WebsiteStudentsPage() {
         if (!editingStudentHasSubscriptions) {
           if (editForm.past_months_count) {
             updateData.past_months_count = parseInt(editForm.past_months_count)
-          }
-          if (editForm.paid_months_count) {
-            updateData.paid_months_count = parseInt(editForm.paid_months_count)
           }
           if (editForm.subscription_start_date) {
             updateData.subscription_start_date = editForm.subscription_start_date
@@ -250,6 +250,7 @@ export default function WebsiteStudentsPage() {
         // Refresh the list
         const filters: any = { type: activeTab, per_page: 10000 }
         if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
+        if (teacherFilterId) filters.teacher_id = parseInt(teacherFilterId)
         fetchStudents(filters)
       } catch (error: any) {
         alert(error.message || 'حدث خطأ أثناء التحديث')
@@ -297,8 +298,9 @@ export default function WebsiteStudentsPage() {
       try {
         await deleteStudent(id)
         // Refresh the list
-        const filters: any = { type: activeTab }
+        const filters: any = { type: activeTab, per_page: 10000 }
         if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
+        if (teacherFilterId) filters.teacher_id = parseInt(teacherFilterId)
         fetchStudents(filters)
       } catch (error: any) {
         alert(error.message || 'حدث خطأ أثناء الحذف')
@@ -369,6 +371,7 @@ export default function WebsiteStudentsPage() {
       // Refresh the list
       const filters: any = { type: activeTab, per_page: 10000 }
       if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
+      if (teacherFilterId) filters.teacher_id = parseInt(teacherFilterId)
       fetchStudents(filters)
       // Update viewed student if it's the same
       if (viewingId === studentId) {
@@ -510,7 +513,7 @@ export default function WebsiteStudentsPage() {
 
       {/* Search and Filters */}
       <div className="bg-white rounded-xl border-2 border-primary-200 p-4 mb-6 shadow-lg">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <div className="relative">
             <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-primary-400 w-5 h-5" />
             <input
@@ -543,6 +546,14 @@ export default function WebsiteStudentsPage() {
               <option value="attended">حضر</option>
             </select>
           </div>
+          <div>
+            <SearchableTeacherSelect
+              value={teacherFilterId}
+              onChange={(value) => setTeacherFilterId(value)}
+              teachers={teachers}
+              placeholder="جميع المعلمين"
+            />
+          </div>
         </div>
       </div>
 
@@ -553,7 +564,7 @@ export default function WebsiteStudentsPage() {
         </div>
       ) : tabStudents.length === 0 ? (
         <div className="bg-white rounded-xl border-2 border-primary-200 p-8 text-center text-primary-600 shadow-lg">
-          {searchTerm || trialSessionFilter ? 'لا توجد نتائج' : `لا يوجد طلاب مسجلون ${activeTab === 'website' ? 'من الموقع' : 'من التطبيق'} بعد`}
+          {searchTerm || trialSessionFilter || teacherFilterId ? 'لا توجد نتائج' : `لا يوجد طلاب مسجلون ${activeTab === 'website' ? 'من الموقع' : 'من التطبيق'} بعد`}
         </div>
       ) : (
         <>
@@ -1042,7 +1053,19 @@ export default function WebsiteStudentsPage() {
                       value={editForm.monthly_subscription_price}
                       onChange={(e) => setEditForm({ ...editForm, monthly_subscription_price: e.target.value })}
                       className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
-                      placeholder="0.00"
+                      placeholder=""
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">عدد الأشهر المدفوعة</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editForm.paid_months_count === '' ? '' : editForm.paid_months_count}
+                      onChange={(e) => setEditForm({ ...editForm, paid_months_count: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                      dir="rtl"
+                      placeholder=""
                     />
                   </div>
                   <div>

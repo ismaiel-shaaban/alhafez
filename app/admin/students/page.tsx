@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAdminStore } from '@/store/useAdminStore'
-import { Plus, Edit, Trash2, Search, X, Eye, Calendar, CheckCircle, Clock, Filter, ChevronDown, ChevronUp, CreditCard, DollarSign } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, X, Eye, Calendar, CheckCircle, Clock, Filter, ChevronDown, ChevronUp, CreditCard, DollarSign, Image as ImageIcon } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import SearchableTeacherSelect from '@/components/admin/SearchableTeacherSelect'
 
@@ -148,6 +148,9 @@ export default function StudentsPage() {
     pause_to: '',
     resume_date: '',
   })
+
+  // Image viewer for receipt images (e.g. partial payment receipts)
+  const [viewingImage, setViewingImage] = useState<string | null>(null)
 
   // Partial payment modal
   const [showPartialPaymentModal, setShowPartialPaymentModal] = useState(false)
@@ -1345,9 +1348,21 @@ export default function StudentsPage() {
                                 <div className="flex flex-col gap-1 items-end min-w-[120px] max-w-[180px]">
                                   {subscription.partial_payments && Array.isArray(subscription.partial_payments) && subscription.partial_payments.length > 0 ? (
                                     subscription.partial_payments.map((pp: any) => (
-                                      <span key={pp.id} className="text-xs text-primary-700">
-                                        {pp.amount} في {pp.payment_date}
-                                      </span>
+                                      <div key={pp.id} className="flex items-center gap-1.5 justify-end">
+                                        <span className="text-xs text-primary-700">
+                                          {pp.amount} في {pp.payment_date}
+                                        </span>
+                                        {(pp.payment_receipt_image || pp.receipt_image) && (
+                                          <button
+                                            type="button"
+                                            onClick={() => setViewingImage(pp.payment_receipt_image || pp.receipt_image)}
+                                            className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                            title="عرض صورة الإيصال"
+                                          >
+                                            <ImageIcon className="w-4 h-4" />
+                                          </button>
+                                        )}
+                                      </div>
                                     ))
                                   ) : (
                                     <span className="text-primary-400 text-sm">-</span>
@@ -1566,9 +1581,21 @@ export default function StudentsPage() {
                             <div className="flex flex-col gap-1 items-end min-w-[120px] max-w-[180px]">
                               {subscription.partial_payments && Array.isArray(subscription.partial_payments) && subscription.partial_payments.length > 0 ? (
                                 subscription.partial_payments.map((pp: any) => (
-                                  <span key={pp.id} className="text-xs text-primary-700">
-                                    {pp.amount} في {pp.payment_date}
-                                  </span>
+                                  <div key={pp.id} className="flex items-center gap-1.5 justify-end">
+                                    <span className="text-xs text-primary-700">
+                                      {pp.amount} في {pp.payment_date}
+                                    </span>
+                                    {(pp.payment_receipt_image || pp.receipt_image) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setViewingImage(pp.payment_receipt_image || pp.receipt_image)}
+                                        className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                        title="عرض صورة الإيصال"
+                                      >
+                                        <ImageIcon className="w-4 h-4" />
+                                      </button>
+                                    )}
+                                  </div>
                                 ))
                               ) : (
                                 <span className="text-primary-400 text-sm">-</span>
@@ -1819,7 +1846,7 @@ export default function StudentsPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 z-[999999] flex items-center justify-center p-4"
             onClick={() => {
               setShowPartialPaymentModal(false)
               setSelectedSubscriptionForPartialPayment(null)
@@ -3084,9 +3111,21 @@ export default function StudentsPage() {
                               <div className="flex flex-col gap-1 items-end min-w-[100px] max-w-[160px]">
                                 {sub?.partial_payments && Array.isArray(sub.partial_payments) && sub.partial_payments.length > 0 ? (
                                   sub.partial_payments.map((pp: any) => (
-                                    <span key={pp.id} className="text-xs text-primary-700">
-                                      {pp.amount} في {pp.payment_date}
-                                    </span>
+                                    <div key={pp.id} className="flex items-center gap-1.5 justify-end">
+                                      <span className="text-xs text-primary-700">
+                                        {pp.amount} في {pp.payment_date}
+                                      </span>
+                                      {(pp.payment_receipt_image || pp.receipt_image) && (
+                                        <button
+                                          type="button"
+                                          onClick={() => setViewingImage(pp.payment_receipt_image || pp.receipt_image)}
+                                          className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                          title="عرض صورة الإيصال"
+                                        >
+                                          <ImageIcon className="w-4 h-4" />
+                                        </button>
+                                      )}
+                                    </div>
                                   ))
                                 ) : (
                                   <span className="text-primary-400 text-sm">-</span>
@@ -3158,6 +3197,37 @@ export default function StudentsPage() {
                   لا توجد اشتراكات غير مدفوعة
                 </div>
               )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Image viewer for receipt images (e.g. partial payment receipts) */}
+      <AnimatePresence>
+        {viewingImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 z-[999999] flex items-center justify-center p-4"
+            onClick={() => setViewingImage(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-[95vw] max-h-[95vh]"
+            >
+              <img src={viewingImage} alt="صورة الإيصال" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />
+              <button
+                type="button"
+                onClick={() => setViewingImage(null)}
+                className="absolute -top-10 left-0 p-2 bg-white/90 hover:bg-white rounded-lg transition-colors"
+                title="إغلاق"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </motion.div>
           </motion.div>
         )}
