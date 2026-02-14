@@ -57,6 +57,7 @@ export interface StudentSession {
   teacher_id?: number
   session_date: string
   session_time: string
+  start_time?: string | null // وقت دخول المعلم (teacher entry time)
   day_of_week: string
   day_of_week_label?: string // Localized day label (e.g., "السبت", "Saturday")
   is_completed: boolean

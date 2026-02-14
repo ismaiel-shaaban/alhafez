@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAdminStore } from '@/store/useAdminStore'
-import { Search, Eye, X, Edit, Trash2 } from 'lucide-react'
+import { Search, Eye, X, Edit, Trash2, AlertTriangle, Plus } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import SearchableTeacherSelect from '@/components/admin/SearchableTeacherSelect'
 
@@ -24,8 +24,10 @@ export default function WebsiteStudentsPage() {
     isLoadingStudents, 
     fetchStudents, 
     getStudent,
+    addStudent,
     updateStudent,
     deleteStudent,
+    forceDeleteStudent,
     packages,
     fetchPackages,
     teachers,
@@ -50,6 +52,19 @@ export default function WebsiteStudentsPage() {
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>('')
   const [trialSessionDate, setTrialSessionDate] = useState<string>('')
   const [trialSessionTime, setTrialSessionTime] = useState<string>('')
+  const [trialSessionDuration, setTrialSessionDuration] = useState<string>('')
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [newStudent, setNewStudent] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    age: '',
+    gender: '' as 'male' | 'female' | '',
+    package_id: '',
+    teacher_id: '',
+    notes: '',
+    country: '',
+  })
   const [editForm, setEditForm] = useState({
     name: '',
     email: '',
@@ -308,6 +323,60 @@ export default function WebsiteStudentsPage() {
     }
   }
 
+  const handleForceDelete = async (id: number) => {
+    if (confirm('هل أنت متأكد من الحذف النهائي لهذا الطالب؟ لا يمكن التراجع عن هذا الإجراء.')) {
+      try {
+        await forceDeleteStudent(id)
+        const filters: any = { type: activeTab, per_page: 10000 }
+        if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
+        if (teacherFilterId) filters.teacher_id = parseInt(teacherFilterId)
+        fetchStudents(filters)
+      } catch (error: any) {
+        alert(error.message || 'حدث خطأ أثناء الحذف النهائي')
+      }
+    }
+  }
+
+  const handleAddStudent = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (isSubmitting) return
+    setIsSubmitting(true)
+    try {
+      const createData: any = {
+        name: newStudent.name,
+        email: newStudent.email || undefined,
+        phone: newStudent.phone,
+        age: newStudent.age ? parseInt(newStudent.age) : undefined,
+        gender: newStudent.gender as 'male' | 'female',
+        package_id: newStudent.package_id ? parseInt(newStudent.package_id) : undefined,
+        teacher_id: newStudent.teacher_id ? parseInt(newStudent.teacher_id) : undefined,
+        notes: newStudent.notes || undefined,
+        country: newStudent.country || undefined,
+      }
+      await addStudent(createData)
+      const filters: any = { type: activeTab, per_page: 10000 }
+      if (trialSessionFilter) filters.trial_session_attendance = trialSessionFilter
+      if (teacherFilterId) filters.teacher_id = parseInt(teacherFilterId)
+      await fetchStudents(filters)
+      setNewStudent({
+        name: '',
+        email: '',
+        phone: '',
+        age: '',
+        gender: '' as 'male' | 'female' | '',
+        package_id: '',
+        teacher_id: '',
+        notes: '',
+        country: '',
+      })
+      setShowAddModal(false)
+    } catch (error: any) {
+      alert(error.message || 'حدث خطأ أثناء الإضافة')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const handleUpdateTrialAttendance = async (studentId: number, newStatus: 'not_booked' | 'booked' | 'attended') => {
     try {
       // Get the student to retrieve teacher_id
@@ -319,6 +388,7 @@ export default function WebsiteStudentsPage() {
         setSelectedTeacherId(student.teacher_id?.toString() || '')
         setTrialSessionDate('')
         setTrialSessionTime('')
+        setTrialSessionDuration('')
         setShowTeacherSelectModal(true)
         return
       }
@@ -329,6 +399,7 @@ export default function WebsiteStudentsPage() {
         setSelectedTeacherId('')
         setTrialSessionDate('')
         setTrialSessionTime('')
+        setTrialSessionDuration('')
         setShowTeacherSelectModal(true)
         return
       }
@@ -345,7 +416,8 @@ export default function WebsiteStudentsPage() {
     newStatus: 'not_booked' | 'booked' | 'attended', 
     teacherId?: number,
     trialDate?: string,
-    trialTime?: string
+    trialTime?: string,
+    sessionDuration?: string
   ) => {
     // Prevent duplicate requests
     if (updatingTrialAttendance === studentId) {
@@ -358,13 +430,19 @@ export default function WebsiteStudentsPage() {
       if (teacherId) {
         updateData.teacher_id = teacherId
       }
-      // Include trial_session_date and trial_session_time only when status is 'booked'
+      // Include trial_session_date, trial_session_time, session_duration only when status is 'booked'
       if (newStatus === 'booked') {
         if (trialDate) {
           updateData.trial_session_date = trialDate
         }
         if (trialTime) {
           updateData.trial_session_time = trialTime
+        }
+        if (sessionDuration && sessionDuration.trim() !== '') {
+          const duration = parseInt(sessionDuration, 10)
+          if (!isNaN(duration) && duration > 0) {
+            updateData.session_duration = duration
+          }
         }
       }
       await updateStudent(studentId, updateData)
@@ -422,12 +500,14 @@ export default function WebsiteStudentsPage() {
       pendingTrialUpdate.newStatus,
       parseInt(selectedTeacherId),
       trialSessionDate || undefined,
-      trialSessionTime || undefined
+      trialSessionTime || undefined,
+      trialSessionDuration || undefined
     )
     setPendingTrialUpdate(null)
     setSelectedTeacherId('')
     setTrialSessionDate('')
     setTrialSessionTime('')
+    setTrialSessionDuration('')
   }
 
   const getTrialAttendanceBadge = (status?: string) => {
@@ -472,15 +552,25 @@ export default function WebsiteStudentsPage() {
   const tabStudents = filteredStudents.filter(student => student.type === activeTab)
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <h1 className="text-2xl sm:text-4xl font-bold text-primary-900">الطلاب</h1>
-        <div className="text-primary-600 font-medium text-sm sm:text-base">إجمالي: {tabStudents.length}</div>
+    <div className="min-w-0 overflow-x-hidden px-3 sm:px-4 lg:px-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-primary-900">الطلاب</h1>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="text-primary-600 font-medium text-sm sm:text-base shrink-0">إجمالي: {tabStudents.length}</div>
+          <button
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm"
+          >
+            <Plus className="w-4 h-4 shrink-0" />
+            إضافة طالب
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-xl border-2 border-primary-200 p-2 mb-6 shadow-lg">
-        <div className="flex gap-2">
+      <div className="bg-white rounded-lg sm:rounded-xl border-2 border-primary-200 p-2 mb-4 sm:mb-6 shadow-lg">
+        <div className="flex gap-2 min-w-0">
           <button
             onClick={() => setActiveTab('website')}
             className={`flex-1 px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition-all text-sm sm:text-base ${
@@ -512,9 +602,9 @@ export default function WebsiteStudentsPage() {
       )}
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-xl border-2 border-primary-200 p-4 mb-6 shadow-lg">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          <div className="relative">
+      <div className="bg-white rounded-lg sm:rounded-xl border-2 border-primary-200 p-3 sm:p-4 mb-4 sm:mb-6 shadow-lg">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 min-w-0">
+          <div className="relative min-w-0">
             <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-primary-400 w-5 h-5" />
             <input
               type="text"
@@ -533,11 +623,11 @@ export default function WebsiteStudentsPage() {
               </button>
             )}
           </div>
-          <div>
+          <div className="min-w-0">
             <select
               value={trialSessionFilter}
               onChange={(e) => setTrialSessionFilter(e.target.value as 'not_booked' | 'booked' | 'attended' | '')}
-              className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+              className="w-full min-w-0 px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
               dir="rtl"
             >
               <option value="">جميع الحالات</option>
@@ -546,7 +636,7 @@ export default function WebsiteStudentsPage() {
               <option value="attended">حضر</option>
             </select>
           </div>
-          <div>
+          <div className="min-w-0">
             <SearchableTeacherSelect
               value={teacherFilterId}
               onChange={(value) => setTeacherFilterId(value)}
@@ -559,34 +649,34 @@ export default function WebsiteStudentsPage() {
 
       {/* Students Table */}
       {isLoadingStudents ? (
-        <div className="flex items-center justify-center py-12">
+        <div className="flex items-center justify-center py-10 sm:py-12">
           <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
         </div>
       ) : tabStudents.length === 0 ? (
-        <div className="bg-white rounded-xl border-2 border-primary-200 p-8 text-center text-primary-600 shadow-lg">
+        <div className="bg-white rounded-lg sm:rounded-xl border-2 border-primary-200 p-6 sm:p-8 text-center text-primary-600 text-sm sm:text-base shadow-lg">
           {searchTerm || trialSessionFilter || teacherFilterId ? 'لا توجد نتائج' : `لا يوجد طلاب مسجلون ${activeTab === 'website' ? 'من الموقع' : 'من التطبيق'} بعد`}
         </div>
       ) : (
         <>
           {/* Mobile Card View */}
-          <div className="md:hidden space-y-4">
+          <div className="md:hidden space-y-3 sm:space-y-4">
             {tabStudents.map((student) => (
               <div
                 key={student.id}
-                className="bg-white rounded-xl border-2 border-primary-200 p-4 shadow-lg"
+                className="bg-white rounded-lg sm:rounded-xl border-2 border-primary-200 p-3 sm:p-4 shadow-lg overflow-hidden min-w-0"
               >
-                <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-lg font-bold text-primary-900">{student.name}</h3>
+                <div className="flex items-start justify-between gap-2 mb-3 min-w-0">
+                  <h3 className="text-base sm:text-lg font-bold text-primary-900 truncate min-w-0">{student.name}</h3>
                 </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-primary-600">الهاتف:</span>
-                    <span className="text-primary-900 font-medium">{student.phone}</span>
+                <div className="space-y-2 text-sm min-w-0">
+                  <div className="flex justify-between gap-2 min-w-0">
+                    <span className="text-primary-600 shrink-0">الهاتف:</span>
+                    <span className="text-primary-900 font-medium truncate text-left" dir="ltr">{student.phone}</span>
                   </div>
                   {student.email && (
-                    <div className="flex justify-between">
-                      <span className="text-primary-600">البريد:</span>
-                      <span className="text-primary-900">{student.email}</span>
+                    <div className="flex justify-between gap-2 min-w-0">
+                      <span className="text-primary-600 shrink-0">البريد:</span>
+                      <span className="text-primary-900 truncate text-left min-w-0">{student.email}</span>
                     </div>
                   )}
                   {student.age && (
@@ -629,7 +719,7 @@ export default function WebsiteStudentsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-primary-200">
+                <div className="flex items-center justify-center flex-wrap gap-1 sm:gap-2 mt-4 pt-4 border-t border-primary-200">
                   <button
                     onClick={() => handleViewStudent(student.id)}
                     className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -651,26 +741,33 @@ export default function WebsiteStudentsPage() {
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+                  <button
+                    onClick={() => handleForceDelete(student.id)}
+                    className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                    title="حذف نهائي"
+                  >
+                    <AlertTriangle className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             ))}
           </div>
 
           {/* Desktop Table View */}
-          <div className="hidden md:block bg-white rounded-xl border-2 border-primary-200 overflow-hidden shadow-lg">
+          <div className="hidden md:block bg-white rounded-lg lg:rounded-xl border-2 border-primary-200 overflow-hidden shadow-lg">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[800px] text-sm lg:text-base">
                 <thead className="bg-primary-100">
                   <tr>
-                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">الاسم</th>
-                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">البريد</th>
-                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">الهاتف</th>
-                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">العمر</th>
-                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">الجنس</th>
-                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">الباقة</th>
-                    <th className="px-6 py-4 text-right text-primary-900 font-semibold">المعلم</th>
-                    <th className="px-6 py-4 text-center text-primary-900 font-semibold">جلسة التجربة</th>
-                    <th className="px-6 py-4 text-center text-primary-900 font-semibold">الإجراءات</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-right text-primary-900 font-semibold whitespace-nowrap">الاسم</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-right text-primary-900 font-semibold whitespace-nowrap">البريد</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-right text-primary-900 font-semibold whitespace-nowrap">الهاتف</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-right text-primary-900 font-semibold whitespace-nowrap">العمر</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-right text-primary-900 font-semibold whitespace-nowrap">الجنس</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-right text-primary-900 font-semibold whitespace-nowrap">الباقة</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-right text-primary-900 font-semibold whitespace-nowrap">المعلم</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-center text-primary-900 font-semibold whitespace-nowrap">جلسة التجربة</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-center text-primary-900 font-semibold whitespace-nowrap">الإجراءات</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -679,14 +776,14 @@ export default function WebsiteStudentsPage() {
                       key={student.id}
                       className="border-b border-primary-200 hover:bg-primary-50 transition-colors"
                     >
-                      <td className="px-6 py-4 text-primary-900 font-medium">{student.name}</td>
-                      <td className="px-6 py-4 text-primary-700">{student.email || '-'}</td>
-                      <td className="px-6 py-4 text-primary-700">{student.phone}</td>
-                      <td className="px-6 py-4 text-primary-700">{student.age || '-'}</td>
-                      <td className="px-6 py-4 text-primary-700">{student.gender_label || (student.gender === 'male' ? 'ذكر' : 'أنثى')}</td>
-                      <td className="px-6 py-4 text-primary-700">{student.package?.name || '-'}</td>
-                      <td className="px-6 py-4 text-primary-700">{student.teacher?.name || '-'}</td>
-                      <td className="px-6 py-4">
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-primary-900 font-medium max-w-[120px] lg:max-w-none truncate" title={student.name}>{student.name}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-primary-700 max-w-[100px] lg:max-w-none truncate" title={student.email || ''}>{student.email || '-'}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-primary-700 whitespace-nowrap" dir="ltr">{student.phone}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-primary-700">{student.age || '-'}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-primary-700">{student.gender_label || (student.gender === 'male' ? 'ذكر' : 'أنثى')}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-primary-700 max-w-[100px] truncate" title={student.package?.name || ''}>{student.package?.name || '-'}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-primary-700 max-w-[100px] truncate" title={student.teacher?.name || ''}>{student.teacher?.name || '-'}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4">
                         <div className="flex flex-col items-center gap-2">
                           {getTrialAttendanceBadge(student.trial_session_attendance)}
                           <select
@@ -702,28 +799,35 @@ export default function WebsiteStudentsPage() {
                           </select>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-2">
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4">
+                        <div className="flex items-center justify-center gap-1 lg:gap-2 flex-wrap">
                           <button
                             onClick={() => handleViewStudent(student.id)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-1.5 lg:p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="عرض التفاصيل"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleEdit(student)}
-                            className="p-2 text-primary-600 hover:bg-primary-100 rounded-lg transition-colors"
+                            className="p-1.5 lg:p-2 text-primary-600 hover:bg-primary-100 rounded-lg transition-colors"
                             title="تعديل"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete(student.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-1.5 lg:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="حذف"
                           >
                             <Trash2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleForceDelete(student.id)}
+                            className="p-1.5 lg:p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                            title="حذف نهائي"
+                          >
+                            <AlertTriangle className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
@@ -736,6 +840,171 @@ export default function WebsiteStudentsPage() {
         </>
       )}
 
+      {/* Add Student Modal (basic data only) */}
+      <AnimatePresence>
+        {showAddModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+            onClick={() => setShowAddModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-t-2xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto min-h-[50vh] sm:min-h-0"
+            >
+              <div className="flex items-center justify-between gap-2 mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-primary-900 min-w-0">إضافة طالب جديد (بيانات أساسية)</h2>
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleAddStudent} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">الاسم الكامل</label>
+                    <input
+                      type="text"
+                      value={newStudent.name}
+                      onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                      dir="rtl"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">البريد الإلكتروني (اختياري)</label>
+                    <input
+                      type="email"
+                      value={newStudent.email}
+                      onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">رقم الهاتف</label>
+                    <input
+                      type="tel"
+                      value={newStudent.phone}
+                      onChange={(e) => setNewStudent({ ...newStudent, phone: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">العمر (اختياري)</label>
+                    <input
+                      type="number"
+                      value={newStudent.age}
+                      onChange={(e) => setNewStudent({ ...newStudent, age: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                      dir="rtl"
+                      min="1"
+                      max="120"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">الجنس</label>
+                    <select
+                      value={newStudent.gender}
+                      onChange={(e) => setNewStudent({ ...newStudent, gender: e.target.value as 'male' | 'female' })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                      dir="rtl"
+                      required
+                    >
+                      <option value="">اختر الجنس</option>
+                      <option value="male">ذكر</option>
+                      <option value="female">أنثى</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">الباقة (اختياري)</label>
+                    <select
+                      value={newStudent.package_id}
+                      onChange={(e) => setNewStudent({ ...newStudent, package_id: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                      dir="rtl"
+                    >
+                      <option value="">اختر الباقة</option>
+                      {packages.map((pkg) => (
+                        <option key={pkg.id} value={pkg.id}>
+                          {pkg.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">المعلم (اختياري)</label>
+                    <SearchableTeacherSelect
+                      value={newStudent.teacher_id}
+                      onChange={(value) => setNewStudent({ ...newStudent, teacher_id: value })}
+                      teachers={teachers}
+                      placeholder="اختر المعلم"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">الدولة (اختياري)</label>
+                    <select
+                      value={newStudent.country}
+                      onChange={(e) => setNewStudent({ ...newStudent, country: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                      dir="rtl"
+                    >
+                      <option value="">اختر البلد</option>
+                      <option value="الأردن">الأردن</option>
+                      <option value="مصر">مصر</option>
+                      <option value="السعودية">السعودية</option>
+                      <option value="الإمارات">الإمارات</option>
+                      <option value="قطر">قطر</option>
+                      <option value="الكويت">الكويت</option>
+                      <option value="أمريكا">أمريكا</option>
+                      <option value="كندا">كندا</option>
+                      <option value="ألمانيا">ألمانيا</option>
+                      <option value="أجنبي">أجنبي</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">ملاحظات (اختياري)</label>
+                    <textarea
+                      value={newStudent.notes}
+                      onChange={(e) => setNewStudent({ ...newStudent, notes: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right resize-none"
+                      dir="rtl"
+                      rows={2}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="w-full sm:w-auto px-4 py-2.5 sm:py-2 border-2 border-primary-200 text-primary-700 rounded-lg hover:bg-primary-50 transition-colors"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? 'جاري الحفظ...' : 'إضافة الطالب'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* View Student Details Modal */}
       <AnimatePresence>
         {showViewModal && viewedStudent && (
@@ -743,7 +1012,7 @@ export default function WebsiteStudentsPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
             onClick={() => setShowViewModal(false)}
           >
             <motion.div
@@ -751,10 +1020,10 @@ export default function WebsiteStudentsPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-t-2xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto min-h-[50vh] sm:min-h-0"
             >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-primary-900">تفاصيل الطالب</h2>
+              <div className="flex items-center justify-between gap-2 mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-primary-900 min-w-0">تفاصيل الطالب</h2>
                 <button
                   onClick={() => setShowViewModal(false)}
                   className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
@@ -763,11 +1032,11 @@ export default function WebsiteStudentsPage() {
                 </button>
               </div>
 
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+              <div className="space-y-4 min-w-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="min-w-0">
                     <label className="block text-primary-600 text-sm mb-1">الاسم</label>
-                    <p className="text-primary-900 font-semibold text-lg">{viewedStudent.name}</p>
+                    <p className="text-primary-900 font-semibold text-base sm:text-lg break-words">{viewedStudent.name}</p>
                   </div>
                   {viewedStudent.email && (
                     <div>
@@ -927,7 +1196,7 @@ export default function WebsiteStudentsPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
             onClick={handleCloseEditModal}
           >
             <motion.div
@@ -935,10 +1204,10 @@ export default function WebsiteStudentsPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-t-2xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto min-h-[50vh] sm:min-h-0"
             >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-primary-900">تعديل بيانات الطالب</h2>
+              <div className="flex items-center justify-between gap-2 mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-primary-900 min-w-0">تعديل بيانات الطالب</h2>
                 <button
                   onClick={handleCloseEditModal}
                   className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
@@ -947,9 +1216,9 @@ export default function WebsiteStudentsPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleSaveEdit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+              <form onSubmit={handleSaveEdit} className="space-y-4 min-w-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="min-w-0">
                     <label className="block text-primary-900 font-semibold mb-2 text-right">الاسم الكامل</label>
                     <input
                       type="text"
@@ -1329,18 +1598,18 @@ export default function WebsiteStudentsPage() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-4 pt-4">
+                <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 pt-4">
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-primary-700 to-primary-600 text-white rounded-lg hover:from-primary-800 hover:to-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-primary-700 to-primary-600 text-white rounded-lg hover:from-primary-800 hover:to-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? 'جاري الحفظ...' : 'حفظ التعديلات'}
                   </button>
                   <button
                     type="button"
                     onClick={handleCloseEditModal}
-                    className="flex-1 px-6 py-3 border-2 border-primary-300 text-primary-700 rounded-lg hover:bg-primary-50 transition-all"
+                    className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 border-2 border-primary-300 text-primary-700 rounded-lg hover:bg-primary-50 transition-all"
                   >
                     إلغاء
                   </button>
@@ -1358,13 +1627,14 @@ export default function WebsiteStudentsPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
             onClick={() => {
               setShowTeacherSelectModal(false)
               setPendingTrialUpdate(null)
               setSelectedTeacherId('')
               setTrialSessionDate('')
               setTrialSessionTime('')
+              setTrialSessionDuration('')
             }}
           >
             <motion.div
@@ -1372,10 +1642,10 @@ export default function WebsiteStudentsPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl"
+              className="bg-white rounded-t-2xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto"
             >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-primary-900">
+              <div className="flex items-center justify-between gap-2 mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-primary-900 min-w-0">
                   {pendingTrialUpdate.newStatus === 'booked' ? 'حجز جلسة التجربة' : 'اختر المعلم'}
                 </h2>
                 <button
@@ -1385,6 +1655,7 @@ export default function WebsiteStudentsPage() {
                     setSelectedTeacherId('')
                     setTrialSessionDate('')
                     setTrialSessionTime('')
+                    setTrialSessionDuration('')
                   }}
                   className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
                 >
@@ -1429,16 +1700,29 @@ export default function WebsiteStudentsPage() {
                         required
                       />
                     </div>
+                    <div>
+                      <label className="block text-primary-900 font-semibold mb-2 text-right">مدة الحصة (دقيقة)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="120"
+                        value={trialSessionDuration}
+                        onChange={(e) => setTrialSessionDuration(e.target.value)}
+                        className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                        dir="rtl"
+                        placeholder="مثال: 30"
+                      />
+                    </div>
                   </>
                 )}
-                <div className="flex items-center gap-4 pt-4">
+                <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 pt-4">
                   <button
                     onClick={handleConfirmTeacherSelection}
                     disabled={
                       !selectedTeacherId || 
                       (pendingTrialUpdate.newStatus === 'booked' && (!trialSessionDate || !trialSessionTime))
                     }
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-primary-700 to-primary-600 text-white rounded-lg hover:from-primary-800 hover:to-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-primary-700 to-primary-600 text-white rounded-lg hover:from-primary-800 hover:to-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     تأكيد
                   </button>
@@ -1450,8 +1734,9 @@ export default function WebsiteStudentsPage() {
                       setSelectedTeacherId('')
                       setTrialSessionDate('')
                       setTrialSessionTime('')
+                      setTrialSessionDuration('')
                     }}
-                    className="flex-1 px-6 py-3 border-2 border-primary-300 text-primary-700 rounded-lg hover:bg-primary-50 transition-all"
+                    className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 border-2 border-primary-300 text-primary-700 rounded-lg hover:bg-primary-50 transition-all"
                   >
                     إلغاء
                   </button>
