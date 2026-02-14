@@ -14,8 +14,13 @@ export interface TeacherSalaryStudent {
 export interface TeacherSalarySummary {
   total_students: number
   total_sessions: number
+  total_trial_sessions?: number
   total_hours: number
+  total_trial_amount?: number
   total_amount: number
+  total_rewards?: number
+  total_deductions?: number
+  final_amount?: number
 }
 
 export interface TeacherPayment {
@@ -37,6 +42,14 @@ export interface TeacherPayment {
   }
 }
 
+export interface TeacherSalaryRewardDeduction {
+  id: number
+  title: string
+  description?: string
+  amount: number
+  notes?: string
+}
+
 export interface TeacherSalaryResponse {
   teacher: {
     id: number
@@ -47,6 +60,8 @@ export interface TeacherSalaryResponse {
   month: string // YYYY-MM
   students: TeacherSalaryStudent[]
   summary: TeacherSalarySummary
+  rewards?: TeacherSalaryRewardDeduction[]
+  deductions?: TeacherSalaryRewardDeduction[]
   payment: TeacherPayment | null
 }
 

@@ -11,6 +11,8 @@ export interface Teacher {
   experience_years: number
   image?: string // Teacher profile image URL
   trial_lesson_price?: number // Price for trial lesson
+  trial_session_duration?: number // Trial session duration in minutes
+  session_link?: string // Session/circle link (e.g. Google Meet)
   supervisor_id?: number
   supervisor?: {
     id: number
@@ -30,6 +32,8 @@ export interface CreateTeacherRequest {
   email?: string // Optional, email address for teacher account
   password?: string // Optional, password for teacher login (min: 6 characters). If provided along with phone or email, a User account will be automatically created/updated for the teacher. Password will be automatically hashed.
   trial_lesson_price?: number // Optional, price for trial lesson
+  trial_session_duration?: number // Optional, trial session duration in minutes
+  session_link?: string // Optional, session/circle link (e.g. Google Meet)
   supervisor_id?: number // Optional, supervisor ID
 }
 
@@ -77,6 +81,8 @@ export const createTeacher = async (data: CreateTeacherRequest): Promise<Teacher
     if (data.email) formData.append('email', data.email)
     if (data.password) formData.append('password', data.password)
     if (data.trial_lesson_price !== undefined) formData.append('trial_lesson_price', data.trial_lesson_price.toString())
+    if (data.trial_session_duration !== undefined) formData.append('trial_session_duration', data.trial_session_duration.toString())
+    if (data.session_link !== undefined) formData.append('session_link', data.session_link)
     if (data.supervisor_id !== undefined) formData.append('supervisor_id', data.supervisor_id.toString())
     
     return apiRequest<Teacher>('/api/teachers', {
@@ -89,6 +95,12 @@ export const createTeacher = async (data: CreateTeacherRequest): Promise<Teacher
   const jsonData: any = { ...data }
   if (jsonData.trial_lesson_price !== undefined) {
     jsonData.trial_lesson_price = jsonData.trial_lesson_price
+  }
+  if (jsonData.trial_session_duration !== undefined) {
+    jsonData.trial_session_duration = jsonData.trial_session_duration
+  }
+  if (jsonData.session_link !== undefined) {
+    jsonData.session_link = jsonData.session_link
   }
   if (jsonData.supervisor_id !== undefined) {
     jsonData.supervisor_id = jsonData.supervisor_id
@@ -118,6 +130,8 @@ export const updateTeacher = async (
     if (data.email) formData.append('email', data.email)
     if (data.password) formData.append('password', data.password)
     if (data.trial_lesson_price !== undefined) formData.append('trial_lesson_price', data.trial_lesson_price.toString())
+    if (data.trial_session_duration !== undefined) formData.append('trial_session_duration', data.trial_session_duration.toString())
+    if (data.session_link !== undefined) formData.append('session_link', data.session_link)
     if (data.supervisor_id !== undefined) formData.append('supervisor_id', data.supervisor_id.toString())
     
     return apiRequest<Teacher>(`/api/teachers/${id}`, {
@@ -130,6 +144,12 @@ export const updateTeacher = async (
   const jsonData: any = { ...data }
   if (jsonData.trial_lesson_price !== undefined) {
     jsonData.trial_lesson_price = jsonData.trial_lesson_price
+  }
+  if (jsonData.trial_session_duration !== undefined) {
+    jsonData.trial_session_duration = jsonData.trial_session_duration
+  }
+  if (jsonData.session_link !== undefined) {
+    jsonData.session_link = jsonData.session_link
   }
   if (jsonData.supervisor_id !== undefined) {
     jsonData.supervisor_id = jsonData.supervisor_id

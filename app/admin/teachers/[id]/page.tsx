@@ -3,7 +3,16 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAdminStore } from '@/store/useAdminStore'
-import { ArrowRight, DollarSign, Calendar, CheckCircle, XCircle, Mail, Phone, User, Award, X } from 'lucide-react'
+import {
+  listRewardsDeductions,
+  createRewardDeduction,
+  updateRewardDeduction,
+  deleteRewardDeduction,
+  type RewardDeduction,
+  type CreateRewardDeductionRequest,
+  type RewardDeductionType,
+} from '@/lib/api/rewards-deductions'
+import { ArrowRight, DollarSign, Calendar, CheckCircle, XCircle, Mail, Phone, User, Award, X, Plus, Edit2, Trash2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 
@@ -28,7 +37,20 @@ export default function TeacherDetailsPage() {
   const [pagination, setPagination] = useState<any>(null)
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<'details' | 'salary' | 'payments'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'salary' | 'payments' | 'rewards'>('details')
+  const [rewardsDeductions, setRewardsDeductions] = useState<RewardDeduction[]>([])
+  const [rewardsPagination, setRewardsPagination] = useState<any>(null)
+  const [rewardsMonthFilter, setRewardsMonthFilter] = useState<string>('')
+  const [showRewardModal, setShowRewardModal] = useState(false)
+  const [editingReward, setEditingReward] = useState<RewardDeduction | null>(null)
+  const [rewardForm, setRewardForm] = useState<CreateRewardDeductionRequest>({
+    type: 'reward',
+    title: '',
+    description: '',
+    amount: 0,
+    month: '',
+    notes: '',
+  })
   const [paymentForm, setPaymentForm] = useState({
     payment_proof_image: null as File | null,
     payment_method_id: '' as string | '',
@@ -57,6 +79,86 @@ export default function TeacherDetailsPage() {
       loadPayments()
     }
   }, [activeTab, teacherId])
+
+  useEffect(() => {
+    if (activeTab === 'rewards' && teacherId) {
+      loadRewardsDeductions()
+    }
+  }, [activeTab, teacherId, rewardsMonthFilter])
+
+  const loadRewardsDeductions = async (page: number = 1) => {
+    try {
+      const res = await listRewardsDeductions(teacherId, {
+        month: rewardsMonthFilter || undefined,
+        per_page: 15,
+        page,
+      })
+      setRewardsDeductions(res.rewards_deductions || [])
+      setRewardsPagination(res.pagination || null)
+    } catch (err: any) {
+      alert(err.message || 'فشل تحميل المكافآت والخصومات')
+    }
+  }
+
+  const handleOpenRewardModal = (item?: RewardDeduction) => {
+    const now = new Date()
+    const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    if (item) {
+      setEditingReward(item)
+      setRewardForm({
+        type: item.type,
+        title: item.title,
+        description: item.description || '',
+        amount: item.amount,
+        month: item.month,
+        notes: item.notes || '',
+      })
+    } else {
+      setEditingReward(null)
+      setRewardForm({
+        type: 'reward',
+        title: '',
+        description: '',
+        amount: 0,
+        month: defaultMonth,
+        notes: '',
+      })
+    }
+    setShowRewardModal(true)
+  }
+
+  const handleSaveReward = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!rewardForm.title.trim() || rewardForm.amount <= 0 || !rewardForm.month) {
+      alert('يرجى إدخال العنوان والمبلغ والشهر')
+      return
+    }
+    try {
+      if (editingReward) {
+        await updateRewardDeduction(teacherId, editingReward.id, rewardForm)
+        alert('تم تحديث السجل بنجاح')
+      } else {
+        await createRewardDeduction(teacherId, rewardForm)
+        alert('تم الإضافة بنجاح')
+      }
+      setShowRewardModal(false)
+      loadRewardsDeductions()
+      if (activeTab === 'salary' && selectedMonth === rewardForm.month) loadSalary()
+    } catch (err: any) {
+      alert(err.message || 'فشل الحفظ')
+    }
+  }
+
+  const handleDeleteReward = async (id: number) => {
+    if (!confirm('هل أنت متأكد من حذف هذا السجل؟')) return
+    try {
+      await deleteRewardDeduction(teacherId, id)
+      loadRewardsDeductions()
+      if (salaryData?.month) loadSalary()
+    } catch (err: any) {
+      alert(err.message || 'فشل الحذف')
+    }
+  }
 
   const loadTeacher = async () => {
     setIsLoading(true)
@@ -250,6 +352,16 @@ export default function TeacherDetailsPage() {
           >
             سجل المدفوعات
           </button>
+          <button
+            onClick={() => setActiveTab('rewards')}
+            className={`flex-1 px-4 py-3 sm:px-6 rounded-lg font-semibold transition-all text-sm sm:text-base ${
+              activeTab === 'rewards'
+                ? 'bg-primary-600 text-white'
+                : 'text-primary-700 hover:bg-primary-50'
+            }`}
+          >
+            المكافآت والخصومات
+          </button>
         </div>
       </div>
 
@@ -282,6 +394,18 @@ export default function TeacherDetailsPage() {
               <label className="block text-primary-600 text-sm mb-1">سنوات الخبرة</label>
               <p className="text-primary-900 font-semibold text-lg">{teacher.experience_years || 0} سنة</p>
             </div>
+            {teacher.trial_session_duration != null && (
+              <div>
+                <label className="block text-primary-600 text-sm mb-1">مدة الحصة التجريبية (دقيقة)</label>
+                <p className="text-primary-900 font-semibold text-lg">{teacher.trial_session_duration} دقيقة</p>
+              </div>
+            )}
+            {teacher.session_link && (
+              <div className="md:col-span-2">
+                <label className="block text-primary-600 text-sm mb-1">رابط الحلقة</label>
+                <a href={teacher.session_link} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:text-primary-800 underline break-all">{teacher.session_link}</a>
+              </div>
+            )}
             {teacher.created_at && (
               <div>
                 <label className="block text-primary-600 text-sm mb-1">تاريخ التسجيل</label>
@@ -428,11 +552,49 @@ export default function TeacherDetailsPage() {
                       <p className="text-primary-600 text-xs sm:text-sm mb-1">إجمالي الساعات</p>
                       <p className="text-primary-900 font-bold text-xl sm:text-2xl">{salaryData.summary.total_hours.toFixed(2)}</p>
                     </div>
+                    <div className="bg-white p-3 sm:p-4 rounded-lg">
+                      <p className="text-primary-600 text-xs sm:text-sm mb-1">مجموع الحصص</p>
+                      <p className="text-primary-900 font-bold text-xl sm:text-2xl">{salaryData.summary.total_amount.toFixed(2)} جنيه</p>
+                    </div>
+                    {(salaryData.summary.total_rewards != null && salaryData.summary.total_rewards > 0) && (
+                      <div className="bg-green-50 p-3 sm:p-4 rounded-lg">
+                        <p className="text-green-700 text-xs sm:text-sm mb-1">المكافآت</p>
+                        <p className="font-bold text-xl sm:text-2xl text-green-700">+{salaryData.summary.total_rewards.toFixed(2)} جنيه</p>
+                      </div>
+                    )}
+                    {(salaryData.summary.total_deductions != null && salaryData.summary.total_deductions > 0) && (
+                      <div className="bg-red-50 p-3 sm:p-4 rounded-lg">
+                        <p className="text-red-700 text-xs sm:text-sm mb-1">الخصومات</p>
+                        <p className="font-bold text-xl sm:text-2xl text-red-700">-{salaryData.summary.total_deductions.toFixed(2)} جنيه</p>
+                      </div>
+                    )}
                     <div className="bg-white p-3 sm:p-4 rounded-lg border-2 border-accent-green">
-                      <p className="text-primary-600 text-xs sm:text-sm mb-1">المبلغ الإجمالي</p>
-                      <p className="font-bold text-xl sm:text-2xl text-accent-green break-words">{salaryData.summary.total_amount.toFixed(2)} جنيه</p>
+                      <p className="text-primary-600 text-xs sm:text-sm mb-1">المبلغ النهائي</p>
+                      <p className="font-bold text-xl sm:text-2xl text-accent-green break-words">
+                        {(salaryData.summary.final_amount != null ? salaryData.summary.final_amount : salaryData.summary.total_amount).toFixed(2)} جنيه
+                      </p>
                     </div>
                   </div>
+                  {salaryData.rewards && salaryData.rewards.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-primary-200">
+                      <p className="text-primary-600 text-sm mb-2">تفاصيل المكافآت</p>
+                      <ul className="space-y-1 text-sm text-primary-800">
+                        {salaryData.rewards.map((r: any) => (
+                          <li key={r.id}>• {r.title}: {r.amount.toFixed(2)} جنيه</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {salaryData.deductions && salaryData.deductions.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-primary-600 text-sm mb-2">تفاصيل الخصومات</p>
+                      <ul className="space-y-1 text-sm text-primary-800">
+                        {salaryData.deductions.map((d: any) => (
+                          <li key={d.id}>• {d.title}: {d.amount.toFixed(2)} جنيه</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -688,6 +850,164 @@ export default function TeacherDetailsPage() {
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* Rewards & Deductions Tab */}
+      {activeTab === 'rewards' && (
+        <div className="bg-white rounded-xl border-2 border-primary-200 p-4 sm:p-8 shadow-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-primary-900">المكافآت والخصومات</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="month"
+                value={rewardsMonthFilter}
+                onChange={(e) => setRewardsMonthFilter(e.target.value)}
+                className="px-3 py-2 border-2 border-primary-200 rounded-lg text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => handleOpenRewardModal()}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+              >
+                <Plus className="w-4 h-4" />
+                إضافة
+              </button>
+            </div>
+          </div>
+          {rewardsDeductions.length === 0 ? (
+            <div className="text-center py-12 text-primary-600">لا توجد سجلات. استخدم فلتر الشهر أو أضف مكافأة/خصم.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border-2 border-primary-200">
+                <thead>
+                  <tr className="bg-primary-100">
+                    <th className="border border-primary-200 p-2 text-right text-primary-900 font-semibold">النوع</th>
+                    <th className="border border-primary-200 p-2 text-right text-primary-900 font-semibold">العنوان</th>
+                    <th className="border border-primary-200 p-2 text-right text-primary-900 font-semibold">المبلغ</th>
+                    <th className="border border-primary-200 p-2 text-right text-primary-900 font-semibold">الشهر</th>
+                    <th className="border border-primary-200 p-2 text-center text-primary-900 font-semibold">إجراءات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rewardsDeductions.map((item) => (
+                    <tr key={item.id} className="hover:bg-primary-50">
+                      <td className="border border-primary-200 p-2">
+                        <span className={item.type === 'reward' ? 'text-green-700 font-medium' : 'text-red-700 font-medium'}>
+                          {item.type_label}
+                        </span>
+                      </td>
+                      <td className="border border-primary-200 p-2 text-primary-900">{item.title}</td>
+                      <td className="border border-primary-200 p-2 font-semibold">{item.amount.toFixed(2)} ج</td>
+                      <td className="border border-primary-200 p-2 text-primary-700">{item.month}</td>
+                      <td className="border border-primary-200 p-2">
+                        <div className="flex items-center justify-center gap-2">
+                          <button type="button" onClick={() => handleOpenRewardModal(item)} className="p-2 text-primary-600 hover:bg-primary-100 rounded" title="تعديل"><Edit2 className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => handleDeleteReward(item.id)} className="p-2 text-red-600 hover:bg-red-50 rounded" title="حذف"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {rewardsPagination && rewardsPagination.total_pages > 1 && (
+            <div className="flex justify-center gap-2 mt-4">
+              <button
+                type="button"
+                disabled={rewardsPagination.current_page <= 1}
+                onClick={() => loadRewardsDeductions(rewardsPagination.current_page - 1)}
+                className="px-4 py-2 border border-primary-300 rounded-lg disabled:opacity-50"
+              >
+                السابق
+              </button>
+              <span className="py-2 text-primary-700">صفحة {rewardsPagination.current_page} من {rewardsPagination.total_pages}</span>
+              <button
+                type="button"
+                disabled={rewardsPagination.current_page >= rewardsPagination.total_pages}
+                onClick={() => loadRewardsDeductions(rewardsPagination.current_page + 1)}
+                className="px-4 py-2 border border-primary-300 rounded-lg disabled:opacity-50"
+              >
+                التالي
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Add/Edit Reward Deduction Modal */}
+      {showRewardModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowRewardModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl border-2 border-primary-200 w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-primary-900 mb-4">{editingReward ? 'تعديل مكافأة/خصم' : 'إضافة مكافأة/خصم'}</h3>
+            <form onSubmit={handleSaveReward} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">النوع *</label>
+                <select
+                  value={rewardForm.type}
+                  onChange={(e) => setRewardForm({ ...rewardForm, type: e.target.value as RewardDeductionType })}
+                  className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg"
+                >
+                  <option value="reward">مكافأة</option>
+                  <option value="deduction">خصم</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">العنوان *</label>
+                <input
+                  type="text"
+                  value={rewardForm.title}
+                  onChange={(e) => setRewardForm({ ...rewardForm, title: e.target.value })}
+                  className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">الوصف</label>
+                <textarea
+                  value={rewardForm.description || ''}
+                  onChange={(e) => setRewardForm({ ...rewardForm, description: e.target.value })}
+                  className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg min-h-[80px]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">المبلغ *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={rewardForm.amount || ''}
+                  onChange={(e) => setRewardForm({ ...rewardForm, amount: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">الشهر * (Y-m)</label>
+                <input
+                  type="month"
+                  value={rewardForm.month}
+                  onChange={(e) => setRewardForm({ ...rewardForm, month: e.target.value })}
+                  className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">ملاحظات</label>
+                <input
+                  type="text"
+                  value={rewardForm.notes || ''}
+                  onChange={(e) => setRewardForm({ ...rewardForm, notes: e.target.value })}
+                  className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowRewardModal(false)} className="flex-1 py-2.5 border-2 border-primary-300 rounded-lg text-primary-700 font-medium">إلغاء</button>
+                <button type="submit" className="flex-1 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700">حفظ</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
