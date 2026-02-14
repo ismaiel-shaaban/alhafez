@@ -23,7 +23,7 @@ export default function SessionsPage() {
   const [selectedSession, setSelectedSession] = useState<StudentSession | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  
+
   // Custom dropdown states
   const [isTeacherDropdownOpen, setIsTeacherDropdownOpen] = useState(false)
   const [teacherSearchTerm, setTeacherSearchTerm] = useState('')
@@ -108,7 +108,7 @@ export default function SessionsPage() {
           <div className="bg-white rounded-xl border-2 border-primary-200 overflow-hidden shadow-lg">
             <div className="p-4 sm:p-6 border-b border-primary-200">
               <h2 className="text-lg sm:text-xl font-bold text-primary-900 mb-4">الفلترة</h2>
-              
+
               {/* Date Picker */}
               <div className="mb-4">
                 <label className="block text-primary-900 font-semibold mb-2 text-right">التاريخ</label>
@@ -173,9 +173,8 @@ export default function SessionsPage() {
                           <button
                             type="button"
                             onClick={() => handleTeacherSelect('')}
-                            className={`w-full px-4 py-2 text-right hover:bg-primary-50 transition-colors ${
-                              selectedTeacherId === '' ? 'bg-primary-100 text-primary-900 font-semibold' : 'text-primary-700'
-                            }`}
+                            className={`w-full px-4 py-2 text-right hover:bg-primary-50 transition-colors ${selectedTeacherId === '' ? 'bg-primary-100 text-primary-900 font-semibold' : 'text-primary-700'
+                              }`}
                           >
                             جميع المعلمين
                           </button>
@@ -191,11 +190,10 @@ export default function SessionsPage() {
                                 key={teacher.id}
                                 type="button"
                                 onClick={() => handleTeacherSelect(teacher.id.toString())}
-                                className={`w-full px-4 py-2 text-right hover:bg-primary-50 transition-colors ${
-                                  selectedTeacherId === teacher.id.toString()
+                                className={`w-full px-4 py-2 text-right hover:bg-primary-50 transition-colors ${selectedTeacherId === teacher.id.toString()
                                     ? 'bg-primary-100 text-primary-900 font-semibold'
                                     : 'text-primary-700'
-                                }`}
+                                  }`}
                               >
                                 <div className="flex items-center justify-between">
                                   <span>{teacher.name}</span>
@@ -314,11 +312,10 @@ export default function SessionsPage() {
 
                         <div className="flex flex-col items-end gap-2 flex-shrink-0">
                           <span
-                            className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2 ${
-                              session.is_completed
+                            className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2 ${session.is_completed
                                 ? 'bg-green-100 text-green-800'
                                 : 'bg-yellow-100 text-yellow-800'
-                            }`}
+                              }`}
                           >
                             {session.is_completed ? (
                               <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -425,15 +422,22 @@ export default function SessionsPage() {
                   </div>
                 </div>
 
+                {/* Teacher entry time (وقت دخول المعلم) */}
+
+                <div className="bg-primary-50 p-3 sm:p-4 rounded-lg">
+                  <h3 className="text-sm sm:text-base font-semibold text-primary-900 mb-2">وقت دخول المعلم</h3>
+                  <p className="text-sm sm:text-base text-primary-700">{selectedSession?.start_time ?? '-'}</p>
+                </div>
+
+
                 {/* Status */}
                 <div className="bg-primary-50 p-3 sm:p-4 rounded-lg">
                   <h3 className="text-sm sm:text-base font-semibold text-primary-900 mb-2">الحالة</h3>
                   <span
-                    className={`inline-block px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
-                      selectedSession.is_completed
+                    className={`inline-block px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${selectedSession.is_completed
                         ? 'bg-green-100 text-green-800'
                         : 'bg-yellow-100 text-yellow-800'
-                    }`}
+                      }`}
                   >
                     {selectedSession.status_label || (selectedSession.is_completed ? 'مكتملة' : 'قيد الانتظار')}
                   </span>
@@ -566,9 +570,9 @@ export default function SessionsPage() {
                             <span>📔 الطالب: {report.student_name ? report?.student_name : "-"}</span>
                           </div>
                           <div className="flex flex-wrap gap-x-4 gap-y-1 text-base text-primary-800 mb-3 font-medium">
-                            <span> 📔 الدرس: {report.session_name }</span>
+                            <span> 📔 الدرس: {report.session_name}</span>
                           </div>
-                       
+
                           {/* Content lines: 📔 حفظ جديد، 📔 مراجعة */}
                           <div className="space-y-1.5 text-base text-primary-900 mb-2">
                             <p className="break-words">
@@ -587,8 +591,8 @@ export default function SessionsPage() {
                               <span className="text-primary-600 ml-1">📌</span> مستوى المراجعة: {report.review_level_label ?? '-'}
                             </p>
                           </div>
-                             {/* Notes first */}
-                             {report.notes && (
+                          {/* Notes first */}
+                          {report.notes && (
                             <div className="mb-3 p-3 bg-primary-50 rounded-lg border border-primary-200">
                               {/* <p className="text-primary-600 font-medium text-sm mb-1">الملاحظة</p> */}
                               <p className="text-primary-800 text-base break-words">{report.notes}</p>

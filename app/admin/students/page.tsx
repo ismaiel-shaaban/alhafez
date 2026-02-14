@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAdminStore } from '@/store/useAdminStore'
-import { Plus, Edit, Trash2, Search, X, Eye, Calendar, CheckCircle, Clock, Filter, ChevronDown, ChevronUp, CreditCard, DollarSign, Image as ImageIcon } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, X, Eye, Calendar, CheckCircle, Clock, Filter, ChevronDown, ChevronUp, CreditCard, DollarSign, Image as ImageIcon, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import SearchableTeacherSelect from '@/components/admin/SearchableTeacherSelect'
 
@@ -24,7 +24,8 @@ export default function StudentsPage() {
     fetchStudents, 
     getStudent,
     addStudent, 
-    deleteStudent, 
+    deleteStudent,
+    forceDeleteStudent,
     updateStudent,
     updateSubscriptionPaymentStatus,
     sessions,
@@ -557,6 +558,17 @@ export default function StudentsPage() {
     }
   }
 
+  const handleForceDelete = async (id: number) => {
+    if (confirm('هل أنت متأكد من الحذف النهائي لهذا الطالب؟ لا يمكن التراجع عن هذا الإجراء.')) {
+      try {
+        await forceDeleteStudent(id)
+        await fetchStudents(buildApiFilters())
+      } catch (error: any) {
+        alert(error.message || 'حدث خطأ أثناء الحذف النهائي')
+      }
+    }
+  }
+
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -970,6 +982,13 @@ export default function StudentsPage() {
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+                  <button
+                    onClick={() => handleForceDelete(student.id)}
+                    className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                    title="حذف نهائي"
+                  >
+                    <AlertTriangle className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             ))}
@@ -1056,6 +1075,13 @@ export default function StudentsPage() {
                             title="حذف"
                           >
                             <Trash2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleForceDelete(student.id)}
+                            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                            title="حذف نهائي"
+                          >
+                            <AlertTriangle className="w-4 h-4" />
                           </button>
                         </div>
                       </td>

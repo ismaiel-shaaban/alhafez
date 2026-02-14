@@ -53,6 +53,7 @@ interface AdminState {
   addStudent: (student: studentsAPI.CreateStudentRequest) => Promise<void>
   updateStudent: (id: number, student: Partial<studentsAPI.CreateStudentRequest>) => Promise<void>
   deleteStudent: (id: number) => Promise<void>
+  forceDeleteStudent: (id: number) => Promise<void>
   updateSubscriptionPaymentStatus: (subscriptionId: number, isPaid: boolean) => Promise<void>
 
   // Student Sessions
@@ -305,6 +306,20 @@ export const useAdminStore = create<AdminState>()(
           set({
             isLoading: false,
             error: error.message || 'فشل حذف الطالب',
+          })
+          throw error
+        }
+      },
+      forceDeleteStudent: async (id) => {
+        set({ isLoading: true, error: null })
+        try {
+          await studentsAPI.forceDeleteStudent(id)
+          await get().fetchStudents()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل الحذف النهائي للطالب',
           })
           throw error
         }

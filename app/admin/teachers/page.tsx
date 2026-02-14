@@ -27,7 +27,6 @@ export default function TeachersPage() {
     email: '',
     password: '',
     trial_lesson_price: '',
-    trial_session_duration: '',
     session_link: '',
     supervisor_id: '',
   })
@@ -86,7 +85,6 @@ export default function TeachersPage() {
         email: teacher.email || '',
         password: '', // Keep empty for security - user can leave it to keep current password
         trial_lesson_price: teacher.trial_lesson_price?.toString() || '',
-        trial_session_duration: teacher.trial_session_duration?.toString() || '',
         session_link: teacher.session_link || '',
         supervisor_id: teacher.supervisor_id?.toString() || '',
       })
@@ -94,7 +92,7 @@ export default function TeachersPage() {
       setImagePreview(teacher.image || null)
     } else {
       setEditingId(null)
-      setFormData({ name: '', name_en: '', specialization: '', specialization_en: '', experience_years: '', phone: '', email: '', password: '', trial_lesson_price: '', trial_session_duration: '', session_link: '', supervisor_id: '' })
+      setFormData({ name: '', name_en: '', specialization: '', specialization_en: '', experience_years: '', phone: '', email: '', password: '', trial_lesson_price: '', session_link: '', supervisor_id: '' })
       setImageFile(null)
       setImagePreview(null)
     }
@@ -104,7 +102,7 @@ export default function TeachersPage() {
   const handleCloseModal = () => {
     setShowModal(false)
     setEditingId(null)
-    setFormData({ name: '', name_en: '', specialization: '', specialization_en: '', experience_years: '', phone: '', email: '', password: '', trial_lesson_price: '', trial_session_duration: '', session_link: '', supervisor_id: '' })
+    setFormData({ name: '', name_en: '', specialization: '', specialization_en: '', experience_years: '', phone: '', email: '', password: '', trial_lesson_price: '', session_link: '', supervisor_id: '' })
     setImageFile(null)
     setImagePreview(null)
   }
@@ -123,7 +121,6 @@ export default function TeachersPage() {
         email: formData.email || undefined,
         password: formData.password || undefined,
         trial_lesson_price: formData.trial_lesson_price ? parseFloat(formData.trial_lesson_price) : undefined,
-        trial_session_duration: formData.trial_session_duration ? parseInt(formData.trial_session_duration) : undefined,
         session_link: formData.session_link?.trim() || undefined,
         supervisor_id: formData.supervisor_id ? parseInt(formData.supervisor_id) : undefined,
       }
@@ -452,10 +449,41 @@ export default function TeachersPage() {
                   <label className="block text-primary-600 text-sm mb-1">سنوات الخبرة</label>
                   <p className="text-primary-900">{viewedTeacher.experience_years} سنة</p>
                 </div>
+                {viewedTeacher.phone && (
+                  <div>
+                    <label className="block text-primary-600 text-sm mb-1">رقم الهاتف</label>
+                    <p className="text-primary-900" dir="ltr">{viewedTeacher.phone}</p>
+                  </div>
+                )}
+                {viewedTeacher.supervisor_name && (
+                  <div>
+                    <label className="block text-primary-600 text-sm mb-1">المشرف</label>
+                    <p className="text-primary-900">{viewedTeacher.supervisor_name}</p>
+                  </div>
+                )}
+                {viewedTeacher.email && (
+                  <div>
+                    <label className="block text-primary-600 text-sm mb-1">البريد الإلكتروني</label>
+                    <p className="text-primary-900 break-all">{viewedTeacher.email}</p>
+                  </div>
+                )}
                 {viewedTeacher.trial_lesson_price !== undefined && viewedTeacher.trial_lesson_price !== null && (
                   <div>
                     <label className="block text-primary-600 text-sm mb-1">سعر جلسة التجربة</label>
                     <p className="text-primary-900">{viewedTeacher.trial_lesson_price} جنيه</p>
+                  </div>
+                )}
+                {viewedTeacher.session_link && (
+                  <div>
+                    <label className="block text-primary-600 text-sm mb-1">رابط الحلقة</label>
+                    <a
+                      href={viewedTeacher.session_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary-600 hover:text-primary-700 underline break-all"
+                    >
+                      {viewedTeacher.session_link}
+                    </a>
                   </div>
                 )}
                 {viewedTeacher.supervisor && (
@@ -597,18 +625,6 @@ export default function TeachersPage() {
                     className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
                     dir="rtl"
                     placeholder="اختياري - سعر جلسة التجربة"
-                  />
-                </div>
-                <div>
-                  <label className="block text-primary-900 font-semibold mb-2 text-right">مدة الحصة التجريبية (دقيقة)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.trial_session_duration}
-                    onChange={(e) => setFormData({ ...formData, trial_session_duration: e.target.value })}
-                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
-                    dir="rtl"
-                    placeholder="اختياري - بالدقائق"
                   />
                 </div>
                 <div>
