@@ -27,6 +27,8 @@ export default function TeachersPage() {
     email: '',
     password: '',
     trial_lesson_price: '',
+    trial_session_duration: '',
+    session_link: '',
     supervisor_id: '',
   })
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -84,13 +86,15 @@ export default function TeachersPage() {
         email: teacher.email || '',
         password: '', // Keep empty for security - user can leave it to keep current password
         trial_lesson_price: teacher.trial_lesson_price?.toString() || '',
+        trial_session_duration: teacher.trial_session_duration?.toString() || '',
+        session_link: teacher.session_link || '',
         supervisor_id: teacher.supervisor_id?.toString() || '',
       })
       setImageFile(null)
       setImagePreview(teacher.image || null)
     } else {
       setEditingId(null)
-      setFormData({ name: '', name_en: '', specialization: '', specialization_en: '', experience_years: '', phone: '', email: '', password: '', trial_lesson_price: '', supervisor_id: '' })
+      setFormData({ name: '', name_en: '', specialization: '', specialization_en: '', experience_years: '', phone: '', email: '', password: '', trial_lesson_price: '', trial_session_duration: '', session_link: '', supervisor_id: '' })
       setImageFile(null)
       setImagePreview(null)
     }
@@ -100,7 +104,7 @@ export default function TeachersPage() {
   const handleCloseModal = () => {
     setShowModal(false)
     setEditingId(null)
-    setFormData({ name: '', name_en: '', specialization: '', specialization_en: '', experience_years: '', phone: '', email: '', password: '', trial_lesson_price: '', supervisor_id: '' })
+    setFormData({ name: '', name_en: '', specialization: '', specialization_en: '', experience_years: '', phone: '', email: '', password: '', trial_lesson_price: '', trial_session_duration: '', session_link: '', supervisor_id: '' })
     setImageFile(null)
     setImagePreview(null)
   }
@@ -119,6 +123,8 @@ export default function TeachersPage() {
         email: formData.email || undefined,
         password: formData.password || undefined,
         trial_lesson_price: formData.trial_lesson_price ? parseFloat(formData.trial_lesson_price) : undefined,
+        trial_session_duration: formData.trial_session_duration ? parseInt(formData.trial_session_duration) : undefined,
+        session_link: formData.session_link?.trim() || undefined,
         supervisor_id: formData.supervisor_id ? parseInt(formData.supervisor_id) : undefined,
       }
       
@@ -134,6 +140,10 @@ export default function TeachersPage() {
         await addTeacher(teacherData)
       }
       handleCloseModal()
+      // Keep same page and filters after add/update
+      const search = searchTerm.trim() || undefined
+      const supervisorId = withoutSupervisor ? undefined : (supervisorFilterId ? parseInt(supervisorFilterId) : undefined)
+      await fetchTeachers(currentPage, 15, search, supervisorId, withoutSupervisor)
     } catch (error: any) {
       alert(error.message || 'حدث خطأ أثناء الحفظ')
     } finally {
@@ -167,6 +177,10 @@ export default function TeachersPage() {
     if (confirm('هل أنت متأكد من حذف هذا المعلم؟')) {
       try {
         await deleteTeacher(id)
+        // Keep same page and filters after delete
+        const search = searchTerm.trim() || undefined
+        const supervisorId = withoutSupervisor ? undefined : (supervisorFilterId ? parseInt(supervisorFilterId) : undefined)
+        await fetchTeachers(currentPage, 15, search, supervisorId, withoutSupervisor)
       } catch (error: any) {
         alert(error.message || 'حدث خطأ أثناء الحذف')
       }
@@ -583,6 +597,29 @@ export default function TeachersPage() {
                     className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
                     dir="rtl"
                     placeholder="اختياري - سعر جلسة التجربة"
+                  />
+                </div>
+                <div>
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">مدة الحصة التجريبية (دقيقة)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.trial_session_duration}
+                    onChange={(e) => setFormData({ ...formData, trial_session_duration: e.target.value })}
+                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                    dir="rtl"
+                    placeholder="اختياري - بالدقائق"
+                  />
+                </div>
+                <div>
+                  <label className="block text-primary-900 font-semibold mb-2 text-right">رابط الحلقة</label>
+                  <input
+                    type="url"
+                    value={formData.session_link}
+                    onChange={(e) => setFormData({ ...formData, session_link: e.target.value })}
+                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+                    dir="rtl"
+                    placeholder="اختياري - مثال: رابط Google Meet"
                   />
                 </div>
                 <div>

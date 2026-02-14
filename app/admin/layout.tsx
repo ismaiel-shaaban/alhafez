@@ -22,6 +22,7 @@ import {
   Calculator,
   UserCheck,
   AlertCircle,
+  Shield,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -98,6 +99,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/testimonials', label: 'آراء الطلاب', icon: MessageSquare },
     { href: '/admin/honor-board', label: 'لوحة الشرف', icon: Award },
     { href: '/admin/features', label: 'المميزات', icon: BookOpen },
+    // { href: '/admin/academy-policies', label: 'سياسات الأكاديمية', icon: Shield },
   ]
 
   // Filter out restricted items for supervisors
