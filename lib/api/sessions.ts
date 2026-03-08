@@ -58,6 +58,7 @@ export interface StudentSession {
   session_date: string
   session_time: string
   start_time?: string | null // وقت دخول المعلم (teacher entry time)
+  student_joined_at?: string | null // وقت دخول الطالب
   day_of_week: string
   day_of_week_label?: string // Localized day label (e.g., "السبت", "Saturday")
   is_completed: boolean
@@ -83,10 +84,13 @@ export interface StudentSession {
   updated_at?: string
 }
 
+export type SessionStatusFilter = 'pending' | 'completed' | 'postponed' | ''
+
 export interface SessionFilters {
   student_id?: number
   teacher_id?: number
   is_completed?: boolean
+  status?: SessionStatusFilter
   date_from?: string
   date_to?: string
   day_of_week?: string
@@ -112,6 +116,7 @@ export const listSessions = async (
   if (filters.student_id) params.append('student_id', filters.student_id.toString())
   if (filters.teacher_id) params.append('teacher_id', filters.teacher_id.toString())
   if (filters.is_completed !== undefined) params.append('is_completed', filters.is_completed.toString())
+  if (filters.status) params.append('status', filters.status)
   if (filters.date_from) params.append('date_from', filters.date_from)
   if (filters.date_to) params.append('date_to', filters.date_to)
   if (filters.day_of_week) params.append('day_of_week', filters.day_of_week)
@@ -141,7 +146,7 @@ export const createSession = async (data: CreateSessionRequest): Promise<Student
 // Update session
 export const updateSession = async (
   id: number,
-  data: Partial<CreateSessionRequest & { is_completed?: boolean }>
+  data: Partial<CreateSessionRequest & { is_completed?: boolean; status?: string }>
 ): Promise<StudentSession> => {
   return apiRequest<StudentSession>(`/api/student-sessions/${id}`, {
     method: 'POST',
@@ -157,6 +162,13 @@ export const completeSession = async (
   return apiRequest<StudentSession>(`/api/student-sessions/${id}/complete`, {
     method: 'POST',
     body: notes ? { notes } : {},
+  })
+}
+
+// Revert session from completed to pending
+export const revertSessionToPending = async (id: number): Promise<StudentSession> => {
+  return apiRequest<StudentSession>(`/api/student-sessions/${id}/revert-to-pending`, {
+    method: 'POST',
   })
 }
 
@@ -183,6 +195,7 @@ export const getSessionsByDate = async (
   date: string, // YYYY-MM-DD
   isCompleted?: boolean,
   teacherId?: number,
+  status?: SessionStatusFilter,
   locale?: string
 ): Promise<SessionsByDateResponse> => {
   const params = new URLSearchParams()
@@ -192,6 +205,9 @@ export const getSessionsByDate = async (
   }
   if (teacherId !== undefined) {
     params.append('teacher_id', teacherId.toString())
+  }
+  if (status) {
+    params.append('status', status)
   }
   return apiRequest<SessionsByDateResponse>(
     `/api/student-sessions/by-date?${params.toString()}`,

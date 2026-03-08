@@ -69,6 +69,7 @@ interface AdminState {
   addSession: (session: sessionsAPI.CreateSessionRequest) => Promise<void>
   updateSession: (id: number, session: Partial<sessionsAPI.CreateSessionRequest & { is_completed?: boolean }>) => Promise<void>
   completeSession: (id: number, notes?: string) => Promise<void>
+  revertSessionToPending: (id: number) => Promise<void>
   deleteSession: (id: number) => Promise<void>
 
   // Teachers
@@ -430,6 +431,20 @@ export const useAdminStore = create<AdminState>()(
           set({
             isLoading: false,
             error: error.message || 'فشل تسجيل إتمام الحصة',
+          })
+          throw error
+        }
+      },
+      revertSessionToPending: async (id) => {
+        set({ isLoading: true, error: null })
+        try {
+          await sessionsAPI.revertSessionToPending(id)
+          await get().fetchSessions()
+          set({ isLoading: false })
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'فشل إرجاع الحصة قيد الانتظار',
           })
           throw error
         }

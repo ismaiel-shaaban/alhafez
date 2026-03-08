@@ -5,6 +5,14 @@ import { useAdminStore } from '@/store/useAdminStore'
 import { Search, Eye, X, Edit, Trash2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import SearchableTeacherSelect from '@/components/admin/SearchableTeacherSelect'
+import {
+  parseWeeklyScheduleFromApi,
+  parseWeeklyDaysFromApi,
+  toApiWeeklySchedule,
+  toApiWeeklyDays,
+  type WeeklyScheduleForm,
+  type WeeklyDaysForm,
+} from '@/lib/weekly-schedule-utils'
 
 const DAYS_OF_WEEK = [
   { value: 'saturday', label: 'السبت', arName: 'السبت' },
@@ -52,8 +60,8 @@ export default function AppStudentsPage() {
     hour: '',
     monthly_sessions: '',
     weekly_sessions: '',
-    weekly_days: [] as string[],
-    weekly_schedule: {} as Record<string, string>,
+    weekly_days: [] as WeeklyDaysForm,
+    weekly_schedule: {} as WeeklyScheduleForm,
     useWeeklySchedule: false,
     session_duration: '',
     hourly_rate: '',
@@ -102,8 +110,8 @@ export default function AppStudentsPage() {
       hour: student.hour || '',
       monthly_sessions: student.monthly_sessions?.toString() || '',
       weekly_sessions: student.weekly_sessions?.toString() || '',
-      weekly_days: Array.isArray(student.weekly_days) ? [...student.weekly_days] : [],
-      weekly_schedule: hasWeeklySchedule ? { ...student.weekly_schedule } : {},
+      weekly_days: parseWeeklyDaysFromApi(student.weekly_days as any),
+      weekly_schedule: hasWeeklySchedule ? parseWeeklyScheduleFromApi(student.weekly_schedule as any) : {},
       useWeeklySchedule: hasWeeklySchedule,
       session_duration: student.session_duration?.toString() || '',
       hourly_rate: student.hourly_rate?.toString() || '',
@@ -147,11 +155,10 @@ export default function AppStudentsPage() {
 
         // If using weekly_schedule, send it (takes precedence)
         if (editForm.useWeeklySchedule && Object.keys(editForm.weekly_schedule).length > 0) {
-          updateData.weekly_schedule = editForm.weekly_schedule
+          updateData.weekly_schedule = toApiWeeklySchedule(editForm.weekly_schedule)
         } else {
-          // Otherwise, use hour and weekly_days
           if (editForm.hour) updateData.hour = editForm.hour
-          if (editForm.weekly_days.length > 0) updateData.weekly_days = editForm.weekly_days
+          if (editForm.weekly_days.length > 0) updateData.weekly_days = toApiWeeklyDays(editForm.weekly_days)
         }
 
         await updateStudent(editingId, updateData)
@@ -301,23 +308,23 @@ export default function AppStudentsPage() {
   const appStudents = filteredStudents.filter(student => student.type === 'app')
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-4xl font-bold text-primary-900">الطلاب الجدد من التطبيق</h1>
-        <div className="text-primary-600 font-medium">إجمالي: {appStudents.length}</div>
+    <div className="min-w-0 px-3 sm:px-4 lg:px-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-primary-900">الطلاب الجدد من التطبيق</h1>
+        <div className="text-primary-600 font-medium text-sm sm:text-base shrink-0">إجمالي: {appStudents.length}</div>
       </div>
 
       {/* Error Message */}
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border-2 border-red-200 rounded-lg text-red-700">
+        <div className="mb-4 p-4 bg-red-50 border-2 border-red-200 rounded-lg text-red-700 text-sm sm:text-base">
           {error}
         </div>
       )}
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-xl border-2 border-primary-200 p-4 mb-6 shadow-lg">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
+      <div className="bg-white rounded-lg sm:rounded-xl border-2 border-primary-200 p-3 sm:p-4 mb-4 sm:mb-6 shadow-lg">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 min-w-0">
+          <div className="relative min-w-0">
             <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-primary-400 w-5 h-5" />
             <input
               type="text"
@@ -336,11 +343,11 @@ export default function AppStudentsPage() {
               </button>
             )}
           </div>
-          <div>
+          <div className="min-w-0">
             <select
               value={trialSessionFilter}
               onChange={(e) => setTrialSessionFilter(e.target.value as 'not_booked' | 'booked' | 'attended' | '')}
-              className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+              className="w-full min-w-0 px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
               dir="rtl"
             >
               <option value="">جميع الحالات</option>
@@ -349,7 +356,7 @@ export default function AppStudentsPage() {
               <option value="attended">حضر</option>
             </select>
           </div>
-          <div>
+          <div className="min-w-0">
             <SearchableTeacherSelect
               value={teacherFilterId}
               onChange={(value) => setTeacherFilterId(value)}
@@ -360,49 +367,147 @@ export default function AppStudentsPage() {
         </div>
       </div>
 
-      {/* Students Table */}
+      {/* Students Content */}
       {isLoadingStudents ? (
-        <div className="flex items-center justify-center py-12">
+        <div className="flex items-center justify-center py-10 sm:py-12">
           <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
         </div>
+      ) : appStudents.length === 0 ? (
+        <div className="bg-white rounded-lg sm:rounded-xl border-2 border-primary-200 p-6 sm:p-8 text-center text-primary-600 text-sm sm:text-base shadow-lg">
+          {searchTerm || trialSessionFilter || teacherFilterId ? 'لا توجد نتائج' : 'لا يوجد طلاب مسجلون من التطبيق بعد'}
+        </div>
       ) : (
-        <div className="bg-white rounded-xl border-2 border-primary-200 overflow-hidden shadow-lg">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-primary-100">
-                <tr>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">الاسم</th>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">البريد</th>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">الهاتف</th>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">العمر</th>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">الجنس</th>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">الباقة</th>
-                  <th className="px-6 py-4 text-right text-primary-900 font-semibold">المعلم</th>
-                  <th className="px-6 py-4 text-center text-primary-900 font-semibold">جلسة التجربة</th>
-                  <th className="px-6 py-4 text-center text-primary-900 font-semibold">الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {appStudents.length === 0 ? (
+        <>
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-3 sm:space-y-4">
+            {appStudents.map((student) => (
+              <div
+                key={student.id}
+                className="bg-white rounded-lg sm:rounded-xl border-2 border-primary-200 p-3 sm:p-4 shadow-lg overflow-hidden min-w-0"
+              >
+                <div className="flex items-start justify-between gap-2 mb-3 min-w-0">
+                  <h3 className="text-base sm:text-lg font-bold text-primary-900 truncate min-w-0">{student.name}</h3>
+                </div>
+                <div className="space-y-2 text-sm min-w-0">
+                  <div className="flex justify-between gap-2 min-w-0">
+                    <span className="text-primary-600 shrink-0">الهاتف:</span>
+                    <span className="text-primary-900 font-medium truncate text-left" dir="ltr">{student.phone}</span>
+                  </div>
+                  {student.email && (
+                    <div className="flex justify-between gap-2 min-w-0">
+                      <span className="text-primary-600 shrink-0">البريد:</span>
+                      <span className="text-primary-900 truncate text-left min-w-0">{student.email}</span>
+                    </div>
+                  )}
+                  {student.age && (
+                    <div className="flex justify-between">
+                      <span className="text-primary-600">العمر:</span>
+                      <span className="text-primary-900">{student.age}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-primary-600">الجنس:</span>
+                    <span className="text-primary-900">{student.gender_label || (student.gender === 'male' ? 'ذكر' : 'أنثى')}</span>
+                  </div>
+                  {student.package?.name && (
+                    <div className="flex justify-between">
+                      <span className="text-primary-600">الباقة:</span>
+                      <span className="text-primary-900 truncate min-w-0">{student.package.name}</span>
+                    </div>
+                  )}
+                  {student.teacher?.name && (
+                    <div className="flex justify-between">
+                      <span className="text-primary-600">المعلم:</span>
+                      <span className="text-primary-900 truncate min-w-0">{student.teacher.name}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center">
+                    <span className="text-primary-600">جلسة التجربة:</span>
+                    <div className="flex flex-col items-end gap-2">
+                      {getTrialAttendanceBadge(student.trial_session_attendance)}
+                      <select
+                        value={student.trial_session_attendance || 'not_booked'}
+                        onChange={(e) => handleUpdateTrialAttendance(student.id, e.target.value as 'not_booked' | 'booked' | 'attended')}
+                        disabled={updatingTrialAttendance === student.id}
+                        className="text-xs px-2 py-1 border border-primary-300 rounded-lg focus:border-primary-500 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                        dir="rtl"
+                      >
+                        <option value="not_booked">غير محجوز</option>
+                        <option value="booked">محجوز</option>
+                        <option value="attended">حضر</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-center flex-wrap gap-1 sm:gap-2 mt-4 pt-4 border-t border-primary-200">
+                  <button
+                    onClick={() => handleViewStudent(student.id)}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="عرض التفاصيل"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleEdit(student)}
+                    className="p-2 text-primary-600 hover:bg-primary-100 rounded-lg transition-colors"
+                    title="تعديل"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(student.id)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="حذف"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block bg-white rounded-lg lg:rounded-xl border-2 border-primary-200 overflow-hidden shadow-lg min-w-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm lg:text-base table-fixed" style={{ tableLayout: 'fixed', minWidth: 0 }}>
+                <colgroup>
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '5%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '16%' }} />
+                </colgroup>
+                <thead className="bg-primary-100">
                   <tr>
-                    <td colSpan={9} className="px-6 py-8 text-center text-primary-600">
-                      {searchTerm || trialSessionFilter ? 'لا توجد نتائج' : 'لا يوجد طلاب مسجلون من التطبيق بعد'}
-                    </td>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-right text-primary-900 font-semibold whitespace-nowrap truncate">الاسم</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-right text-primary-900 font-semibold whitespace-nowrap truncate">البريد</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-right text-primary-900 font-semibold whitespace-nowrap truncate">الهاتف</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-right text-primary-900 font-semibold whitespace-nowrap">العمر</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-right text-primary-900 font-semibold whitespace-nowrap">الجنس</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-right text-primary-900 font-semibold whitespace-nowrap truncate">الباقة</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-right text-primary-900 font-semibold whitespace-nowrap truncate">المعلم</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-center text-primary-900 font-semibold whitespace-nowrap truncate">جلسة التجربة</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-center text-primary-900 font-semibold whitespace-nowrap">الإجراءات</th>
                   </tr>
-                ) : (
-                  appStudents.map((student) => (
+                </thead>
+                <tbody>
+                  {appStudents.map((student) => (
                     <tr
                       key={student.id}
                       className="border-b border-primary-200 hover:bg-primary-50 transition-colors"
                     >
-                      <td className="px-6 py-4 text-primary-900">{student.name}</td>
-                      <td className="px-6 py-4 text-primary-700">{student.email || '-'}</td>
-                      <td className="px-6 py-4 text-primary-700">{student.phone}</td>
-                      <td className="px-6 py-4 text-primary-700">{student.age || '-'}</td>
-                      <td className="px-6 py-4 text-primary-700">{student.gender_label || (student.gender === 'male' ? 'ذكر' : 'أنثى')}</td>
-                      <td className="px-6 py-4 text-primary-700">{student.package?.name || '-'}</td>
-                      <td className="px-6 py-4 text-primary-700">{student.teacher?.name || '-'}</td>
-                      <td className="px-6 py-4">
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-primary-900 font-medium truncate" title={student.name}>{student.name}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-primary-700 truncate" title={student.email || ''}>{student.email || '-'}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-primary-700 truncate" dir="ltr" title={student.phone}>{student.phone}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-primary-700">{student.age || '-'}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-primary-700">{student.gender_label || (student.gender === 'male' ? 'ذكر' : 'أنثى')}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-primary-700 truncate" title={student.package?.name || ''}>{student.package?.name || '-'}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-primary-700 truncate" title={student.teacher?.name || ''}>{student.teacher?.name || '-'}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4">
                         <div className="flex flex-col items-center gap-2">
                           {getTrialAttendanceBadge(student.trial_session_attendance)}
                           <select
@@ -418,7 +523,7 @@ export default function AppStudentsPage() {
                           </select>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4">
                         <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => handleViewStudent(student.id)}
@@ -444,12 +549,12 @@ export default function AppStudentsPage() {
                         </div>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* View Student Details Modal */}
@@ -459,7 +564,7 @@ export default function AppStudentsPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 sm:p-4"
             onClick={() => setShowViewModal(false)}
           >
             <motion.div
@@ -467,10 +572,10 @@ export default function AppStudentsPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto"
             >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-primary-900">تفاصيل الطالب</h2>
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-primary-900 min-w-0">تفاصيل الطالب</h2>
                 <button
                   onClick={() => setShowViewModal(false)}
                   className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
@@ -597,12 +702,17 @@ export default function AppStudentsPage() {
                   <div>
                     <label className="block text-primary-600 text-sm mb-2">الجدول الأسبوعي</label>
                     <div className="bg-primary-50 rounded-lg p-4">
-                      {Object.entries(viewedStudent.weekly_schedule).map(([day, time]) => (
-                        <div key={day} className="flex items-center justify-between py-2 border-b border-primary-200 last:border-0">
-                          <span className="text-primary-900 font-medium">{day}</span>
-                          <span className="text-primary-700">{time as string}</span>
-                        </div>
-                      ))}
+                      {Object.entries(viewedStudent.weekly_schedule).map(([day, val]) => {
+                        const dayObj = DAYS_OF_WEEK.find(d => d.value === day || d.arName === day)
+                        const timeStr = typeof val === 'string' ? val : (val as any)?.time
+                        const dur = typeof val === 'object' && val && 'session_duration' in val ? (val as any).session_duration : null
+                        return (
+                          <div key={day} className="flex items-center justify-between py-2 border-b border-primary-200 last:border-0">
+                            <span className="text-primary-900 font-medium">{dayObj?.label || day}</span>
+                            <span className="text-primary-700">{timeStr || '-'}{dur != null ? ` (${dur} د)` : ''}</span>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
@@ -611,14 +721,16 @@ export default function AppStudentsPage() {
                   <div>
                     <label className="block text-primary-600 text-sm mb-2">أيام الأسبوع</label>
                     <div className="flex flex-wrap gap-2">
-                      {viewedStudent.weekly_days.map((day: string) => {
+                      {viewedStudent.weekly_days.map((item: any) => {
+                        const day = typeof item === 'string' ? item : item?.day
                         const dayObj = DAYS_OF_WEEK.find(d => d.value === day)
+                        const dur = typeof item === 'object' && item?.session_duration != null ? ` (${item.session_duration} د)` : ''
                         return (
                           <span
                             key={day}
                             className="px-3 py-1 bg-primary-100 text-primary-700 rounded-lg text-sm"
                           >
-                            {dayObj?.label || day}
+                            {dayObj?.label || day}{dur}
                           </span>
                         )
                       })}
@@ -645,7 +757,7 @@ export default function AppStudentsPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 sm:p-4"
             onClick={handleCloseEditModal}
           >
             <motion.div
@@ -653,10 +765,10 @@ export default function AppStudentsPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto"
             >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-primary-900">تعديل بيانات الطالب</h2>
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-primary-900 min-w-0">تعديل بيانات الطالب</h2>
                 <button
                   onClick={handleCloseEditModal}
                   className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
@@ -885,39 +997,53 @@ export default function AppStudentsPage() {
                   </div>
                 </div>
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <label className="block text-primary-900 font-semibold">جدول الأسبوع</label>
-                    <label className="flex items-center gap-2 cursor-pointer">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+                    <label className="block text-primary-900 font-semibold text-sm sm:text-base">جدول الأسبوع</label>
+                    <label className="flex items-center gap-2 cursor-pointer min-w-0">
                       <input
                         type="checkbox"
                         checked={editForm.useWeeklySchedule}
                         onChange={(e) => setEditForm({ ...editForm, useWeeklySchedule: e.target.checked })}
-                        className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                        className="w-4 h-4 shrink-0 text-primary-600 rounded focus:ring-primary-500"
                       />
-                      <span className="text-primary-700 text-sm">استخدام جدول متقدم (وقت مختلف لكل يوم)</span>
+                      <span className="text-primary-700 text-xs sm:text-sm">استخدام جدول متقدم (وقت مختلف لكل يوم)</span>
                     </label>
                   </div>
                   
                   {editForm.useWeeklySchedule ? (
                     <div className="space-y-3 p-4 bg-primary-50 rounded-lg border-2 border-primary-200">
-                      <p className="text-sm text-primary-600 mb-3">حدد وقت الحصة لكل يوم (اختياري)</p>
+                      <p className="text-sm text-primary-600 mb-3">حدد وقت الحصة ومدة الحصة (اختياري) لكل يوم</p>
                       {DAYS_OF_WEEK.map((day) => (
-                        <div key={day.value} className="flex items-center gap-3">
+                        <div key={day.value} className="flex items-center gap-3 flex-wrap">
                           <label className="w-24 text-primary-700 font-medium">{day.label}</label>
                           <input
                             type="time"
-                            value={editForm.weekly_schedule[day.arName] || ''}
+                            value={editForm.weekly_schedule[day.value]?.time || ''}
                             onChange={(e) => {
                               const newSchedule = { ...editForm.weekly_schedule }
                               if (e.target.value) {
-                                newSchedule[day.arName] = e.target.value
+                                newSchedule[day.value] = { ...(newSchedule[day.value] || { time: '', session_duration: '' }), time: e.target.value }
                               } else {
-                                delete newSchedule[day.arName]
+                                delete newSchedule[day.value]
                               }
                               setEditForm({ ...editForm, weekly_schedule: newSchedule })
                             }}
-                            className="flex-1 px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
-                            placeholder="اختياري"
+                            className="flex-1 min-w-[100px] px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                          />
+                          <input
+                            type="number"
+                            min="1"
+                            max="180"
+                            placeholder="مدة (د)"
+                            value={editForm.weekly_schedule[day.value]?.session_duration || ''}
+                            onChange={(e) => {
+                              const newSchedule = { ...editForm.weekly_schedule }
+                              if (newSchedule[day.value]) {
+                                newSchedule[day.value] = { ...newSchedule[day.value], session_duration: e.target.value }
+                              }
+                              setEditForm({ ...editForm, weekly_schedule: newSchedule })
+                            }}
+                            className="w-20 px-2 py-2 border-2 border-primary-200 rounded-lg text-sm"
                           />
                         </div>
                       ))}
@@ -936,23 +1062,17 @@ export default function AppStudentsPage() {
                       </div>
                       <div>
                         <label className="block text-primary-900 font-semibold mb-2 text-right">أيام الأسبوع</label>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
                           {DAYS_OF_WEEK.map((day) => (
                             <label key={day.value} className="flex items-center gap-2 cursor-pointer">
                               <input
                                 type="checkbox"
-                                checked={editForm.weekly_days.includes(day.value)}
+                                checked={editForm.weekly_days.some((d) => d.day === day.value)}
                                 onChange={(e) => {
                                   if (e.target.checked) {
-                                    setEditForm({
-                                      ...editForm,
-                                      weekly_days: [...editForm.weekly_days, day.value],
-                                    })
+                                    setEditForm({ ...editForm, weekly_days: [...editForm.weekly_days, { day: day.value, session_duration: '' }] })
                                   } else {
-                                    setEditForm({
-                                      ...editForm,
-                                      weekly_days: editForm.weekly_days.filter((d) => d !== day.value),
-                                    })
+                                    setEditForm({ ...editForm, weekly_days: editForm.weekly_days.filter((d) => d.day !== day.value) })
                                   }
                                 }}
                                 className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
@@ -961,6 +1081,28 @@ export default function AppStudentsPage() {
                             </label>
                           ))}
                         </div>
+                        {editForm.weekly_days.length > 0 && (
+                          <div className="space-y-2 mt-2 p-2 bg-primary-50 rounded-lg">
+                            <p className="text-xs text-primary-600 mb-1">مدة الحصة لكل يوم (اختياري)</p>
+                            {editForm.weekly_days.map((item) => (
+                              <div key={item.day} className="flex items-center gap-2">
+                                <span className="text-sm w-20">{DAYS_OF_WEEK.find((d) => d.value === item.day)?.label}</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="180"
+                                  placeholder="دقيقة"
+                                  value={item.session_duration || ''}
+                                  onChange={(e) => setEditForm({
+                                    ...editForm,
+                                    weekly_days: editForm.weekly_days.map((d) => d.day === item.day ? { ...d, session_duration: e.target.value } : d),
+                                  })}
+                                  className="w-20 px-2 py-1 border rounded text-sm"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -987,18 +1129,18 @@ export default function AppStudentsPage() {
                     placeholder="ملاحظات اختيارية..."
                   />
                 </div>
-                <div className="flex items-center gap-4 pt-4">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 pt-4">
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-primary-700 to-primary-600 text-white rounded-lg hover:from-primary-800 hover:to-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 sm:px-6 py-3 bg-gradient-to-r from-primary-700 to-primary-600 text-white rounded-lg hover:from-primary-800 hover:to-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                   >
                     {isSubmitting ? 'جاري الحفظ...' : 'حفظ التعديلات'}
                   </button>
                   <button
                     type="button"
                     onClick={handleCloseEditModal}
-                    className="flex-1 px-6 py-3 border-2 border-primary-300 text-primary-700 rounded-lg hover:bg-primary-50 transition-all"
+                    className="flex-1 px-4 sm:px-6 py-3 border-2 border-primary-300 text-primary-700 rounded-lg hover:bg-primary-50 transition-all text-sm sm:text-base"
                   >
                     إلغاء
                   </button>

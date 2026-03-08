@@ -5,6 +5,14 @@ import { useAdminStore } from '@/store/useAdminStore'
 import { Plus, Edit, Trash2, Search, X, Eye, Calendar, CheckCircle, Clock, Filter, ChevronDown, ChevronUp, CreditCard, DollarSign, Image as ImageIcon, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import SearchableTeacherSelect from '@/components/admin/SearchableTeacherSelect'
+import {
+  parseWeeklyScheduleFromApi,
+  parseWeeklyDaysFromApi,
+  toApiWeeklySchedule,
+  toApiWeeklyDays,
+  type WeeklyScheduleForm,
+  type WeeklyDaysForm,
+} from '@/lib/weekly-schedule-utils'
 
 const DAYS_OF_WEEK = [
   { value: 'saturday', label: 'السبت', arName: 'السبت' },
@@ -34,6 +42,7 @@ export default function StudentsPage() {
     addSession,
     updateSession,
     completeSession,
+    revertSessionToPending,
     deleteSession,
     packages,
     fetchPackages,
@@ -71,9 +80,9 @@ export default function StudentsPage() {
     hour: '',
     monthly_sessions: '',
     weekly_sessions: '',
-    weekly_days: [] as string[],
-    weekly_schedule: {} as Record<string, string>, // Object with Arabic day names as keys and times as values
-    useWeeklySchedule: false, // Toggle between weekly_days/hour and weekly_schedule
+    weekly_days: [] as WeeklyDaysForm,
+    weekly_schedule: {} as WeeklyScheduleForm,
+    useWeeklySchedule: false,
     session_duration: '',
     hourly_rate: '',
     notes: '',
@@ -102,9 +111,9 @@ export default function StudentsPage() {
     hour: '',
     monthly_sessions: '',
     weekly_sessions: '',
-    weekly_days: [] as string[],
-    weekly_schedule: {} as Record<string, string>, // Object with Arabic day names as keys and times as values
-    useWeeklySchedule: false, // Toggle between weekly_days/hour and weekly_schedule
+    weekly_days: [] as WeeklyDaysForm,
+    weekly_schedule: {} as WeeklyScheduleForm,
+    useWeeklySchedule: false,
     session_duration: '',
     hourly_rate: '',
     notes: '',
@@ -384,7 +393,7 @@ export default function StudentsPage() {
       // Get subscription statistics
       const paidMonthsCount = fullStudent.subscriptions_statistics?.paid_subscriptions?.toString() || ''
       const totalSubscriptions = fullStudent.subscriptions_statistics?.total_subscriptions || 0
-      const unpaidSubscriptions = fullStudent.subscriptions_statistics?.unpaid_subscriptions || 0
+      const pastMonthsCount = fullStudent.subscriptions_statistics?.past_months_count ?? fullStudent.past_months_count ?? totalSubscriptions
       
       setEditForm({
         name: fullStudent.name || '',
@@ -397,8 +406,8 @@ export default function StudentsPage() {
         hour: fullStudent.hour || '',
         monthly_sessions: fullStudent.monthly_sessions?.toString() || '',
         weekly_sessions: fullStudent.weekly_sessions?.toString() || '',
-        weekly_days: Array.isArray(fullStudent.weekly_days) ? [...fullStudent.weekly_days] : [],
-        weekly_schedule: hasWeeklySchedule ? { ...fullStudent.weekly_schedule } : {},
+        weekly_days: parseWeeklyDaysFromApi(fullStudent.weekly_days as any),
+        weekly_schedule: hasWeeklySchedule ? parseWeeklyScheduleFromApi(fullStudent.weekly_schedule as any) : {},
         useWeeklySchedule: hasWeeklySchedule,
         session_duration: fullStudent.session_duration?.toString() || '',
         hourly_rate: fullStudent.hourly_rate?.toString() || '',
@@ -408,8 +417,8 @@ export default function StudentsPage() {
         monthly_subscription_price: fullStudent.monthly_subscription_price?.toString() || '',
         country: fullStudent.country || '',
         currency: fullStudent.currency || '',
-        // Get data from subscriptions_statistics (only if no subscriptions exist)
-        past_months_count: hasSubscriptions ? '' : totalSubscriptions.toString(),
+        // past_months_count: always editable, from subscriptions_statistics.past_months_count
+        past_months_count: String(pastMonthsCount ?? ''),
         paid_months_count: hasSubscriptions ? '' : paidMonthsCount,
         subscription_start_date: hasSubscriptions ? '' : subscriptionStartDate,
         paid_subscriptions_count: '',
@@ -448,19 +457,19 @@ export default function StudentsPage() {
 
         // If using weekly_schedule, send it (takes precedence) and set hour to null
         if (editForm.useWeeklySchedule && Object.keys(editForm.weekly_schedule).length > 0) {
-          updateData.weekly_schedule = editForm.weekly_schedule
-          updateData.hour = null // Set hour to null when using custom weekly schedule
+          updateData.weekly_schedule = toApiWeeklySchedule(editForm.weekly_schedule)
+          updateData.hour = null
         } else {
-          // Otherwise, use hour and weekly_days
           if (editForm.hour) updateData.hour = editForm.hour
-          if (editForm.weekly_days.length > 0) updateData.weekly_days = editForm.weekly_days
+          if (editForm.weekly_days.length > 0) updateData.weekly_days = toApiWeeklyDays(editForm.weekly_days)
         }
 
-        // Add subscription-related fields only if student doesn't have existing subscriptions
+        // past_months_count: always send when provided (editable for all students)
+        if (editForm.past_months_count !== '') {
+          updateData.past_months_count = parseInt(editForm.past_months_count)
+        }
+        // Add other subscription-related fields only if student doesn't have existing subscriptions
         if (!editingStudentHasSubscriptions) {
-          if (editForm.past_months_count) {
-            updateData.past_months_count = parseInt(editForm.past_months_count)
-          }
           if (editForm.paid_months_count) {
             updateData.paid_months_count = parseInt(editForm.paid_months_count)
           }
@@ -573,7 +582,7 @@ export default function StudentsPage() {
     e.preventDefault()
     setIsSubmitting(true)
     try {
-      // Build request data - weekly_schedule takes precedence over hour and weekly_days
+      // Build request data
       const createData: any = {
         name: newStudent.name,
         email: newStudent.email || undefined, // Optional, unique
@@ -594,13 +603,11 @@ export default function StudentsPage() {
         currency: newStudent.currency || undefined,
       }
 
-      // If using weekly_schedule, send it (takes precedence)
       if (newStudent.useWeeklySchedule && Object.keys(newStudent.weekly_schedule).length > 0) {
-        createData.weekly_schedule = newStudent.weekly_schedule
+        createData.weekly_schedule = toApiWeeklySchedule(newStudent.weekly_schedule)
       } else {
-        // Otherwise, use hour and weekly_days
         if (newStudent.hour) createData.hour = newStudent.hour
-        if (newStudent.weekly_days.length > 0) createData.weekly_days = newStudent.weekly_days
+        if (newStudent.weekly_days.length > 0) createData.weekly_days = toApiWeeklyDays(newStudent.weekly_days)
       }
 
       // Add subscription-related fields
@@ -698,6 +705,18 @@ export default function StudentsPage() {
       } catch (error: any) {
         alert(error.message || 'حدث خطأ أثناء تسجيل إتمام الحصة')
       }
+    }
+  }
+
+  const handleRevertToPending = async (id: number) => {
+    if (!confirm('هل أنت متأكد من إرجاع الحصة إلى قيد الانتظار؟')) return
+    try {
+      await revertSessionToPending(id)
+      if (selectedStudentId) {
+        await fetchSessions({ student_id: selectedStudentId, per_page: 10000 })
+      }
+    } catch (error: any) {
+      alert(error.message || 'فشل إرجاع الحصة قيد الانتظار')
     }
   }
 
@@ -1191,11 +1210,17 @@ export default function StudentsPage() {
                     <label className="block text-primary-600 text-sm mb-1">جدول الأسبوع</label>
                     {viewedStudent.weekly_schedule && typeof viewedStudent.weekly_schedule === 'object' && Object.keys(viewedStudent.weekly_schedule).length > 0 ? (
                       <div className="space-y-2">
-                        {Object.entries(viewedStudent.weekly_schedule).map(([day, time]) => (
-                          <p key={day} className="text-primary-900">
-                            <span className="font-medium">{day}:</span> {time as string}
-                          </p>
-                        ))}
+                        {Object.entries(viewedStudent.weekly_schedule).map(([day, val]) => {
+                          const dayObj = DAYS_OF_WEEK.find(d => d.value === day || d.arName === day)
+                          const timeStr = typeof val === 'string' ? val : (val as any)?.time
+                          const dur = typeof val === 'object' && val && 'session_duration' in val ? (val as any).session_duration : null
+                          return (
+                            <p key={day} className="text-primary-900">
+                              <span className="font-medium">{dayObj?.label || day}:</span> {timeStr || '-'}
+                              {dur != null && <span className="text-primary-600"> ({dur} د)</span>}
+                            </p>
+                          )
+                        })}
                       </div>
                     ) : viewedStudent.hour !== null && viewedStudent.hour !== undefined ? (
                       <div>
@@ -1205,9 +1230,11 @@ export default function StudentsPage() {
                         <p className="text-primary-900">
                           <span className="font-medium">الأيام:</span>{' '}
                           {Array.isArray(viewedStudent.weekly_days) && viewedStudent.weekly_days.length > 0
-                            ? viewedStudent.weekly_days.map((day: string) => {
+                            ? viewedStudent.weekly_days.map((item: any) => {
+                                const day = typeof item === 'string' ? item : item?.day
                                 const dayObj = DAYS_OF_WEEK.find(d => d.value === day)
-                                return dayObj?.label
+                                const dur = typeof item === 'object' && item?.session_duration != null ? ` (${item.session_duration} د)` : ''
+                                return dayObj ? dayObj.label + dur : day
                               }).filter(Boolean).join('، ')
                             : '-'}
                         </p>
@@ -2058,6 +2085,11 @@ export default function StudentsPage() {
                               {session.day_of_week_label || session.day_of_week}
                               {session.teacher && ` - ${session.teacher.name}`}
                             </p>
+                            {(session as any).student_joined_at && (
+                              <p className="text-xs text-primary-500 mt-0.5">
+                                دخول الطالب: {new Date((session as any).student_joined_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            )}
                             {session.notes && (
                               <p className="text-sm text-primary-700 mt-1">{session.notes}</p>
                             )}
@@ -2070,6 +2102,14 @@ export default function StudentsPage() {
                               className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
                             >
                               إتمام
+                            </button>
+                          )}
+                          {session.is_completed && (
+                            <button
+                              onClick={() => handleRevertToPending(session.id)}
+                              className="px-3 py-1 bg-amber-100 text-amber-800 hover:bg-amber-200 rounded-lg transition-colors text-sm"
+                            >
+                              إرجاع قيد الانتظار
                             </button>
                           )}
                           <button
@@ -2391,24 +2431,38 @@ export default function StudentsPage() {
                   
                   {newStudent.useWeeklySchedule ? (
                     <div className="space-y-3 p-4 bg-primary-50 rounded-lg border-2 border-primary-200">
-                      <p className="text-sm text-primary-600 mb-3">حدد وقت الحصة لكل يوم (اختياري)</p>
+                      <p className="text-sm text-primary-600 mb-3">حدد وقت الحصة ومدة الحصة (اختياري) لكل يوم</p>
                       {DAYS_OF_WEEK.map((day) => (
-                        <div key={day.value} className="flex items-center gap-3">
+                        <div key={day.value} className="flex items-center gap-3 flex-wrap">
                           <label className="w-24 text-primary-700 font-medium">{day.label}</label>
                           <input
                             type="time"
-                            value={newStudent.weekly_schedule[day.arName] || ''}
+                            value={newStudent.weekly_schedule[day.value]?.time || ''}
                             onChange={(e) => {
                               const newSchedule = { ...newStudent.weekly_schedule }
                               if (e.target.value) {
-                                newSchedule[day.arName] = e.target.value
+                                newSchedule[day.value] = { ...(newSchedule[day.value] || { time: '', session_duration: '' }), time: e.target.value }
                               } else {
-                                delete newSchedule[day.arName]
+                                delete newSchedule[day.value]
                               }
                               setNewStudent({ ...newStudent, weekly_schedule: newSchedule })
                             }}
-                            className="flex-1 px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
-                            placeholder="اختياري"
+                            className="flex-1 min-w-[100px] px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                          />
+                          <input
+                            type="number"
+                            min="1"
+                            max="180"
+                            placeholder="مدة (د)"
+                            value={newStudent.weekly_schedule[day.value]?.session_duration || ''}
+                            onChange={(e) => {
+                              const newSchedule = { ...newStudent.weekly_schedule }
+                              if (newSchedule[day.value]) {
+                                newSchedule[day.value] = { ...newSchedule[day.value], session_duration: e.target.value }
+                              }
+                              setNewStudent({ ...newStudent, weekly_schedule: newSchedule })
+                            }}
+                            className="w-20 px-2 py-2 border-2 border-primary-200 rounded-lg text-sm"
                           />
                         </div>
                       ))}
@@ -2427,23 +2481,17 @@ export default function StudentsPage() {
                       </div>
                       <div>
                         <label className="block text-primary-900 font-semibold mb-2 text-right">أيام الأسبوع</label>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
                           {DAYS_OF_WEEK.map((day) => (
                             <label key={day.value} className="flex items-center gap-2 cursor-pointer">
                               <input
                                 type="checkbox"
-                                checked={newStudent.weekly_days.includes(day.value)}
+                                checked={newStudent.weekly_days.some((d) => d.day === day.value)}
                                 onChange={(e) => {
                                   if (e.target.checked) {
-                                    setNewStudent({
-                                      ...newStudent,
-                                      weekly_days: [...newStudent.weekly_days, day.value],
-                                    })
+                                    setNewStudent({ ...newStudent, weekly_days: [...newStudent.weekly_days, { day: day.value, session_duration: '' }] })
                                   } else {
-                                    setNewStudent({
-                                      ...newStudent,
-                                      weekly_days: newStudent.weekly_days.filter((d) => d !== day.value),
-                                    })
+                                    setNewStudent({ ...newStudent, weekly_days: newStudent.weekly_days.filter((d) => d.day !== day.value) })
                                   }
                                 }}
                                 className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
@@ -2452,6 +2500,28 @@ export default function StudentsPage() {
                             </label>
                           ))}
                         </div>
+                        {newStudent.weekly_days.length > 0 && (
+                          <div className="space-y-2 mt-2 p-2 bg-primary-50 rounded-lg">
+                            <p className="text-xs text-primary-600 mb-1">مدة الحصة لكل يوم (اختياري)</p>
+                            {newStudent.weekly_days.map((item) => (
+                              <div key={item.day} className="flex items-center gap-2">
+                                <span className="text-sm w-20">{DAYS_OF_WEEK.find((d) => d.value === item.day)?.label}</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="180"
+                                  placeholder="دقيقة"
+                                  value={item.session_duration || ''}
+                                  onChange={(e) => setNewStudent({
+                                    ...newStudent,
+                                    weekly_days: newStudent.weekly_days.map((d) => d.day === item.day ? { ...d, session_duration: e.target.value } : d),
+                                  })}
+                                  className="w-20 px-2 py-1 border rounded text-sm"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -2815,24 +2885,39 @@ export default function StudentsPage() {
                   
                   {editForm.useWeeklySchedule ? (
                     <div className="space-y-3 p-4 bg-primary-50 rounded-lg border-2 border-primary-200">
-                      <p className="text-sm text-primary-600 mb-3">حدد وقت الحصة لكل يوم (اختياري)</p>
+                      <p className="text-sm text-primary-600 mb-3">حدد وقت الحصة ومدة الحصة (اختياري) لكل يوم</p>
                       {DAYS_OF_WEEK.map((day) => (
-                        <div key={day.value} className="flex items-center gap-3">
+                        <div key={day.value} className="flex items-center gap-3 flex-wrap">
                           <label className="w-24 text-primary-700 font-medium">{day.label}</label>
                           <input
                             type="time"
-                            value={editForm.weekly_schedule[day.arName] || ''}
+                            value={editForm.weekly_schedule[day.value]?.time || ''}
                             onChange={(e) => {
                               const newSchedule = { ...editForm.weekly_schedule }
                               if (e.target.value) {
-                                newSchedule[day.arName] = e.target.value
+                                newSchedule[day.value] = { ...(newSchedule[day.value] || { time: '', session_duration: '' }), time: e.target.value }
                               } else {
-                                delete newSchedule[day.arName]
+                                delete newSchedule[day.value]
                               }
                               setEditForm({ ...editForm, weekly_schedule: newSchedule })
                             }}
-                            className="flex-1 px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
-                            placeholder="اختياري"
+                            className="flex-1 min-w-[100px] px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                            placeholder="وقت"
+                          />
+                          <input
+                            type="number"
+                            min="1"
+                            max="180"
+                            placeholder="مدة (د)"
+                            value={editForm.weekly_schedule[day.value]?.session_duration || ''}
+                            onChange={(e) => {
+                              const newSchedule = { ...editForm.weekly_schedule }
+                              if (newSchedule[day.value]) {
+                                newSchedule[day.value] = { ...newSchedule[day.value], session_duration: e.target.value }
+                              }
+                              setEditForm({ ...editForm, weekly_schedule: newSchedule })
+                            }}
+                            className="w-20 px-2 py-2 border-2 border-primary-200 rounded-lg text-sm"
                           />
                         </div>
                       ))}
@@ -2851,23 +2936,17 @@ export default function StudentsPage() {
                       </div>
                       <div>
                         <label className="block text-primary-900 font-semibold mb-2 text-right">أيام الأسبوع</label>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
                           {DAYS_OF_WEEK.map((day) => (
                             <label key={day.value} className="flex items-center gap-2 cursor-pointer">
                               <input
                                 type="checkbox"
-                                checked={editForm.weekly_days.includes(day.value)}
+                                checked={editForm.weekly_days.some((d) => d.day === day.value)}
                                 onChange={(e) => {
                                   if (e.target.checked) {
-                                    setEditForm({
-                                      ...editForm,
-                                      weekly_days: [...editForm.weekly_days, day.value],
-                                    })
+                                    setEditForm({ ...editForm, weekly_days: [...editForm.weekly_days, { day: day.value, session_duration: '' }] })
                                   } else {
-                                    setEditForm({
-                                      ...editForm,
-                                      weekly_days: editForm.weekly_days.filter((d) => d !== day.value),
-                                    })
+                                    setEditForm({ ...editForm, weekly_days: editForm.weekly_days.filter((d) => d.day !== day.value) })
                                   }
                                 }}
                                 className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
@@ -2876,6 +2955,28 @@ export default function StudentsPage() {
                             </label>
                           ))}
                         </div>
+                        {editForm.weekly_days.length > 0 && (
+                          <div className="space-y-2 mt-2 p-2 bg-primary-50 rounded-lg">
+                            <p className="text-xs text-primary-600 mb-1">مدة الحصة لكل يوم (اختياري)</p>
+                            {editForm.weekly_days.map((item) => (
+                              <div key={item.day} className="flex items-center gap-2">
+                                <span className="text-sm w-20">{DAYS_OF_WEEK.find((d) => d.value === item.day)?.label}</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="180"
+                                  placeholder="دقيقة"
+                                  value={item.session_duration || ''}
+                                  onChange={(e) => setEditForm({
+                                    ...editForm,
+                                    weekly_days: editForm.weekly_days.map((d) => d.day === item.day ? { ...d, session_duration: e.target.value } : d),
+                                  })}
+                                  className="w-20 px-2 py-1 border rounded text-sm"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -2972,6 +3073,28 @@ export default function StudentsPage() {
                   />
                 </div>
                 
+                {/* past_months_count - always editable (subscriptions_statistics.past_months_count) */}
+                <div className="border-t-2 border-primary-200 pt-4 mt-4">
+                  <h3 className="text-lg font-bold text-primary-900 mb-4 text-right">عدد الأشهر السابقة</h3>
+                  <div>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">
+                      عدد الأشهر السابقة (past_months_count)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="120"
+                      value={editForm.past_months_count}
+                      onChange={(e) => setEditForm({ ...editForm, past_months_count: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                      placeholder="0-120"
+                    />
+                    <p className="text-xs text-primary-600 mt-1 text-right">
+                      يُعرض في إحصائيات الاشتراكات (past_months_count)
+                    </p>
+                  </div>
+                </div>
+
                 {/* Subscription Fields Section - Only show if student doesn't have existing subscriptions */}
                 {!editingStudentHasSubscriptions && (
                   <div className="border-t-2 border-primary-200 pt-4 mt-4">
@@ -2992,23 +3115,6 @@ export default function StudentsPage() {
                         </p>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-primary-900 font-semibold mb-2 text-right">
-                            عدد الأشهر السابقة
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            max="120"
-                            value={editForm.past_months_count}
-                            onChange={(e) => setEditForm({ ...editForm, past_months_count: e.target.value })}
-                            className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
-                            placeholder="0-120"
-                          />
-                          <p className="text-xs text-primary-600 mt-1 text-right">
-                            عدد الأشهر السابقة لإنشاء اشتراكات لها
-                          </p>
-                        </div>
                         <div>
                           <label className="block text-primary-900 font-semibold mb-2 text-right">
                             عدد الأشهر المدفوعة

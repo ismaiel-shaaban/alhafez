@@ -855,79 +855,122 @@ export default function TeacherDetailsPage() {
 
       {/* Rewards & Deductions Tab */}
       {activeTab === 'rewards' && (
-        <div className="bg-white rounded-xl border-2 border-primary-200 p-4 sm:p-8 shadow-lg">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-primary-900">المكافآت والخصومات</h2>
-            <div className="flex flex-wrap items-center gap-2">
+        <div className="bg-white rounded-lg sm:rounded-xl border-2 border-primary-200 p-3 sm:p-6 lg:p-8 shadow-lg min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-primary-900">المكافآت والخصومات</h2>
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
               <input
                 type="month"
                 value={rewardsMonthFilter}
                 onChange={(e) => setRewardsMonthFilter(e.target.value)}
-                className="px-3 py-2 border-2 border-primary-200 rounded-lg text-sm"
+                className="flex-1 sm:flex-initial min-w-0 px-3 py-2 border-2 border-primary-200 rounded-lg text-sm"
               />
               <button
                 type="button"
                 onClick={() => handleOpenRewardModal()}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-4 h-4 shrink-0" />
                 إضافة
               </button>
             </div>
           </div>
           {rewardsDeductions.length === 0 ? (
-            <div className="text-center py-12 text-primary-600">لا توجد سجلات. استخدم فلتر الشهر أو أضف مكافأة/خصم.</div>
+            <div className="text-center py-8 sm:py-12 text-primary-600 text-sm sm:text-base">لا توجد سجلات. استخدم فلتر الشهر أو أضف مكافأة/خصم.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse border-2 border-primary-200">
-                <thead>
-                  <tr className="bg-primary-100">
-                    <th className="border border-primary-200 p-2 text-right text-primary-900 font-semibold">النوع</th>
-                    <th className="border border-primary-200 p-2 text-right text-primary-900 font-semibold">العنوان</th>
-                    <th className="border border-primary-200 p-2 text-right text-primary-900 font-semibold">المبلغ</th>
-                    <th className="border border-primary-200 p-2 text-right text-primary-900 font-semibold">الشهر</th>
-                    <th className="border border-primary-200 p-2 text-center text-primary-900 font-semibold">إجراءات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rewardsDeductions.map((item) => (
-                    <tr key={item.id} className="hover:bg-primary-50">
-                      <td className="border border-primary-200 p-2">
-                        <span className={item.type === 'reward' ? 'text-green-700 font-medium' : 'text-red-700 font-medium'}>
-                          {item.type_label}
-                        </span>
-                      </td>
-                      <td className="border border-primary-200 p-2 text-primary-900">{item.title}</td>
-                      <td className="border border-primary-200 p-2 font-semibold">{item.amount.toFixed(2)} ج</td>
-                      <td className="border border-primary-200 p-2 text-primary-700">{item.month}</td>
-                      <td className="border border-primary-200 p-2">
-                        <div className="flex items-center justify-center gap-2">
-                          <button type="button" onClick={() => handleOpenRewardModal(item)} className="p-2 text-primary-600 hover:bg-primary-100 rounded" title="تعديل"><Edit2 className="w-4 h-4" /></button>
-                          <button type="button" onClick={() => handleDeleteReward(item.id)} className="p-2 text-red-600 hover:bg-red-50 rounded" title="حذف"><Trash2 className="w-4 h-4" /></button>
-                        </div>
-                      </td>
+            <>
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-3">
+                {rewardsDeductions.map((item) => (
+                  <div
+                    key={item.id}
+                    className="bg-primary-50 rounded-lg border-2 border-primary-200 p-3 sm:p-4"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span className={`text-sm font-medium ${item.type === 'reward' ? 'text-green-700' : 'text-red-700'}`}>
+                        {item.type_label}
+                      </span>
+                      <span className="font-bold text-primary-900">{item.amount.toFixed(2)} ج</span>
+                    </div>
+                    <p className="text-primary-900 font-medium mb-1">{item.title}</p>
+                    {item.description && (
+                      <p className="text-xs sm:text-sm text-primary-600 mb-2 line-clamp-2">{item.description}</p>
+                    )}
+                    <p className="text-xs text-primary-500 mb-3">{item.month}</p>
+                    <div className="flex items-center gap-2 pt-2 border-t border-primary-200">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenRewardModal(item)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-primary-600 hover:bg-primary-100 rounded-lg text-sm"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                        تعديل
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteReward(item.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg text-sm"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        حذف
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto min-w-0">
+                <table className="w-full border-collapse border-2 border-primary-200 text-sm lg:text-base min-w-[500px]">
+                  <thead>
+                    <tr className="bg-primary-100">
+                      <th className="border border-primary-200 px-3 py-2 lg:px-4 lg:py-3 text-right text-primary-900 font-semibold whitespace-nowrap">النوع</th>
+                      <th className="border border-primary-200 px-3 py-2 lg:px-4 lg:py-3 text-right text-primary-900 font-semibold whitespace-nowrap">العنوان</th>
+                      <th className="border border-primary-200 px-3 py-2 lg:px-4 lg:py-3 text-right text-primary-900 font-semibold whitespace-nowrap">المبلغ</th>
+                      <th className="border border-primary-200 px-3 py-2 lg:px-4 lg:py-3 text-right text-primary-900 font-semibold whitespace-nowrap">الشهر</th>
+                      <th className="border border-primary-200 px-3 py-2 lg:px-4 lg:py-3 text-center text-primary-900 font-semibold whitespace-nowrap">إجراءات</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {rewardsDeductions.map((item) => (
+                      <tr key={item.id} className="hover:bg-primary-50">
+                        <td className="border border-primary-200 px-3 py-2 lg:px-4 lg:py-3">
+                          <span className={item.type === 'reward' ? 'text-green-700 font-medium' : 'text-red-700 font-medium'}>
+                            {item.type_label}
+                          </span>
+                        </td>
+                        <td className="border border-primary-200 px-3 py-2 lg:px-4 lg:py-3 text-primary-900">{item.title}</td>
+                        <td className="border border-primary-200 px-3 py-2 lg:px-4 lg:py-3 font-semibold">{item.amount.toFixed(2)} ج</td>
+                        <td className="border border-primary-200 px-3 py-2 lg:px-4 lg:py-3 text-primary-700">{item.month}</td>
+                        <td className="border border-primary-200 px-3 py-2 lg:px-4 lg:py-3">
+                          <div className="flex items-center justify-center gap-1 lg:gap-2">
+                            <button type="button" onClick={() => handleOpenRewardModal(item)} className="p-2 text-primary-600 hover:bg-primary-100 rounded-lg" title="تعديل"><Edit2 className="w-4 h-4" /></button>
+                            <button type="button" onClick={() => handleDeleteReward(item.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg" title="حذف"><Trash2 className="w-4 h-4" /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
           {rewardsPagination && rewardsPagination.total_pages > 1 && (
-            <div className="flex justify-center gap-2 mt-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 mt-4 pt-4 border-t border-primary-200">
               <button
                 type="button"
                 disabled={rewardsPagination.current_page <= 1}
                 onClick={() => loadRewardsDeductions(rewardsPagination.current_page - 1)}
-                className="px-4 py-2 border border-primary-300 rounded-lg disabled:opacity-50"
+                className="w-full sm:w-auto px-4 py-2 border-2 border-primary-300 rounded-lg hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
                 السابق
               </button>
-              <span className="py-2 text-primary-700">صفحة {rewardsPagination.current_page} من {rewardsPagination.total_pages}</span>
+              <span className="text-sm sm:text-base py-2 text-primary-700">صفحة {rewardsPagination.current_page} من {rewardsPagination.total_pages}</span>
               <button
                 type="button"
                 disabled={rewardsPagination.current_page >= rewardsPagination.total_pages}
                 onClick={() => loadRewardsDeductions(rewardsPagination.current_page + 1)}
-                className="px-4 py-2 border border-primary-300 rounded-lg disabled:opacity-50"
+                className="w-full sm:w-auto px-4 py-2 border-2 border-primary-300 rounded-lg hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
                 التالي
               </button>
@@ -938,8 +981,8 @@ export default function TeacherDetailsPage() {
 
       {/* Add/Edit Reward Deduction Modal */}
       {showRewardModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowRewardModal(false)}>
-          <div className="bg-white rounded-2xl shadow-xl border-2 border-primary-200 w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50" onClick={() => setShowRewardModal(false)}>
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border-2 border-primary-200 w-full max-w-md p-4 sm:p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-primary-900 mb-4">{editingReward ? 'تعديل مكافأة/خصم' : 'إضافة مكافأة/خصم'}</h3>
             <form onSubmit={handleSaveReward} className="space-y-4">
               <div>

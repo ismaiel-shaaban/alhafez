@@ -130,8 +130,8 @@ export interface CreateStudentRequest {
   hour?: string // Default session time (format: HH:mm) - used if weekly_schedule not provided
   monthly_sessions?: number
   weekly_sessions?: number
-  weekly_days?: string[] // Days of the week (array: ["saturday", "tuesday"]) - used if weekly_schedule not provided
-  weekly_schedule?: Record<string, string> // Weekly schedule with specific times per day (JSON object: {"السبت": "17:00", "الثلاثاء": "14:00"}). Takes precedence over hour and weekly_days.
+  weekly_days?: Array<string | { day: string; session_duration?: number }> // e.g. ["friday"] or [{ day: "sunday", session_duration: 90 }, { day: "tuesday" }]
+  weekly_schedule?: Record<string, string | { time: string; session_duration?: number }> // e.g. { "sunday": { time: "10:00", session_duration: 60 }, "friday": "17:00" }. Takes precedence over hour and weekly_days.
   session_duration?: number
   hourly_rate?: number
   notes?: string
@@ -210,6 +210,29 @@ export const deleteStudent = async (id: number): Promise<void> => {
 export const forceDeleteStudent = async (id: number): Promise<void> => {
   return apiRequest(`/api/students/${id}/force-delete`, {
     method: 'DELETE',
+  })
+}
+
+// List trashed (soft-deleted) students
+export const listTrashedStudents = async (
+  filters?: { page?: number; per_page?: number; search?: string },
+  locale?: string
+): Promise<{ students: Student[]; pagination?: any }> => {
+  const params = new URLSearchParams()
+  if (filters?.page) params.append('page', filters.page.toString())
+  if (filters?.per_page) params.append('per_page', filters.per_page.toString())
+  if (filters?.search) params.append('search', filters.search)
+  const query = params.toString()
+  return apiRequest<{ students: Student[]; pagination?: any }>(
+    `/api/students/trashed${query ? `?${query}` : ''}`,
+    { locale }
+  )
+}
+
+// Restore trashed student
+export const restoreTrashedStudent = async (id: number): Promise<Student> => {
+  return apiRequest<Student>(`/api/students/trashed/${id}/restore`, {
+    method: 'POST',
   })
 }
 

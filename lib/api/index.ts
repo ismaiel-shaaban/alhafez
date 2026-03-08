@@ -21,4 +21,5 @@ export {
 export * from './notifications'
 export * from './rewards-deductions'
 export * from './supervisor-salaries'
+export * from './supervisor-rewards-deductions'
 export * from './academy-policies'

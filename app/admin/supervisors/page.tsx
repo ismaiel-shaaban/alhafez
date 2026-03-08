@@ -30,9 +30,18 @@ import {
   type SupervisorSalary,
   type CreateSupervisorSalaryRequest,
 } from '@/lib/api/supervisor-salaries'
+import {
+  listSupervisorRewardsDeductions,
+  createSupervisorRewardDeduction,
+  updateSupervisorRewardDeduction,
+  deleteSupervisorRewardDeduction,
+  type SupervisorRewardDeduction,
+  type CreateSupervisorRewardDeductionRequest,
+  type SupervisorRewardDeductionType,
+} from '@/lib/api/supervisor-rewards-deductions'
 import { Pagination } from '@/lib/api-client'
 import { motion, AnimatePresence } from 'framer-motion'
-import { DollarSign } from 'lucide-react'
+import { DollarSign, Award } from 'lucide-react'
 
 export default function SupervisorsPage() {
   const [supervisors, setSupervisors] = useState<Supervisor[]>([])
@@ -58,8 +67,8 @@ export default function SupervisorsPage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Salaries modal
-  const [salariesSupervisor, setSalariesSupervisor] = useState<Supervisor | null>(null)
+  // Combined salaries + rewards/deductions modal
+  const [financeSupervisor, setFinanceSupervisor] = useState<Supervisor | null>(null)
   const [salariesList, setSalariesList] = useState<SupervisorSalary[]>([])
   const [salariesPagination, setSalariesPagination] = useState<Pagination | null>(null)
   const [salariesPage, setSalariesPage] = useState(1)
@@ -73,6 +82,22 @@ export default function SupervisorsPage() {
     notes: '',
   })
   const [salaryFormFile, setSalaryFormFile] = useState<File | null>(null)
+
+  // Rewards/deductions (مكافآت وخصومات)
+  const [rewardsList, setRewardsList] = useState<SupervisorRewardDeduction[]>([])
+  const [rewardsPagination, setRewardsPagination] = useState<Pagination | null>(null)
+  const [rewardsPage, setRewardsPage] = useState(1)
+  const [loadingRewards, setLoadingRewards] = useState(false)
+  const [showRewardForm, setShowRewardForm] = useState(false)
+  const [editingReward, setEditingReward] = useState<SupervisorRewardDeduction | null>(null)
+  const [rewardForm, setRewardForm] = useState<CreateSupervisorRewardDeductionRequest>({
+    type: 'reward',
+    title: '',
+    description: '',
+    amount: 0,
+    month: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
+    notes: '',
+  })
 
   // Load supervisors
   useEffect(() => {
@@ -193,8 +218,8 @@ export default function SupervisorsPage() {
     setCurrentPage(1)
   }
 
-  const openSalariesModal = async (supervisor: Supervisor) => {
-    setSalariesSupervisor(supervisor)
+  const openFinanceModal = async (supervisor: Supervisor) => {
+    setFinanceSupervisor(supervisor)
     setSalariesList([])
     setSalariesPagination(null)
     setSalariesPage(1)
@@ -208,7 +233,81 @@ export default function SupervisorsPage() {
       notes: '',
     })
     setSalaryFormFile(null)
+    setRewardsList([])
+    setRewardsPagination(null)
+    setRewardsPage(1)
+    setShowRewardForm(false)
+    setEditingReward(null)
+    setRewardForm({
+      type: 'reward',
+      title: '',
+      description: '',
+      amount: 0,
+      month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+      notes: '',
+    })
     loadSalaries(supervisor.id, 1)
+    loadRewards(supervisor.id, 1)
+  }
+
+  const loadRewards = async (supervisorId: number, page: number = 1) => {
+    setLoadingRewards(true)
+    try {
+      const res = await listSupervisorRewardsDeductions(supervisorId, { page, per_page: 10 })
+      setRewardsList(res.rewards_deductions || [])
+      setRewardsPagination(res.pagination || null)
+      setRewardsPage(page)
+    } catch (err: any) {
+      alert(err.message || 'فشل تحميل المكافآت والخصومات')
+    } finally {
+      setLoadingRewards(false)
+    }
+  }
+
+  const handleSaveReward = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!financeSupervisor) return
+    if (!rewardForm.title || rewardForm.amount <= 0 || !rewardForm.month) {
+      alert('يرجى إدخال العنوان والمبلغ والشهر')
+      return
+    }
+    try {
+      if (editingReward) {
+        await updateSupervisorRewardDeduction(financeSupervisor.id, editingReward.id, rewardForm)
+        alert('تم التحديث بنجاح')
+      } else {
+        await createSupervisorRewardDeduction(financeSupervisor.id, rewardForm)
+        alert('تمت الإضافة بنجاح')
+      }
+      setShowRewardForm(false)
+      setEditingReward(null)
+      loadRewards(financeSupervisor.id, rewardsPage)
+    } catch (err: any) {
+      alert(err.message || 'فشل الحفظ')
+    }
+  }
+
+  const handleDeleteReward = async (id: number) => {
+    if (!financeSupervisor || !confirm('هل أنت متأكد من الحذف؟')) return
+    try {
+      await deleteSupervisorRewardDeduction(financeSupervisor.id, id)
+      loadRewards(financeSupervisor.id, rewardsPage)
+    } catch (err: any) {
+      alert(err.message || 'فشل الحذف')
+    }
+  }
+
+  const openEditReward = (r: SupervisorRewardDeduction) => {
+    setEditingReward(r)
+    setRewardForm({
+      type: r.type as SupervisorRewardDeductionType,
+      title: r.title,
+      description: r.description || '',
+      amount: r.amount,
+      month: r.month,
+      notes: r.notes || '',
+    })
+    setShowRewardForm(true)
   }
 
   const loadSalaries = async (supervisorId: number, page: number = 1) => {
@@ -227,20 +326,20 @@ export default function SupervisorsPage() {
 
   const handleSaveSalary = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!salariesSupervisor) return
+    if (!financeSupervisor) return
     if (!salaryForm.month || salaryForm.amount <= 0) {
       alert('يرجى إدخال الشهر والمبلغ')
       return
     }
     try {
       if (editingSalary) {
-        await updateSupervisorSalary(salariesSupervisor.id, editingSalary.id, {
+        await updateSupervisorSalary(financeSupervisor.id, editingSalary.id, {
           ...salaryForm,
           payment_proof_image: salaryFormFile || undefined,
         })
         alert('تم تحديث الراتب بنجاح')
       } else {
-        await createSupervisorSalary(salariesSupervisor.id, {
+        await createSupervisorSalary(financeSupervisor.id, {
           ...salaryForm,
           payment_proof_image: salaryFormFile || undefined,
         })
@@ -248,17 +347,17 @@ export default function SupervisorsPage() {
       }
       setShowSalaryForm(false)
       setEditingSalary(null)
-      loadSalaries(salariesSupervisor.id, salariesPage)
+      loadSalaries(financeSupervisor.id, salariesPage)
     } catch (err: any) {
       alert(err.message || 'فشل الحفظ')
     }
   }
 
   const handleDeleteSalary = async (salaryId: number) => {
-    if (!salariesSupervisor || !confirm('هل أنت متأكد من حذف هذا الراتب؟')) return
+    if (!financeSupervisor || !confirm('هل أنت متأكد من حذف هذا الراتب؟')) return
     try {
-      await deleteSupervisorSalary(salariesSupervisor.id, salaryId)
-      loadSalaries(salariesSupervisor.id, salariesPage)
+      await deleteSupervisorSalary(financeSupervisor.id, salaryId)
+      loadSalaries(financeSupervisor.id, salariesPage)
     } catch (err: any) {
       alert(err.message || 'فشل الحذف')
     }
@@ -390,9 +489,9 @@ export default function SupervisorsPage() {
                   </div>
                   <div className="flex items-center justify-end gap-2">
                     <button
-                      onClick={() => openSalariesModal(supervisor)}
+                      onClick={() => openFinanceModal(supervisor)}
                       className="p-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
-                      title="رواتب"
+                      title="رواتب ومكافآت وخصومات"
                     >
                       <DollarSign className="w-4 h-4" />
                     </button>
@@ -472,9 +571,9 @@ export default function SupervisorsPage() {
                       <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => openSalariesModal(supervisor)}
+                            onClick={() => openFinanceModal(supervisor)}
                             className="p-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
-                            title="رواتب"
+                            title="رواتب ومكافآت وخصومات"
                           >
                             <DollarSign className="w-4 h-4 sm:w-5 sm:h-5" />
                           </button>
@@ -657,102 +756,225 @@ export default function SupervisorsPage() {
         )}
       </AnimatePresence>
 
-      {/* Salaries Modal */}
-      {salariesSupervisor && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setSalariesSupervisor(null)}>
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+      {/* Finance Modal: Salaries + Rewards/Deductions */}
+      {financeSupervisor && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setFinanceSupervisor(null)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="p-4 border-b border-primary-200 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-primary-900">رواتب: {salariesSupervisor.name}</h2>
-              <button type="button" onClick={() => setSalariesSupervisor(null)} className="p-2 hover:bg-primary-100 rounded-lg">✕</button>
+              <h2 className="text-xl font-bold text-primary-900">رواتب ومكافآت وخصومات: {financeSupervisor.name}</h2>
+              <button type="button" onClick={() => setFinanceSupervisor(null)} className="p-2 hover:bg-primary-100 rounded-lg">✕</button>
             </div>
-            <div className="p-4 flex-1 overflow-y-auto">
-              {!showSalaryForm ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingSalary(null)
-                      const now = new Date()
-                      setSalaryForm({ month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`, amount: 0, is_paid: false, notes: '' })
-                      setSalaryFormFile(null)
-                      setShowSalaryForm(true)
-                    }}
-                    className="mb-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-                  >
-                    إضافة راتب
-                  </button>
-                  {loadingSalaries ? (
-                    <div className="text-center py-8">جاري التحميل...</div>
-                  ) : salariesList.length === 0 ? (
-                    <p className="text-primary-600 py-4">لا توجد رواتب مسجلة.</p>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full border border-primary-200">
-                        <thead className="bg-primary-100">
-                          <tr>
-                            <th className="p-2 text-right text-primary-900 font-semibold">الشهر</th>
-                            <th className="p-2 text-right text-primary-900 font-semibold">المبلغ</th>
-                            <th className="p-2 text-right text-primary-900 font-semibold">السداد</th>
-                            <th className="p-2 text-center text-primary-900 font-semibold">إجراءات</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {salariesList.map((s) => (
-                            <tr key={s.id} className="border-t border-primary-200">
-                              <td className="p-2 text-primary-900">{s.month}</td>
-                              <td className="p-2 font-semibold">{s.amount.toFixed(2)} ج</td>
-                              <td className="p-2">{s.is_paid ? <CheckCircle className="w-5 h-5 text-green-600 inline" /> : <XCircle className="w-5 h-5 text-red-500 inline" />}</td>
-                              <td className="p-2">
-                                <div className="flex justify-center gap-2">
-                                  <button type="button" onClick={() => openEditSalary(s)} className="p-2 bg-primary-100 rounded">تعديل</button>
-                                  <button type="button" onClick={() => handleDeleteSalary(s.id)} className="p-2 bg-red-100 text-red-700 rounded">حذف</button>
-                                </div>
-                              </td>
+            <div className="p-4 flex-1 overflow-y-auto space-y-6">
+              {/* Section 1: Salaries */}
+              <div>
+                <h3 className="flex items-center gap-2 text-lg font-bold text-primary-900 mb-3">
+                  <DollarSign className="w-5 h-5" />
+                  الرواتب
+                </h3>
+                {!showSalaryForm ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingSalary(null)
+                        const now = new Date()
+                        setSalaryForm({ month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`, amount: 0, is_paid: false, notes: '' })
+                        setSalaryFormFile(null)
+                        setShowSalaryForm(true)
+                      }}
+                      className="mb-3 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm"
+                    >
+                      إضافة راتب
+                    </button>
+                    {loadingSalaries ? (
+                      <div className="text-center py-4 text-primary-600">جاري التحميل...</div>
+                    ) : salariesList.length === 0 ? (
+                      <p className="text-primary-600 py-2 text-sm">لا توجد رواتب مسجلة.</p>
+                    ) : (
+                      <div className="overflow-x-auto rounded-lg border border-primary-200">
+                        <table className="w-full">
+                          <thead className="bg-primary-100">
+                            <tr>
+                              <th className="p-2 text-right text-primary-900 font-semibold text-sm">الشهر</th>
+                              <th className="p-2 text-right text-primary-900 font-semibold text-sm">المبلغ</th>
+                              <th className="p-2 text-right text-primary-900 font-semibold text-sm">السداد</th>
+                              <th className="p-2 text-center text-primary-900 font-semibold text-sm">إجراءات</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {salariesList.map((s) => (
+                              <tr key={s.id} className="border-t border-primary-200">
+                                <td className="p-2 text-primary-900 text-sm">{s.month}</td>
+                                <td className="p-2 font-semibold text-sm">{s.amount.toFixed(2)} ج</td>
+                                <td className="p-2">{s.is_paid ? <CheckCircle className="w-4 h-4 text-green-600 inline" /> : <XCircle className="w-4 h-4 text-red-500 inline" />}</td>
+                                <td className="p-2">
+                                  <div className="flex justify-center gap-1">
+                                    <button type="button" onClick={() => openEditSalary(s)} className="p-1.5 bg-primary-100 rounded text-xs">تعديل</button>
+                                    <button type="button" onClick={() => handleDeleteSalary(s.id)} className="p-1.5 bg-red-100 text-red-700 rounded text-xs">حذف</button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                    {salariesPagination && salariesPagination.total_pages > 1 && (
+                      <div className="flex justify-center gap-2 mt-2">
+                        <button type="button" disabled={salariesPage <= 1} onClick={() => loadSalaries(financeSupervisor.id, salariesPage - 1)} className="px-3 py-1.5 border rounded text-sm disabled:opacity-50">السابق</button>
+                        <span className="py-1.5 text-primary-700 text-sm">ص {salariesPage} من {salariesPagination.total_pages}</span>
+                        <button type="button" disabled={salariesPage >= salariesPagination.total_pages} onClick={() => loadSalaries(financeSupervisor.id, salariesPage + 1)} className="px-3 py-1.5 border rounded text-sm disabled:opacity-50">التالي</button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <form onSubmit={handleSaveSalary} className="space-y-3 p-3 bg-primary-50 rounded-lg">
+                    <h4 className="font-semibold text-primary-900 text-sm">{editingSalary ? 'تعديل راتب' : 'إضافة راتب'}</h4>
+                    <div>
+                      <label className="block text-xs font-medium text-primary-700 mb-1">الشهر *</label>
+                      <input type="month" value={salaryForm.month} onChange={(e) => setSalaryForm({ ...salaryForm, month: e.target.value })} className="w-full px-3 py-2 border-2 border-primary-200 rounded-lg text-sm" required />
                     </div>
-                  )}
-                  {salariesPagination && salariesPagination.total_pages > 1 && (
-                    <div className="flex justify-center gap-2 mt-4">
-                      <button type="button" disabled={salariesPage <= 1} onClick={() => loadSalaries(salariesSupervisor.id, salariesPage - 1)} className="px-3 py-2 border rounded disabled:opacity-50">السابق</button>
-                      <span className="py-2 text-primary-700">ص {salariesPage} من {salariesPagination.total_pages}</span>
-                      <button type="button" disabled={salariesPage >= salariesPagination.total_pages} onClick={() => loadSalaries(salariesSupervisor.id, salariesPage + 1)} className="px-3 py-2 border rounded disabled:opacity-50">التالي</button>
+                    <div>
+                      <label className="block text-xs font-medium text-primary-700 mb-1">المبلغ *</label>
+                      <input type="number" step="0.01" min="0.01" value={salaryForm.amount || ''} onChange={(e) => setSalaryForm({ ...salaryForm, amount: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 border-2 border-primary-200 rounded-lg text-sm" required />
                     </div>
-                  )}
-                </>
-              ) : (
-                <form onSubmit={handleSaveSalary} className="space-y-4">
-                  <h3 className="font-bold text-primary-900">{editingSalary ? 'تعديل راتب' : 'إضافة راتب'}</h3>
-                  <div>
-                    <label className="block text-sm font-medium text-primary-700 mb-1">الشهر *</label>
-                    <input type="month" value={salaryForm.month} onChange={(e) => setSalaryForm({ ...salaryForm, month: e.target.value })} className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg" required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-primary-700 mb-1">المبلغ *</label>
-                    <input type="number" step="0.01" min="0.01" value={salaryForm.amount || ''} onChange={(e) => setSalaryForm({ ...salaryForm, amount: parseFloat(e.target.value) || 0 })} className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg" required />
-                  </div>
-                  <div>
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" checked={salaryForm.is_paid} onChange={(e) => setSalaryForm({ ...salaryForm, is_paid: e.target.checked })} />
-                      <span className="text-sm font-medium text-primary-700">تم السداد</span>
-                    </label>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-primary-700 mb-1">صورة إثبات الدفع (اختياري)</label>
-                    <input type="file" accept="image/*" onChange={(e) => setSalaryFormFile(e.target.files?.[0] || null)} className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-primary-700 mb-1">ملاحظات</label>
-                    <input type="text" value={salaryForm.notes || ''} onChange={(e) => setSalaryForm({ ...salaryForm, notes: e.target.value })} className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg" />
-                  </div>
-                  <div className="flex gap-3">
-                    <button type="button" onClick={() => setShowSalaryForm(false)} className="flex-1 py-2.5 border-2 border-primary-300 rounded-lg text-primary-700 font-medium">إلغاء</button>
-                    <button type="submit" className="flex-1 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700">حفظ</button>
-                  </div>
-                </form>
-              )}
+                    <div>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={salaryForm.is_paid} onChange={(e) => setSalaryForm({ ...salaryForm, is_paid: e.target.checked })} />
+                        <span className="text-primary-700">تم السداد</span>
+                      </label>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-primary-700 mb-1">صورة إثبات الدفع (اختياري)</label>
+                      <input type="file" accept="image/*" onChange={(e) => setSalaryFormFile(e.target.files?.[0] || null)} className="w-full px-3 py-2 border-2 border-primary-200 rounded-lg text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-primary-700 mb-1">ملاحظات</label>
+                      <input type="text" value={salaryForm.notes || ''} onChange={(e) => setSalaryForm({ ...salaryForm, notes: e.target.value })} className="w-full px-3 py-2 border-2 border-primary-200 rounded-lg text-sm" />
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setShowSalaryForm(false)} className="flex-1 py-2 border-2 border-primary-300 rounded-lg text-primary-700 text-sm font-medium">إلغاء</button>
+                      <button type="submit" className="flex-1 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">حفظ</button>
+                    </div>
+                  </form>
+                )}
+              </div>
+
+              {/* Section 2: Rewards and Deductions */}
+              <div className="border-t border-primary-200 pt-4">
+                <h3 className="flex items-center gap-2 text-lg font-bold text-primary-900 mb-3">
+                  <Award className="w-5 h-5" />
+                  المكافآت والخصومات
+                </h3>
+                {!showRewardForm ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingReward(null)
+                        const now = new Date()
+                        setRewardForm({
+                          type: 'reward',
+                          title: '',
+                          description: '',
+                          amount: 0,
+                          month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+                          notes: '',
+                        })
+                        setShowRewardForm(true)
+                      }}
+                      className="mb-3 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                    >
+                      إضافة مكافأة/خصم
+                    </button>
+                    {loadingRewards ? (
+                      <div className="text-center py-4 text-primary-600">جاري التحميل...</div>
+                    ) : rewardsList.length === 0 ? (
+                      <p className="text-primary-600 py-2 text-sm">لا توجد مكافآت أو خصومات.</p>
+                    ) : (
+                      <div className="overflow-x-auto rounded-lg border border-primary-200">
+                        <table className="w-full">
+                          <thead className="bg-primary-100">
+                            <tr>
+                              <th className="p-2 text-right text-primary-900 font-semibold text-sm">النوع</th>
+                              <th className="p-2 text-right text-primary-900 font-semibold text-sm">العنوان</th>
+                              <th className="p-2 text-right text-primary-900 font-semibold text-sm">الشهر</th>
+                              <th className="p-2 text-right text-primary-900 font-semibold text-sm">المبلغ</th>
+                              <th className="p-2 text-center text-primary-900 font-semibold text-sm">إجراءات</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rewardsList.map((r) => (
+                              <tr key={r.id} className="border-t border-primary-200">
+                                <td className="p-2 text-sm">
+                                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${r.type === 'reward' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                    {r.type_label}
+                                  </span>
+                                </td>
+                                <td className="p-2 text-primary-900 text-sm">{r.title}</td>
+                                <td className="p-2 text-primary-700 text-sm">{r.month}</td>
+                                <td className={`p-2 font-semibold text-sm ${r.type === 'reward' ? 'text-green-700' : 'text-red-700'}`}>
+                                  {r.type === 'reward' ? '+' : '-'}{r.amount.toFixed(2)} ج
+                                </td>
+                                <td className="p-2">
+                                  <div className="flex justify-center gap-1">
+                                    <button type="button" onClick={() => openEditReward(r)} className="p-1.5 bg-primary-100 rounded text-xs">تعديل</button>
+                                    <button type="button" onClick={() => handleDeleteReward(r.id)} className="p-1.5 bg-red-100 text-red-700 rounded text-xs">حذف</button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                    {rewardsPagination && rewardsPagination.total_pages > 1 && (
+                      <div className="flex justify-center gap-2 mt-2">
+                        <button type="button" disabled={rewardsPage <= 1} onClick={() => loadRewards(financeSupervisor.id, rewardsPage - 1)} className="px-3 py-1.5 border rounded text-sm disabled:opacity-50">السابق</button>
+                        <span className="py-1.5 text-primary-700 text-sm">ص {rewardsPage} من {rewardsPagination.total_pages}</span>
+                        <button type="button" disabled={rewardsPage >= rewardsPagination.total_pages} onClick={() => loadRewards(financeSupervisor.id, rewardsPage + 1)} className="px-3 py-1.5 border rounded text-sm disabled:opacity-50">التالي</button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <form onSubmit={handleSaveReward} className="space-y-3 p-3 bg-primary-50 rounded-lg">
+                    <h4 className="font-semibold text-primary-900 text-sm">{editingReward ? 'تعديل مكافأة/خصم' : 'إضافة مكافأة/خصم'}</h4>
+                    <div>
+                      <label className="block text-xs font-medium text-primary-700 mb-1">النوع *</label>
+                      <select value={rewardForm.type} onChange={(e) => setRewardForm({ ...rewardForm, type: e.target.value as SupervisorRewardDeductionType })} className="w-full px-3 py-2 border-2 border-primary-200 rounded-lg text-sm" required>
+                        <option value="reward">مكافأة</option>
+                        <option value="deduction">خصم</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-primary-700 mb-1">العنوان *</label>
+                      <input type="text" value={rewardForm.title} onChange={(e) => setRewardForm({ ...rewardForm, title: e.target.value })} className="w-full px-3 py-2 border-2 border-primary-200 rounded-lg text-sm" required />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-primary-700 mb-1">الوصف (اختياري)</label>
+                      <input type="text" value={rewardForm.description || ''} onChange={(e) => setRewardForm({ ...rewardForm, description: e.target.value })} className="w-full px-3 py-2 border-2 border-primary-200 rounded-lg text-sm" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium text-primary-700 mb-1">الشهر *</label>
+                        <input type="month" value={rewardForm.month} onChange={(e) => setRewardForm({ ...rewardForm, month: e.target.value })} className="w-full px-3 py-2 border-2 border-primary-200 rounded-lg text-sm" required />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-primary-700 mb-1">المبلغ *</label>
+                        <input type="number" step="0.01" min="0.01" value={rewardForm.amount || ''} onChange={(e) => setRewardForm({ ...rewardForm, amount: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 border-2 border-primary-200 rounded-lg text-sm" required />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-primary-700 mb-1">ملاحظات</label>
+                      <input type="text" value={rewardForm.notes || ''} onChange={(e) => setRewardForm({ ...rewardForm, notes: e.target.value })} className="w-full px-3 py-2 border-2 border-primary-200 rounded-lg text-sm" />
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setShowRewardForm(false)} className="flex-1 py-2 border-2 border-primary-300 rounded-lg text-primary-700 text-sm font-medium">إلغاء</button>
+                      <button type="submit" className="flex-1 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">حفظ</button>
+                    </div>
+                  </form>
+                )}
+              </div>
             </div>
           </div>
         </div>
