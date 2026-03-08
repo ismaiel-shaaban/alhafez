@@ -86,6 +86,7 @@ export interface Student {
     total_subscriptions: number
     paid_subscriptions: number
     unpaid_subscriptions: number
+    past_months_count?: number
     first_subscription_date?: string
     last_subscription_date?: string
     monthly_sessions?: number
