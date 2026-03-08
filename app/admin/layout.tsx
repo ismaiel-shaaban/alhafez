@@ -23,6 +23,7 @@ import {
   UserCheck,
   AlertCircle,
   Shield,
+  Trash2,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -84,6 +85,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/sessions', label: 'حصص اليوم', icon: Calendar },
     { href: '/admin/website-students', label: '  الطلاب الجدد', icon: Users },
     { href: '/admin/students', label: 'الطلاب', icon: Users },
+    { href: '/admin/trashed-students', label: 'الطلاب المحذوفة', icon: Trash2 },
     { href: '/admin/teachers', label: 'المعلمين', icon: GraduationCap },
     { href: '/admin/teacher-salary', label: 'الرواتب', icon: DollarSign },
     { href: '/admin/accounting', label: 'المحاسبة', icon: Calculator, restricted: true },

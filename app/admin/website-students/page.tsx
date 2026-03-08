@@ -2,9 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import { useAdminStore } from '@/store/useAdminStore'
-import { Search, Eye, X, Edit, Trash2, AlertTriangle, Plus } from 'lucide-react'
+import { Search, Eye, X, Edit, Trash2, AlertTriangle, Plus, CreditCard, Calendar, CheckCircle, Clock } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import SearchableTeacherSelect from '@/components/admin/SearchableTeacherSelect'
+import {
+  parseWeeklyScheduleFromApi,
+  parseWeeklyDaysFromApi,
+  toApiWeeklySchedule,
+  toApiWeeklyDays,
+  type WeeklyScheduleForm,
+  type WeeklyDaysForm,
+} from '@/lib/weekly-schedule-utils'
 
 const DAYS_OF_WEEK = [
   { value: 'saturday', label: 'السبت', arName: 'السبت' },
@@ -32,6 +40,13 @@ export default function WebsiteStudentsPage() {
     fetchPackages,
     teachers,
     fetchTeachers,
+    sessions,
+    isLoadingSessions,
+    fetchSessions,
+    completeSession,
+    revertSessionToPending,
+    deleteSession,
+    updateSubscriptionPaymentStatus,
     error 
   } = useAdminStore()
   
@@ -54,6 +69,10 @@ export default function WebsiteStudentsPage() {
   const [trialSessionTime, setTrialSessionTime] = useState<string>('')
   const [trialSessionDuration, setTrialSessionDuration] = useState<string>('')
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showSubscriptionsOnlyModal, setShowSubscriptionsOnlyModal] = useState(false)
+  const [selectedStudentForSubscriptions, setSelectedStudentForSubscriptions] = useState<any>(null)
+  const [showSessionsModal, setShowSessionsModal] = useState(false)
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null)
   const [newStudent, setNewStudent] = useState({
     name: '',
     email: '',
@@ -76,8 +95,8 @@ export default function WebsiteStudentsPage() {
     hour: '',
     monthly_sessions: '',
     weekly_sessions: '',
-    weekly_days: [] as string[],
-    weekly_schedule: {} as Record<string, string>,
+    weekly_days: [] as WeeklyDaysForm,
+    weekly_schedule: {} as WeeklyScheduleForm,
     useWeeklySchedule: false,
     session_duration: '',
     hourly_rate: '',
@@ -103,6 +122,67 @@ export default function WebsiteStudentsPage() {
     fetchTeachers(1, 1000)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, trialSessionFilter, teacherFilterId])
+
+  const handleViewSubscriptionsOnly = async (student: any) => {
+    try {
+      const fullStudent = await getStudent(student.id)
+      setSelectedStudentForSubscriptions(fullStudent)
+      setShowSubscriptionsOnlyModal(true)
+    } catch (error: any) {
+      alert(error.message || 'فشل تحميل الاشتراكات')
+    }
+  }
+
+  const handleViewSessions = async (studentId: number) => {
+    setSelectedStudentId(studentId)
+    await fetchSessions({ student_id: studentId, per_page: 10000 })
+    setShowSessionsModal(true)
+  }
+
+  const handleToggleSubscriptionPayment = async (subscriptionId: number, currentIsPaid: boolean) => {
+    if (!selectedStudentForSubscriptions) return
+    try {
+      await updateSubscriptionPaymentStatus(subscriptionId, !currentIsPaid)
+      const updatedStudent = await getStudent(selectedStudentForSubscriptions.id)
+      setSelectedStudentForSubscriptions(updatedStudent)
+    } catch (error: any) {
+      alert(error.message || 'فشل تحديث حالة الدفع')
+    }
+  }
+
+  const handleCompleteSession = async (sessionId: number) => {
+    if (!selectedStudentId) return
+    try {
+      await completeSession(sessionId)
+      await fetchSessions({ student_id: selectedStudentId, per_page: 10000 })
+    } catch (error: any) {
+      alert(error.message || 'فشل إتمام الحصة')
+    }
+  }
+
+  const handleRevertToPending = async (sessionId: number) => {
+    if (!selectedStudentId || !confirm('هل أنت متأكد من إرجاع الحصة إلى قيد الانتظار؟')) return
+    try {
+      await revertSessionToPending(sessionId)
+      await fetchSessions({ student_id: selectedStudentId, per_page: 10000 })
+    } catch (error: any) {
+      alert(error.message || 'فشل إرجاع الحصة قيد الانتظار')
+    }
+  }
+
+  const handleDeleteSession = async (sessionId: number) => {
+    if (!selectedStudentId || !confirm('هل أنت متأكد من حذف هذه الحصة؟')) return
+    try {
+      await deleteSession(sessionId)
+      await fetchSessions({ student_id: selectedStudentId, per_page: 10000 })
+    } catch (error: any) {
+      alert(error.message || 'فشل حذف الحصة')
+    }
+  }
+
+  const studentSessions = selectedStudentId
+    ? sessions.filter((s: { student_id: number }) => s.student_id === selectedStudentId)
+    : []
 
   const handleViewStudent = async (id: number) => {
     try {
@@ -146,6 +226,7 @@ export default function WebsiteStudentsPage() {
       // Get subscription statistics
       const paidMonthsCount = fullStudent.subscriptions_statistics?.paid_subscriptions?.toString() || ''
       const totalSubscriptions = fullStudent.subscriptions_statistics?.total_subscriptions || 0
+      const pastMonthsCount = fullStudent.subscriptions_statistics?.past_months_count ?? fullStudent.past_months_count ?? totalSubscriptions
       
       setEditingId(fullStudent.id)
       setEditForm({
@@ -159,8 +240,8 @@ export default function WebsiteStudentsPage() {
         hour: fullStudent.hour || '',
         monthly_sessions: fullStudent.monthly_sessions?.toString() || '',
         weekly_sessions: fullStudent.weekly_sessions?.toString() || '',
-        weekly_days: Array.isArray(fullStudent.weekly_days) ? [...fullStudent.weekly_days] : [],
-        weekly_schedule: hasWeeklySchedule ? { ...fullStudent.weekly_schedule } : {},
+        weekly_days: parseWeeklyDaysFromApi(fullStudent.weekly_days as any),
+        weekly_schedule: hasWeeklySchedule ? parseWeeklyScheduleFromApi(fullStudent.weekly_schedule as any) : {},
         useWeeklySchedule: hasWeeklySchedule,
         session_duration: fullStudent.session_duration?.toString() || '',
         hourly_rate: fullStudent.hourly_rate?.toString() || '',
@@ -170,8 +251,8 @@ export default function WebsiteStudentsPage() {
         monthly_subscription_price: fullStudent.monthly_subscription_price?.toString() || '',
         country: fullStudent.country || '',
         currency: fullStudent.currency || '',
-        // Get data from subscriptions_statistics (only if no subscriptions exist)
-        past_months_count: hasSubscriptions ? '' : totalSubscriptions.toString(),
+        // past_months_count: always editable, from subscriptions_statistics.past_months_count
+        past_months_count: String(pastMonthsCount ?? ''),
         paid_months_count: fullStudent.paid_months_count?.toString() ?? (hasSubscriptions ? '' : paidMonthsCount),
         subscription_start_date: hasSubscriptions ? '' : subscriptionStartDate,
         paid_subscriptions_count: '',
@@ -212,18 +293,18 @@ export default function WebsiteStudentsPage() {
 
         // If using weekly_schedule, send it (takes precedence)
         if (editForm.useWeeklySchedule && Object.keys(editForm.weekly_schedule).length > 0) {
-          updateData.weekly_schedule = editForm.weekly_schedule
+          updateData.weekly_schedule = toApiWeeklySchedule(editForm.weekly_schedule)
         } else {
-          // Otherwise, use hour and weekly_days
           if (editForm.hour) updateData.hour = editForm.hour
-          if (editForm.weekly_days.length > 0) updateData.weekly_days = editForm.weekly_days
+          if (editForm.weekly_days.length > 0) updateData.weekly_days = toApiWeeklyDays(editForm.weekly_days)
         }
 
-        // Add subscription-related fields only if student doesn't have existing subscriptions
+        // past_months_count: always send when provided (editable for all students)
+        if (editForm.past_months_count !== '') {
+          updateData.past_months_count = parseInt(editForm.past_months_count)
+        }
+        // Add other subscription-related fields only if student doesn't have existing subscriptions
         if (!editingStudentHasSubscriptions) {
-          if (editForm.past_months_count) {
-            updateData.past_months_count = parseInt(editForm.past_months_count)
-          }
           if (editForm.subscription_start_date) {
             updateData.subscription_start_date = editForm.subscription_start_date
           }
@@ -552,7 +633,7 @@ export default function WebsiteStudentsPage() {
   const tabStudents = filteredStudents.filter(student => student.type === activeTab)
 
   return (
-    <div className="min-w-0 overflow-x-hidden px-3 sm:px-4 lg:px-6">
+    <div className="min-w-0 px-3 sm:px-4 lg:px-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
         <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-primary-900">الطلاب</h1>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -728,6 +809,20 @@ export default function WebsiteStudentsPage() {
                     <Eye className="w-4 h-4" />
                   </button>
                   <button
+                    onClick={() => handleViewSubscriptionsOnly(student)}
+                    className="p-2 text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"
+                    title="الاشتراكات"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleViewSessions(student.id)}
+                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                    title="عرض الحصص"
+                  >
+                    <Calendar className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={() => handleEdit(student)}
                     className="p-2 text-primary-600 hover:bg-primary-100 rounded-lg transition-colors"
                     title="تعديل"
@@ -754,20 +849,31 @@ export default function WebsiteStudentsPage() {
           </div>
 
           {/* Desktop Table View */}
-          <div className="hidden md:block bg-white rounded-lg lg:rounded-xl border-2 border-primary-200 overflow-hidden shadow-lg">
+          <div className="hidden md:block bg-white rounded-lg lg:rounded-xl border-2 border-primary-200 overflow-hidden shadow-lg min-w-0">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px] text-sm lg:text-base">
+              <table className="w-full text-sm lg:text-base table-fixed" style={{ tableLayout: 'fixed', minWidth: 0 }}>
+                <colgroup>
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '4%' }} />
+                  <col style={{ width: '6%' }} />
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '24%' }} />
+                </colgroup>
                 <thead className="bg-primary-100">
                   <tr>
-                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-right text-primary-900 font-semibold whitespace-nowrap">الاسم</th>
-                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-right text-primary-900 font-semibold whitespace-nowrap">البريد</th>
-                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-right text-primary-900 font-semibold whitespace-nowrap">الهاتف</th>
-                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-right text-primary-900 font-semibold whitespace-nowrap">العمر</th>
-                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-right text-primary-900 font-semibold whitespace-nowrap">الجنس</th>
-                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-right text-primary-900 font-semibold whitespace-nowrap">الباقة</th>
-                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-right text-primary-900 font-semibold whitespace-nowrap">المعلم</th>
-                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-center text-primary-900 font-semibold whitespace-nowrap">جلسة التجربة</th>
-                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-center text-primary-900 font-semibold whitespace-nowrap">الإجراءات</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-right text-primary-900 font-semibold whitespace-nowrap truncate">الاسم</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-right text-primary-900 font-semibold whitespace-nowrap truncate">البريد</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-right text-primary-900 font-semibold whitespace-nowrap truncate">الهاتف</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-right text-primary-900 font-semibold whitespace-nowrap">العمر</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-right text-primary-900 font-semibold whitespace-nowrap">الجنس</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-right text-primary-900 font-semibold whitespace-nowrap truncate">الباقة</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-right text-primary-900 font-semibold whitespace-nowrap truncate">المعلم</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-center text-primary-900 font-semibold whitespace-nowrap truncate">جلسة التجربة</th>
+                    <th className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-center text-primary-900 font-semibold whitespace-nowrap">الإجراءات</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -776,15 +882,15 @@ export default function WebsiteStudentsPage() {
                       key={student.id}
                       className="border-b border-primary-200 hover:bg-primary-50 transition-colors"
                     >
-                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-primary-900 font-medium max-w-[120px] lg:max-w-none truncate" title={student.name}>{student.name}</td>
-                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-primary-700 max-w-[100px] lg:max-w-none truncate" title={student.email || ''}>{student.email || '-'}</td>
-                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-primary-700 whitespace-nowrap" dir="ltr">{student.phone}</td>
-                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-primary-700">{student.age || '-'}</td>
-                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-primary-700">{student.gender_label || (student.gender === 'male' ? 'ذكر' : 'أنثى')}</td>
-                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-primary-700 max-w-[100px] truncate" title={student.package?.name || ''}>{student.package?.name || '-'}</td>
-                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-primary-700 max-w-[100px] truncate" title={student.teacher?.name || ''}>{student.teacher?.name || '-'}</td>
-                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4">
-                        <div className="flex flex-col items-center gap-2">
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-primary-900 font-medium truncate overflow-hidden" title={student.name}>{student.name}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-primary-700 truncate" title={student.email || ''}>{student.email || '-'}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-primary-700 truncate" dir="ltr" title={student.phone}>{student.phone}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-primary-700">{student.age || '-'}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-primary-700">{student.gender_label || (student.gender === 'male' ? 'ذكر' : 'أنثى')}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-primary-700 truncate" title={student.package?.name || ''}>{student.package?.name || '-'}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3 text-primary-700 truncate" title={student.teacher?.name || ''}>{student.teacher?.name || '-'}</td>
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3">
+                        <div className="flex flex-col items-center gap-1.5">
                           {getTrialAttendanceBadge(student.trial_session_attendance)}
                           <select
                             value={student.trial_session_attendance || 'not_booked'}
@@ -799,7 +905,7 @@ export default function WebsiteStudentsPage() {
                           </select>
                         </div>
                       </td>
-                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4">
+                      <td className="px-3 py-2 md:px-4 md:py-3 lg:px-5 lg:py-3">
                         <div className="flex items-center justify-center gap-1 lg:gap-2 flex-wrap">
                           <button
                             onClick={() => handleViewStudent(student.id)}
@@ -807,6 +913,20 @@ export default function WebsiteStudentsPage() {
                             title="عرض التفاصيل"
                           >
                             <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleViewSubscriptionsOnly(student)}
+                            className="p-1.5 lg:p-2 text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"
+                            title="الاشتراكات"
+                          >
+                            <CreditCard className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleViewSessions(student.id)}
+                            className="p-1.5 lg:p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            title="عرض الحصص"
+                          >
+                            <Calendar className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleEdit(student)}
@@ -1148,12 +1268,17 @@ export default function WebsiteStudentsPage() {
                   <div>
                     <label className="block text-primary-600 text-sm mb-2">الجدول الأسبوعي</label>
                     <div className="bg-primary-50 rounded-lg p-4">
-                      {Object.entries(viewedStudent.weekly_schedule).map(([day, time]) => (
-                        <div key={day} className="flex items-center justify-between py-2 border-b border-primary-200 last:border-0">
-                          <span className="text-primary-900 font-medium">{day}</span>
-                          <span className="text-primary-700">{time as string}</span>
-                        </div>
-                      ))}
+                      {Object.entries(viewedStudent.weekly_schedule).map(([day, val]) => {
+                        const dayObj = DAYS_OF_WEEK.find(d => d.value === day || d.arName === day)
+                        const timeStr = typeof val === 'string' ? val : (val as any)?.time
+                        const dur = typeof val === 'object' && val && 'session_duration' in val ? (val as any).session_duration : null
+                        return (
+                          <div key={day} className="flex items-center justify-between py-2 border-b border-primary-200 last:border-0">
+                            <span className="text-primary-900 font-medium">{dayObj?.label || day}</span>
+                            <span className="text-primary-700">{timeStr || '-'}{dur != null ? ` (${dur} د)` : ''}</span>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
@@ -1162,14 +1287,16 @@ export default function WebsiteStudentsPage() {
                   <div>
                     <label className="block text-primary-600 text-sm mb-2">أيام الأسبوع</label>
                     <div className="flex flex-wrap gap-2">
-                      {viewedStudent.weekly_days.map((day: string) => {
+                      {viewedStudent.weekly_days.map((item: any) => {
+                        const day = typeof item === 'string' ? item : item?.day
                         const dayObj = DAYS_OF_WEEK.find(d => d.value === day)
+                        const dur = typeof item === 'object' && item?.session_duration != null ? ` (${item.session_duration} د)` : ''
                         return (
                           <span
                             key={day}
                             className="px-3 py-1 bg-primary-100 text-primary-700 rounded-lg text-sm"
                           >
-                            {dayObj?.label || day}
+                            {dayObj?.label || day}{dur}
                           </span>
                         )
                       })}
@@ -1451,24 +1578,38 @@ export default function WebsiteStudentsPage() {
                   
                   {editForm.useWeeklySchedule ? (
                     <div className="space-y-3 p-4 bg-primary-50 rounded-lg border-2 border-primary-200">
-                      <p className="text-sm text-primary-600 mb-3">حدد وقت الحصة لكل يوم (اختياري)</p>
+                      <p className="text-sm text-primary-600 mb-3">حدد وقت الحصة ومدة الحصة (اختياري) لكل يوم</p>
                       {DAYS_OF_WEEK.map((day) => (
-                        <div key={day.value} className="flex items-center gap-3">
+                        <div key={day.value} className="flex items-center gap-3 flex-wrap">
                           <label className="w-24 text-primary-700 font-medium">{day.label}</label>
                           <input
                             type="time"
-                            value={editForm.weekly_schedule[day.arName] || ''}
+                            value={editForm.weekly_schedule[day.value]?.time || ''}
                             onChange={(e) => {
                               const newSchedule = { ...editForm.weekly_schedule }
                               if (e.target.value) {
-                                newSchedule[day.arName] = e.target.value
+                                newSchedule[day.value] = { ...(newSchedule[day.value] || { time: '', session_duration: '' }), time: e.target.value }
                               } else {
-                                delete newSchedule[day.arName]
+                                delete newSchedule[day.value]
                               }
                               setEditForm({ ...editForm, weekly_schedule: newSchedule })
                             }}
-                            className="flex-1 px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
-                            placeholder="اختياري"
+                            className="flex-1 min-w-[100px] px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                          />
+                          <input
+                            type="number"
+                            min="1"
+                            max="180"
+                            placeholder="مدة (د)"
+                            value={editForm.weekly_schedule[day.value]?.session_duration || ''}
+                            onChange={(e) => {
+                              const newSchedule = { ...editForm.weekly_schedule }
+                              if (newSchedule[day.value]) {
+                                newSchedule[day.value] = { ...newSchedule[day.value], session_duration: e.target.value }
+                              }
+                              setEditForm({ ...editForm, weekly_schedule: newSchedule })
+                            }}
+                            className="w-20 px-2 py-2 border-2 border-primary-200 rounded-lg text-sm"
                           />
                         </div>
                       ))}
@@ -1487,23 +1628,17 @@ export default function WebsiteStudentsPage() {
                       </div>
                       <div>
                         <label className="block text-primary-900 font-semibold mb-2 text-right">أيام الأسبوع</label>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
                           {DAYS_OF_WEEK.map((day) => (
                             <label key={day.value} className="flex items-center gap-2 cursor-pointer">
                               <input
                                 type="checkbox"
-                                checked={editForm.weekly_days.includes(day.value)}
+                                checked={editForm.weekly_days.some((d) => d.day === day.value)}
                                 onChange={(e) => {
                                   if (e.target.checked) {
-                                    setEditForm({
-                                      ...editForm,
-                                      weekly_days: [...editForm.weekly_days, day.value],
-                                    })
+                                    setEditForm({ ...editForm, weekly_days: [...editForm.weekly_days, { day: day.value, session_duration: '' }] })
                                   } else {
-                                    setEditForm({
-                                      ...editForm,
-                                      weekly_days: editForm.weekly_days.filter((d) => d !== day.value),
-                                    })
+                                    setEditForm({ ...editForm, weekly_days: editForm.weekly_days.filter((d) => d.day !== day.value) })
                                   }
                                 }}
                                 className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
@@ -1512,6 +1647,28 @@ export default function WebsiteStudentsPage() {
                             </label>
                           ))}
                         </div>
+                        {editForm.weekly_days.length > 0 && (
+                          <div className="space-y-2 mt-2 p-2 bg-primary-50 rounded-lg">
+                            <p className="text-xs text-primary-600 mb-1">مدة الحصة لكل يوم (اختياري)</p>
+                            {editForm.weekly_days.map((item) => (
+                              <div key={item.day} className="flex items-center gap-2">
+                                <span className="text-sm w-20">{DAYS_OF_WEEK.find((d) => d.value === item.day)?.label}</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="180"
+                                  placeholder="دقيقة"
+                                  value={item.session_duration || ''}
+                                  onChange={(e) => setEditForm({
+                                    ...editForm,
+                                    weekly_days: editForm.weekly_days.map((d) => d.day === item.day ? { ...d, session_duration: e.target.value } : d),
+                                  })}
+                                  className="w-20 px-2 py-1 border rounded text-sm"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -1539,6 +1696,28 @@ export default function WebsiteStudentsPage() {
                   />
                 </div>
                 
+                {/* past_months_count - always editable (subscriptions_statistics.past_months_count) */}
+                <div className="border-t-2 border-primary-200 pt-4 mt-4">
+                  <h3 className="text-lg font-bold text-primary-900 mb-4 text-right">عدد الأشهر السابقة</h3>
+                  <div>
+                    <label className="block text-primary-900 font-semibold mb-2 text-right">
+                      عدد الأشهر السابقة (past_months_count)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="120"
+                      value={editForm.past_months_count}
+                      onChange={(e) => setEditForm({ ...editForm, past_months_count: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
+                      placeholder="0-120"
+                    />
+                    <p className="text-xs text-primary-600 mt-1 text-right">
+                      يُعرض في إحصائيات الاشتراكات (past_months_count)
+                    </p>
+                  </div>
+                </div>
+
                 {/* Subscription Fields Section - Only show if student doesn't have existing subscriptions */}
                 {!editingStudentHasSubscriptions && (
                   <div className="border-t-2 border-primary-200 pt-4 mt-4">
@@ -1559,23 +1738,6 @@ export default function WebsiteStudentsPage() {
                         </p>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-primary-900 font-semibold mb-2 text-right">
-                            عدد الأشهر السابقة
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            max="120"
-                            value={editForm.past_months_count}
-                            onChange={(e) => setEditForm({ ...editForm, past_months_count: e.target.value })}
-                            className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none"
-                            placeholder="0-120"
-                          />
-                          <p className="text-xs text-primary-600 mt-1 text-right">
-                            عدد الأشهر السابقة لإنشاء اشتراكات لها
-                          </p>
-                        </div>
                         <div>
                           <label className="block text-primary-900 font-semibold mb-2 text-right">
                             عدد الأشهر المدفوعة
@@ -1615,6 +1777,225 @@ export default function WebsiteStudentsPage() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Subscriptions-only Modal */}
+      <AnimatePresence>
+        {showSubscriptionsOnlyModal && selectedStudentForSubscriptions && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowSubscriptionsOnlyModal(false)
+              setSelectedStudentForSubscriptions(null)
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-8 max-w-5xl w-full shadow-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-primary-900">
+                  الاشتراكات — {selectedStudentForSubscriptions.name}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowSubscriptionsOnlyModal(false)
+                    setSelectedStudentForSubscriptions(null)
+                  }}
+                  className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {selectedStudentForSubscriptions.subscriptions && Array.isArray(selectedStudentForSubscriptions.subscriptions) && selectedStudentForSubscriptions.subscriptions.length > 0 ? (
+                <div className="overflow-x-auto rounded-xl border-2 border-primary-200">
+                  <table className="w-full border-collapse bg-white" style={{ tableLayout: 'auto', minWidth: '100%' }}>
+                    <thead className="bg-primary-100">
+                      <tr>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">رقم الاشتراك</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">تاريخ البدء</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">تاريخ الانتهاء</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">الحصص</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">السعر / المتبقي</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">الحالة</th>
+                        <th className="px-4 py-3 text-center text-sm font-semibold text-primary-900 border-b-2 border-primary-200 whitespace-nowrap">إجراء</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedStudentForSubscriptions.subscriptions.map((subscription: any, index: number) => (
+                        <tr key={subscription.id} className="border-b border-primary-100 hover:bg-primary-50 transition-colors">
+                          <td className="px-4 py-3 text-primary-900 font-medium text-sm whitespace-nowrap">{subscription.subscription_number ?? index + 1}</td>
+                          <td className="px-4 py-3 text-primary-700 text-sm whitespace-nowrap">{subscription.start_date}</td>
+                          <td className="px-4 py-3 text-primary-700 text-sm whitespace-nowrap">{subscription.end_date}</td>
+                          <td className="px-4 py-3 text-primary-700 text-sm whitespace-nowrap">
+                            {subscription.completed_sessions_count ?? 0} / {subscription.total_sessions || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-primary-700 text-sm whitespace-nowrap">
+                            {subscription.subscription_price != null ? `السعر: ${subscription.subscription_price}` : ''}
+                            {subscription.remaining_amount != null && subscription.remaining_amount > 0 && (
+                              <span className="text-red-600 font-medium block">المتبقي: {subscription.remaining_amount}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {subscription.is_paid ? (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-800 rounded-lg text-xs font-semibold">
+                                <CheckCircle className="w-4 h-4" /> مدفوع
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-800 rounded-lg text-xs font-semibold">
+                                <X className="w-4 h-4" /> غير مدفوع
+                              </span>
+                            )}
+                            {subscription.is_active && (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs mr-1">
+                                <Clock className="w-3 h-3" /> نشط
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => handleToggleSubscriptionPayment(subscription.id, subscription.is_paid)}
+                              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                                subscription.is_paid ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
+                              }`}
+                              title={subscription.is_paid ? 'تعيين كغير مدفوع' : 'تعيين كمدفوع'}
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              {subscription.is_paid ? 'غير مدفوع' : 'مدفوع'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-primary-600 text-center py-8">لا توجد اشتراكات مسجلة</p>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Sessions Modal */}
+      <AnimatePresence>
+        {showSessionsModal && selectedStudentId && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowSessionsModal(false)
+              setSelectedStudentId(null)
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-8 max-w-4xl w-full shadow-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-primary-900">حصص الطالب</h2>
+                <button
+                  onClick={() => {
+                    setShowSessionsModal(false)
+                    setSelectedStudentId(null)
+                  }}
+                  className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {isLoadingSessions ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : studentSessions.length === 0 ? (
+                <div className="text-center py-12 text-primary-600">لا توجد حصص مسجلة</div>
+              ) : (
+                <div className="space-y-4">
+                  {studentSessions.map((session: any, index: number) => (
+                    <div
+                      key={session.id}
+                      className={`p-4 rounded-lg border-2 ${
+                        session.is_completed
+                          ? 'border-green-200 bg-green-50'
+                          : 'border-primary-200 bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          {session.is_completed ? (
+                            <CheckCircle className="w-6 h-6 text-green-600" />
+                          ) : (
+                            <Clock className="w-6 h-6 text-primary-600" />
+                          )}
+                          <div>
+                            <div className="flex items-center gap-3 mb-1">
+                              <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary-600 text-white font-bold flex-shrink-0">
+                                {(session as any).session_number || index + 1}
+                              </span>
+                              <p className="font-bold text-lg text-primary-900">
+                                {session.session_date} - {session.session_time}
+                              </p>
+                            </div>
+                            <p className="text-sm text-primary-600">
+                              {session.day_of_week_label || session.day_of_week}
+                              {session.teacher && ` - ${session.teacher.name}`}
+                            </p>
+                            {(session as any).student_joined_at && (
+                              <p className="text-xs text-primary-500 mt-0.5">
+                                دخول الطالب: {new Date((session as any).student_joined_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            )}
+                            {session.notes && (
+                              <p className="text-sm text-primary-700 mt-1">{session.notes}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {!session.is_completed && (
+                            <button
+                              onClick={() => handleCompleteSession(session.id)}
+                              className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                            >
+                              إتمام
+                            </button>
+                          )}
+                          {session.is_completed && (
+                            <button
+                              onClick={() => handleRevertToPending(session.id)}
+                              className="px-3 py-1 bg-amber-100 text-amber-800 hover:bg-amber-200 rounded-lg transition-colors text-sm"
+                            >
+                              إرجاع قيد الانتظار
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDeleteSession(session.id)}
+                            className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                          >
+                            حذف
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

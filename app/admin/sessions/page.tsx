@@ -2,18 +2,18 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { Calendar as CalendarIcon, Clock, X, User, GraduationCap, CheckCircle, AlertCircle, Filter, Search, ChevronDown, FileText, Star } from 'lucide-react'
-import { getSessionsByDate, StudentSession, SessionReport, SessionEvaluation } from '@/lib/api/sessions'
+import { getSessionsByDate, listSessions, StudentSession, SessionReport, SessionEvaluation, revertSessionToPending, updateSession, completeSession, type SessionStatusFilter } from '@/lib/api/sessions'
 import { useAdminStore } from '@/store/useAdminStore'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function SessionsPage() {
-  const { teachers, fetchTeachers } = useAdminStore()
+  const { teachers, fetchTeachers, getSession } = useAdminStore()
   const [selectedDate, setSelectedDate] = useState<string>(() => {
-    // Get today's date in YYYY-MM-DD format
     const today = new Date()
     return today.toISOString().split('T')[0]
   })
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>('')
+  const [statusFilter, setStatusFilter] = useState<SessionStatusFilter>('')
   const [sessions, setSessions] = useState<StudentSession[]>([])
   const [statistics, setStatistics] = useState<{
     total_sessions: number
@@ -23,6 +23,7 @@ export default function SessionsPage() {
   const [selectedSession, setSelectedSession] = useState<StudentSession | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [updatingSessionId, setUpdatingSessionId] = useState<number | null>(null)
 
   // Custom dropdown states
   const [isTeacherDropdownOpen, setIsTeacherDropdownOpen] = useState(false)
@@ -34,15 +35,32 @@ export default function SessionsPage() {
     fetchTeachers(1, 1000)
   }, [fetchTeachers])
 
-  // Load sessions for selected date and teacher
+  // Load sessions for selected date, teacher, and status
   useEffect(() => {
     const loadSessions = async () => {
       setLoading(true)
       try {
         const teacherId = selectedTeacherId ? parseInt(selectedTeacherId) : undefined
-        const data = await getSessionsByDate(selectedDate, undefined, teacherId)
-        setSessions(data?.sessions || [])
-        setStatistics(data?.statistics || null)
+        if (statusFilter) {
+          const response = await listSessions({
+            date_from: selectedDate,
+            date_to: selectedDate,
+            teacher_id: teacherId,
+            status: statusFilter,
+            per_page: 500,
+          })
+          const sess = response?.sessions || []
+          setSessions(sess)
+          setStatistics({
+            total_sessions: sess.length,
+            completed_sessions: sess.filter((s) => s.is_completed).length,
+            pending_sessions: sess.filter((s) => !s.is_completed && s.status !== 'postponed').length,
+          })
+        } else {
+          const data = await getSessionsByDate(selectedDate, undefined, teacherId, undefined)
+          setSessions(data?.sessions || [])
+          setStatistics(data?.statistics || null)
+        }
       } catch (error) {
         console.error('Error loading sessions:', error)
         setSessions([])
@@ -52,7 +70,7 @@ export default function SessionsPage() {
       }
     }
     loadSessions()
-  }, [selectedDate, selectedTeacherId])
+  }, [selectedDate, selectedTeacherId, statusFilter])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -98,6 +116,74 @@ export default function SessionsPage() {
     setIsModalOpen(true)
   }
 
+  const handleRevertToPending = async (sessionId: number) => {
+    if (!confirm('هل أنت متأكد من إرجاع الحصة إلى قيد الانتظار؟')) return
+    setUpdatingSessionId(sessionId)
+    try {
+      await revertSessionToPending(sessionId)
+      setSelectedSession((prev) =>
+        prev?.id === sessionId ? { ...prev, is_completed: false, status: 'pending', status_label: 'قيد الانتظار' } : prev
+      )
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === sessionId ? { ...s, is_completed: false, status: 'pending', status_label: 'قيد الانتظار' } : s
+        )
+      )
+      setStatistics((prev) =>
+        prev ? { ...prev, completed_sessions: prev.completed_sessions - 1, pending_sessions: prev.pending_sessions + 1 } : prev
+      )
+    } catch (error: any) {
+      alert(error.message || 'فشل إرجاع الحصة')
+    } finally {
+      setUpdatingSessionId(null)
+    }
+  }
+
+  const loadSessionsForDate = async () => {
+    const teacherId = selectedTeacherId ? parseInt(selectedTeacherId) : undefined
+    if (statusFilter) {
+      const response = await listSessions({
+        date_from: selectedDate,
+        date_to: selectedDate,
+        teacher_id: teacherId,
+        status: statusFilter,
+        per_page: 500,
+      })
+      const sess = response?.sessions || []
+      setSessions(sess)
+      setStatistics({
+        total_sessions: sess.length,
+        completed_sessions: sess.filter((s) => s.is_completed).length,
+        pending_sessions: sess.filter((s) => !s.is_completed && s.status !== 'postponed').length,
+      })
+    } else {
+      const data = await getSessionsByDate(selectedDate, undefined, teacherId, undefined)
+      setSessions(data?.sessions || [])
+      setStatistics(data?.statistics || null)
+    }
+  }
+
+  const handleStatusChange = async (sessionId: number, newStatus: 'pending' | 'completed' | 'postponed') => {
+    setUpdatingSessionId(sessionId)
+    try {
+      const session = sessions.find((s) => s.id === sessionId)
+      if (newStatus === 'completed') {
+        await completeSession(sessionId)
+      } else if (newStatus === 'pending' && session?.is_completed) {
+        await revertSessionToPending(sessionId)
+      } else {
+        await updateSession(sessionId, { status: newStatus } as any)
+      }
+      const updated = await getSession(sessionId)
+      setSelectedSession((prev) => (prev?.id === sessionId ? updated : prev))
+      await loadSessionsForDate()
+    } catch (error: any) {
+      alert(error.message || 'فشل تحديث الحالة')
+    } finally {
+      setUpdatingSessionId(null)
+    }
+  }
+
   return (
     <div className="px-2 sm:px-0">
       <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-primary-900 mb-6 sm:mb-8">الحصص اليومية</h1>
@@ -121,6 +207,22 @@ export default function SessionsPage() {
                     className="flex-1 px-4 py-2 border-2 border-primary-300 rounded-lg focus:outline-none focus:border-primary-500 text-primary-900"
                   />
                 </div>
+              </div>
+
+              {/* Status Filter */}
+              <div className="mb-4">
+                <label className="block text-primary-900 font-semibold mb-2 text-right">الحالة</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as SessionStatusFilter)}
+                  className="w-full px-4 py-2 border-2 border-primary-300 rounded-lg focus:outline-none focus:border-primary-500 text-primary-900 bg-white"
+                  dir="rtl"
+                >
+                  <option value="">جميع الحالات</option>
+                  <option value="pending">قيد الانتظار</option>
+                  <option value="completed">مكتملة</option>
+                  <option value="postponed">مؤجلة</option>
+                </select>
               </div>
 
               {/* Teacher Filter */}
@@ -289,6 +391,13 @@ export default function SessionsPage() {
                               <span className="text-xs sm:text-sm text-primary-700 font-medium">المعلم:</span>
                               <span className="text-xs sm:text-sm text-primary-900 break-words">{session.teacher?.name || '-'}</span>
                             </div>
+                            {(session as any).student_joined_at && (
+                              <div className="flex items-center gap-2 flex-wrap sm:col-span-2">
+                                <Clock className="w-4 h-4 text-primary-600 flex-shrink-0" />
+                                <span className="text-xs sm:text-sm text-primary-700 font-medium">دخول الطالب:</span>
+                                <span className="text-xs sm:text-sm text-primary-900">{new Date((session as any).student_joined_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                            )}
                           </div>
 
                           {session.notes && (
@@ -423,23 +532,52 @@ export default function SessionsPage() {
                 </div>
 
                 {/* Teacher entry time (وقت دخول المعلم) */}
-
                 <div className="bg-primary-50 p-3 sm:p-4 rounded-lg">
                   <h3 className="text-sm sm:text-base font-semibold text-primary-900 mb-2">وقت دخول المعلم</h3>
                   <p className="text-sm sm:text-base text-primary-700">{selectedSession?.start_time ?? '-'}</p>
                 </div>
 
+                {/* Student joined time (وقت دخول الطالب) */}
+
+                  <div className="bg-primary-50 p-3 sm:p-4 rounded-lg">
+                    <h3 className="text-sm sm:text-base font-semibold text-primary-900 mb-2">وقت دخول الطالب</h3>
+                    <p className="text-sm sm:text-base text-primary-700">
+                    {selectedSession?.student_joined_at ?? '-'}
+                    </p>
+                  </div>
+               
 
                 {/* Status */}
                 <div className="bg-primary-50 p-3 sm:p-4 rounded-lg">
                   <h3 className="text-sm sm:text-base font-semibold text-primary-900 mb-2">الحالة</h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={selectedSession.status || (selectedSession.is_completed ? 'completed' : 'pending')}
+                      onChange={(e) => handleStatusChange(selectedSession.id, e.target.value as 'pending' | 'completed' | 'postponed')}
+                      disabled={updatingSessionId === selectedSession.id}
+                      className="px-3 py-1.5 border-2 border-primary-300 rounded-lg focus:border-primary-500 outline-none text-sm font-medium disabled:opacity-50"
+                      dir="rtl"
+                    >
+                     
+                      <option value="completed">مكتملة</option>
+                      <option value="postponed">مؤجلة</option>
+                    </select>
+                    {selectedSession.is_completed && (
+                      <button
+                        onClick={() => handleRevertToPending(selectedSession.id)}
+                        disabled={updatingSessionId === selectedSession.id}
+                        className="px-3 py-1.5 bg-amber-100 text-amber-800 hover:bg-amber-200 rounded-lg text-sm font-medium disabled:opacity-50"
+                      >
+                        {updatingSessionId === selectedSession.id ? 'جاري...' : 'إرجاع قيد الانتظار'}
+                      </button>
+                    )}
+                  </div>
                   <span
-                    className={`inline-block px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${selectedSession.is_completed
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                      }`}
+                    className={`inline-block mt-2 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
+                      selectedSession.is_completed ? 'bg-green-100 text-green-800' : selectedSession.status === 'postponed' ? 'bg-orange-100 text-orange-800' : 'bg-yellow-100 text-yellow-800'
+                    }`}
                   >
-                    {selectedSession.status_label || (selectedSession.is_completed ? 'مكتملة' : 'قيد الانتظار')}
+                    {selectedSession.status_label || (selectedSession.is_completed ? 'مكتملة' : selectedSession.status === 'postponed' ? 'مؤجلة' : 'قيد الانتظار')}
                   </span>
                   {selectedSession.completed_at && (
                     <p className="text-xs sm:text-sm text-primary-600 mt-2">
