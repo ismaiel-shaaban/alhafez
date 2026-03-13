@@ -558,9 +558,9 @@ export default function SessionsPage() {
                       className="px-3 py-1.5 border-2 border-primary-300 rounded-lg focus:border-primary-500 outline-none text-sm font-medium disabled:opacity-50"
                       dir="rtl"
                     >
-                     
+                     {selectedSession.status == 'pending' && <option value="pending">قيد الانتظار</option>}
                       <option value="completed">مكتملة</option>
-                      <option value="postponed">مؤجلة</option>
+                      {selectedSession.status == 'postponed' && <option value="postponed">مؤجلة</option>}
                     </select>
                     {selectedSession.is_completed && (
                       <button
