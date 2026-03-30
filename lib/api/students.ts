@@ -113,6 +113,8 @@ export interface StudentFilters {
   teacher_id?: number
   search?: string // Search term
   unpaid_months_count?: number // Number of unpaid months
+  incomplete_sessions_count?: number // Number of incomplete sessions
+  subscription_days_remaining?: number // Days remaining until subscription ends
   payment_status?: 'all_paid' | 'has_unpaid' // Payment status filter
   trial_session_attendance?: 'not_booked' | 'booked' | 'attended' // Filter by trial session attendance
   is_paused?: boolean // Filter by paused status
@@ -162,6 +164,8 @@ export const listStudents = async (
   if (filters.teacher_id) params.append('teacher_id', filters.teacher_id.toString())
   if (filters.search) params.append('search', filters.search)
   if (filters.unpaid_months_count !== undefined) params.append('unpaid_months_count', filters.unpaid_months_count.toString())
+  if (filters.incomplete_sessions_count !== undefined) params.append('incomplete_sessions_count', filters.incomplete_sessions_count.toString())
+  if (filters.subscription_days_remaining !== undefined) params.append('subscription_days_remaining', filters.subscription_days_remaining.toString())
   if (filters.payment_status) params.append('payment_status', filters.payment_status)
   if (filters.trial_session_attendance) params.append('trial_session_attendance', filters.trial_session_attendance)
   if (filters.is_paused !== undefined) params.append('is_paused', filters.is_paused.toString())

@@ -59,6 +59,8 @@ export default function StudentsPage() {
     teacher_id: '',
     search: '',
     unpaid_months_count: '',
+    incomplete_sessions_count: '',
+    subscription_days_remaining: '',
     payment_status: '' as 'all_paid' | 'has_unpaid' | '',
     is_paused: '' as 'true' | 'false' | '',
   })
@@ -181,6 +183,8 @@ export default function StudentsPage() {
     if (filters.teacher_id) apiFilters.teacher_id = parseInt(filters.teacher_id)
     if (filters.search) apiFilters.search = filters.search
     if (filters.unpaid_months_count) apiFilters.unpaid_months_count = parseInt(filters.unpaid_months_count)
+    if (filters.incomplete_sessions_count) apiFilters.incomplete_sessions_count = parseInt(filters.incomplete_sessions_count)
+    if (filters.subscription_days_remaining) apiFilters.subscription_days_remaining = parseInt(filters.subscription_days_remaining)
     if (filters.payment_status) apiFilters.payment_status = filters.payment_status
     if (filters.is_paused) apiFilters.is_paused = filters.is_paused === 'true'
     apiFilters.page = currentPage
@@ -196,11 +200,11 @@ export default function StudentsPage() {
   // Apply filters when they change
   useEffect(() => {
     setCurrentPage(1) // Reset to first page when filters change
-  }, [filters.type, filters.package_id, filters.gender, filters.teacher_id, filters.search, filters.unpaid_months_count, filters.payment_status, filters.is_paused])
+  }, [filters.type, filters.package_id, filters.gender, filters.teacher_id, filters.search, filters.unpaid_months_count, filters.incomplete_sessions_count, filters.subscription_days_remaining, filters.payment_status, filters.is_paused])
 
   useEffect(() => {
     fetchStudents(buildApiFilters())
-  }, [currentPage, filters.type, filters.package_id, filters.gender, filters.teacher_id, filters.search, filters.unpaid_months_count, filters.payment_status, filters.is_paused, fetchStudents])
+  }, [currentPage, filters.type, filters.package_id, filters.gender, filters.teacher_id, filters.search, filters.unpaid_months_count, filters.incomplete_sessions_count, filters.subscription_days_remaining, filters.payment_status, filters.is_paused, fetchStudents])
 
   // Students are now filtered on the API side, so we use them directly
   const filteredStudents = students
@@ -866,6 +870,30 @@ export default function StudentsPage() {
             />
           </div>
           <div>
+            <label className="block text-primary-900 font-semibold mb-2 text-right">عدد الحصص غير مكتملة</label>
+            <input
+              type="number"
+              value={filters.incomplete_sessions_count}
+              onChange={(e) => setFilters({ ...filters, incomplete_sessions_count: e.target.value })}
+              placeholder="عدد الحصص..."
+              className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+              dir="rtl"
+              min="0"
+            />
+          </div>
+          <div>
+            <label className="block text-primary-900 font-semibold mb-2 text-right">متبقي كام يوم علي انتهاء الاشتراك</label>
+            <input
+              type="number"
+              value={filters.subscription_days_remaining}
+              onChange={(e) => setFilters({ ...filters, subscription_days_remaining: e.target.value })}
+              placeholder="عدد الأيام..."
+              className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-right"
+              dir="rtl"
+              min="0"
+            />
+          </div>
+          <div>
             <label className="block text-primary-900 font-semibold mb-2 text-right">حالة الدفع</label>
             <select
               value={filters.payment_status}
@@ -904,7 +932,7 @@ export default function StudentsPage() {
         </div>
       ) : filteredStudents.length === 0 ? (
         <div className="bg-white rounded-xl border-2 border-primary-200 p-8 text-center text-primary-600 shadow-lg">
-          {filters.search || filters.package_id || filters.gender || filters.teacher_id || filters.unpaid_months_count || filters.payment_status || filters.is_paused
+          {filters.search || filters.package_id || filters.gender || filters.teacher_id || filters.unpaid_months_count || filters.incomplete_sessions_count || filters.subscription_days_remaining || filters.payment_status || filters.is_paused
             ? 'لا توجد نتائج'
             : 'لا يوجد طلاب مسجلون بعد'}
         </div>
