@@ -1,6 +1,6 @@
 import { apiRequest } from '../api-client'
 
-export type RecipientType = 'all' | 'students' | 'teachers'
+export type RecipientType = 'all' | 'students' | 'teachers' | 'unpaid_students'
 
 export interface SendNotificationRequest {
   title: string

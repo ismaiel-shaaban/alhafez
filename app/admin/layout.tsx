@@ -24,6 +24,7 @@ import {
   AlertCircle,
   Shield,
   Trash2,
+  History,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -91,6 +92,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/accounting', label: 'المحاسبة', icon: Calculator, restricted: true },
     { href: '/admin/complaints', label: 'الشكاوي والتقييمات', icon: AlertCircle },
     { href: '/admin/schedule-change-requests', label: 'طلبات تغيير المواعيد', icon: Calendar },
+    { href: '/admin/session-system-logs', label: 'طلبات تغيير نظام الحصص', icon: History },
     { href: '/admin/student-deletion-requests', label: 'طلبات حذف الطلاب', icon: Users },
     { href: '/admin/payment-receipts', label: 'إيصالات الدفع', icon: DollarSign },
     { href: '/admin/subscription-pause-requests', label: 'طلبات الإيقاف', icon: Calendar },
