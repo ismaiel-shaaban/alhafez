@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Award, CheckCircle, XCircle, Clock, User, RefreshCw, GraduationCap, ChevronRight, ChevronLeft, BookOpen, Image as ImageIcon, Trash2 } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
+import { Award, CheckCircle, XCircle, Clock, User, RefreshCw, GraduationCap, ChevronRight, ChevronLeft, BookOpen, Image as ImageIcon, Trash2, X, Upload } from 'lucide-react'
 import {
   getParentCertificates,
   getStudentCertificates,
@@ -10,10 +10,9 @@ import {
   deleteParentCertificate,
   deleteStudentCertificate,
   Certificate,
-  CertificatesResponse,
 } from '@/lib/api/certificates'
-import { motion } from 'framer-motion'
-import { Pagination } from '@/lib/api-client'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Pagination, getCurrentLocale } from '@/lib/api-client'
 
 export default function CertificatesPage() {
   const [activeTab, setActiveTab] = useState<'student' | 'parent'>('student')
@@ -26,6 +25,10 @@ export default function CertificatesPage() {
   const [loading, setLoading] = useState(false)
   const [updatingId, setUpdatingId] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [approveModal, setApproveModal] = useState<{ id: number; type: 'parent' | 'student' } | null>(null)
+  const [approveFile, setApproveFile] = useState<File | null>(null)
+  const [approvePreview, setApprovePreview] = useState<string | null>(null)
+  const approveFileInputRef = useRef<HTMLInputElement>(null)
 
   // Load certificates based on active tab
   useEffect(() => {
@@ -61,31 +64,97 @@ export default function CertificatesPage() {
     }
   }
 
+  const closeApproveModal = () => {
+    setApproveModal(null)
+    setApproveFile(null)
+    if (approvePreview) {
+      URL.revokeObjectURL(approvePreview)
+      setApprovePreview(null)
+    }
+    if (approveFileInputRef.current) approveFileInputRef.current.value = ''
+  }
+
+  const handleApproveFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (approvePreview) {
+      URL.revokeObjectURL(approvePreview)
+      setApprovePreview(null)
+    }
+    if (file) {
+      setApproveFile(file)
+      setApprovePreview(URL.createObjectURL(file))
+    } else {
+      setApproveFile(null)
+    }
+  }
+
+  const reloadAfterStatus = async (type: 'parent' | 'student') => {
+    if (type === 'parent') {
+      const data = await getParentCertificates(parentPage)
+      setParentCertificates(data?.certificates || [])
+      setParentPagination(data?.pagination || null)
+    } else {
+      const data = await getStudentCertificates(studentPage)
+      setStudentCertificates(data?.certificates || [])
+      setStudentPagination(data?.pagination || null)
+    }
+  }
+
   const handleStatusUpdate = async (
     id: number,
     status: 'pending' | 'accept' | 'cancel',
     type: 'parent' | 'student'
   ) => {
+    if (status === 'accept') {
+      setApprovePreview((prev) => {
+        if (prev) URL.revokeObjectURL(prev)
+        return null
+      })
+      setApproveFile(null)
+      setApproveModal({ id, type })
+      setTimeout(() => {
+        if (approveFileInputRef.current) approveFileInputRef.current.value = ''
+      }, 0)
+      return
+    }
+
     setUpdatingId(id)
+    const locale = getCurrentLocale()
     try {
       if (type === 'parent') {
-        await updateParentCertificateStatus(id, status)
+        await updateParentCertificateStatus(id, status, locale)
       } else {
-        await updateStudentCertificateStatus(id, status)
+        await updateStudentCertificateStatus(id, status, locale)
       }
-      // Reload certificates - keep current page
-      if (type === 'parent') {
-        const data = await getParentCertificates(parentPage)
-        setParentCertificates(data?.certificates || [])
-        setParentPagination(data?.pagination || null)
-      } else {
-        const data = await getStudentCertificates(studentPage)
-        setStudentCertificates(data?.certificates || [])
-        setStudentPagination(data?.pagination || null)
-      }
+      await reloadAfterStatus(type)
     } catch (error) {
       console.error('Error updating certificate status:', error)
       alert('حدث خطأ أثناء تحديث حالة الشهادة')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const handleConfirmApprove = async () => {
+    if (!approveModal) return
+    if (!approveFile) {
+      alert('يرجى رفع صورة الشهادة قبل القبول')
+      return
+    }
+    const { id, type } = approveModal
+    const locale = getCurrentLocale()
+    setUpdatingId(id)
+    try {
+      if (type === 'parent') {
+        await updateParentCertificateStatus(id, 'accept', locale, approveFile)
+      } else {
+        await updateStudentCertificateStatus(id, 'accept', locale, approveFile)
+      }
+      closeApproveModal()
+      await reloadAfterStatus(type)
+    } catch (error: any) {
+      console.error('Error approving certificate:', error)
+      alert(error?.message || 'حدث خطأ أثناء قبول الشهادة')
     } finally {
       setUpdatingId(null)
     }
@@ -227,6 +296,7 @@ export default function CertificatesPage() {
                       {/* Student Image */}
                       {activeTab === 'student' && certificate.student_image && (
                         <div className="mb-3 sm:mb-4">
+                          <p className="text-xs text-primary-600 mb-1 font-medium">صورة الطالب</p>
                           <img
                             src={certificate.student_image}
                             alt={certificate.student_name || 'صورة الطالب'}
@@ -236,6 +306,31 @@ export default function CertificatesPage() {
                               target.style.display = 'none'
                             }}
                           />
+                        </div>
+                      )}
+
+                      {certificate.certificate_image && (
+                        <div className="mb-3 sm:mb-4">
+                          <p className="text-xs text-primary-600 mb-1 font-medium flex items-center gap-1">
+                            <ImageIcon className="w-3.5 h-3.5" />
+                            صورة الشهادة (بعد القبول)
+                          </p>
+                          <a
+                            href={certificate.certificate_image}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-block"
+                          >
+                            <img
+                              src={certificate.certificate_image}
+                              alt="صورة الشهادة"
+                              className="max-w-full sm:max-w-xs max-h-48 object-contain rounded-lg border-2 border-primary-200 hover:border-primary-400 transition-colors"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement
+                                target.style.display = 'none'
+                              }}
+                            />
+                          </a>
                         </div>
                       )}
 
@@ -392,6 +487,91 @@ export default function CertificatesPage() {
           )}
         </div>
       </div>
+
+      {/* Approve modal: required certificate image upload */}
+      <AnimatePresence>
+        {approveModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+            onClick={() => !updatingId && closeApproveModal()}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-xl shadow-xl border-2 border-primary-200 w-full max-w-md overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-4 sm:p-5 border-b border-primary-200 flex items-center justify-between gap-2">
+                <h2 className="text-lg sm:text-xl font-bold text-primary-900">قبول الشهادة</h2>
+                <button
+                  type="button"
+                  onClick={() => !updatingId && closeApproveModal()}
+                  className="p-2 rounded-lg hover:bg-primary-100 text-primary-700"
+                  aria-label="إغلاق"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-4 sm:p-5 space-y-4">
+                <p className="text-sm text-primary-700 text-right">
+                  يرجى رفع صورة الشهادة النهائية لإتمام القبول.
+                </p>
+                <div>
+                  <label className="block text-sm font-medium text-primary-800 mb-2 text-right">صورة الشهادة *</label>
+                  <input
+                    ref={approveFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleApproveFileChange}
+                    disabled={!!updatingId && updatingId === approveModal.id}
+                    className="hidden"
+                    id="certificate-approve-image"
+                  />
+                  <label
+                    htmlFor="certificate-approve-image"
+                    className={`flex flex-col items-center justify-center gap-2 w-full px-4 py-8 border-2 border-dashed border-primary-300 rounded-xl cursor-pointer hover:bg-primary-50 transition-colors ${updatingId === approveModal.id ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
+                    <Upload className="w-8 h-8 text-primary-600" />
+                    <span className="text-sm text-primary-700 text-center">اضغط لاختيار صورة</span>
+                  </label>
+                  {approvePreview && (
+                    <div className="mt-3 rounded-lg border border-primary-200 overflow-hidden bg-primary-50 p-2">
+                      <img src={approvePreview} alt="معاينة" className="max-h-48 mx-auto object-contain w-full" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-3 flex-row-reverse">
+                  <button
+                    type="button"
+                    onClick={handleConfirmApprove}
+                    disabled={updatingId === approveModal.id || !approveFile}
+                    className="flex-1 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                  >
+                    {updatingId === approveModal.id ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <CheckCircle className="w-4 h-4" />
+                    )}
+                    تأكيد القبول
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => !updatingId && closeApproveModal()}
+                    disabled={updatingId === approveModal.id}
+                    className="flex-1 py-2.5 border-2 border-primary-300 text-primary-800 rounded-lg font-medium hover:bg-primary-50 disabled:opacity-50"
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

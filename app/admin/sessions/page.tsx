@@ -370,12 +370,26 @@ export default function SessionsPage() {
                     >
                       <div className="flex items-start justify-between gap-3 sm:gap-4">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                          <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3 flex-wrap">
                             <span className="inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary-600 text-white font-bold text-base sm:text-lg flex-shrink-0">
-                              {(session as any).session_number || index + 1}
+                              {session.session_number != null && session.session_number !== ''
+                                ? session.session_number
+                                : index + 1}
                             </span>
-                            <div>
-                              <div className="text-base sm:text-lg font-bold text-primary-900">{session.session_time}</div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2 gap-y-1">
+                                <span className="text-base sm:text-lg font-bold text-primary-900">{session.session_time || '—'}</span>
+                                {session.session_number != null && session.session_number !== '' && (
+                                  <span className="text-xs sm:text-sm font-medium text-primary-700 bg-white/80 px-2 py-0.5 rounded-full border border-primary-200">
+                                    رقم الحصة: {session.session_number}
+                                  </span>
+                                )}
+                                {session.subscription_month_number != null && session.subscription_month_number !== '' && (
+                                  <span className="text-xs sm:text-sm font-medium text-primary-700 bg-white/80 px-2 py-0.5 rounded-full border border-primary-200">
+                                    رقم الشهر: {session.subscription_month_number}
+                                  </span>
+                                )}
+                              </div>
                               <div className="text-xs sm:text-sm text-primary-600">{session.day_of_week_label || session.day_of_week}</div>
                             </div>
                           </div>
@@ -385,6 +399,7 @@ export default function SessionsPage() {
                               <User className="w-4 h-4 text-primary-600 flex-shrink-0" />
                               <span className="text-xs sm:text-sm text-primary-700 font-medium">الطالب:</span>
                               <span className="text-xs sm:text-sm text-primary-900 break-words">{session.student?.name || '-'}</span>
+                          
                             </div>
                             <div className="flex items-center gap-2 flex-wrap">
                               <GraduationCap className="w-4 h-4 text-primary-600 flex-shrink-0" />
@@ -477,18 +492,33 @@ export default function SessionsPage() {
               </div>
 
               <div className="p-4 sm:p-6 space-y-4">
-                {/* Session Number */}
-                <div className="flex items-center justify-center mb-4">
-                  <span className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-primary-600 text-white font-bold text-xl sm:text-2xl">
-                    {(selectedSession as any).session_number || '-'}
+                {/* Student session # + subscription month (للطالب فقط) */}
+                <div className="flex flex-wrap items-center justify-center gap-3 mb-4">
+                  <span className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-primary-600 text-white font-bold text-xl sm:text-2xl" title="رقم حصة الطالب">
+                    {selectedSession.session_number != null && selectedSession.session_number !== ''
+                      ? selectedSession.session_number
+                      : '-'}
                   </span>
+                  <div className="flex flex-wrap justify-center gap-2 text-sm">
+                    {selectedSession.session_number != null && selectedSession.session_number !== '' && (
+                      <span className="bg-primary-100 text-primary-900 px-3 py-1 rounded-lg font-medium">
+                        رقم الحصة: {selectedSession.session_number}
+                      </span>
+                    )}
+                    {selectedSession.subscription_month_number != null && selectedSession.subscription_month_number !== '' && (
+                      <span className="bg-primary-100 text-primary-900 px-3 py-1 rounded-lg font-medium">
+                        رقم الشهر: {selectedSession.subscription_month_number}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Student Info */}
                 <div className="bg-primary-50 p-3 sm:p-4 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <User className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600" />
                     <h3 className="text-sm sm:text-base font-semibold text-primary-900">الطالب</h3>
+                  
                   </div>
                   <p className="text-sm sm:text-base text-primary-700 break-words">{selectedSession.student?.name || '-'}</p>
                 </div>

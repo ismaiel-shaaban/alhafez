@@ -69,7 +69,8 @@ export interface StudentSession {
   new_time?: string | null
   reason?: string | null
   notes?: string | null
-  session_number?: number | string // Session number for display
+  session_number?: number | string // Student's session number within subscription
+  subscription_month_number?: number | string | null // Student's subscription month number
   student?: {
     id: number
     name: string

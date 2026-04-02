@@ -19,6 +19,10 @@ export interface LoginResponse {
       name: string
       specialization: string
     }
+    supervisor?: {
+      id: number
+      name?: string
+    }
   }
   token: string
 }
@@ -34,6 +38,11 @@ export interface User {
     id: number
     name: string
     specialization: string
+  }
+  /** When logged in as supervisor; use supervisor.id for /api/supervisors/:id/... if present */
+  supervisor?: {
+    id: number
+    name?: string
   }
 }
 

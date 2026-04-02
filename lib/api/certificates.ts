@@ -8,6 +8,7 @@ export interface Certificate {
   student_name?: string
   memorization_amount?: string
   student_image?: string | null
+  certificate_image?: string | null
   status: 'pending' | 'accept' | 'cancel'
   status_label?: string
   teacher?: {
@@ -36,12 +37,23 @@ export const getParentCertificates = async (
   return apiRequest<CertificatesResponse>(`/api/parent-certificates?${params.toString()}`, { locale })
 }
 
-// Update parent certificate status
+// Update parent certificate status (accept with certificate_image uses multipart FormData)
 export const updateParentCertificateStatus = async (
   id: number,
   status: 'pending' | 'accept' | 'cancel',
-  locale?: string
+  locale?: string,
+  certificateImage?: File | null
 ): Promise<Certificate> => {
+  if (status === 'accept' && certificateImage) {
+    const formData = new FormData()
+    formData.append('status', status)
+    formData.append('certificate_image', certificateImage)
+    return apiRequest<Certificate>(`/api/parent-certificates/${id}/status`, {
+      method: 'POST',
+      body: formData,
+      locale,
+    })
+  }
   return apiRequest<Certificate>(`/api/parent-certificates/${id}/status`, {
     method: 'POST',
     body: { status },
@@ -61,12 +73,23 @@ export const getStudentCertificates = async (
   return apiRequest<CertificatesResponse>(`/api/student-certificates?${params.toString()}`, { locale })
 }
 
-// Update student certificate status
+// Update student certificate status (accept with certificate_image uses multipart FormData)
 export const updateStudentCertificateStatus = async (
   id: number,
   status: 'pending' | 'accept' | 'cancel',
-  locale?: string
+  locale?: string,
+  certificateImage?: File | null
 ): Promise<Certificate> => {
+  if (status === 'accept' && certificateImage) {
+    const formData = new FormData()
+    formData.append('status', status)
+    formData.append('certificate_image', certificateImage)
+    return apiRequest<Certificate>(`/api/student-certificates/${id}/status`, {
+      method: 'POST',
+      body: formData,
+      locale,
+    })
+  }
   return apiRequest<Certificate>(`/api/student-certificates/${id}/status`, {
     method: 'POST',
     body: { status },
