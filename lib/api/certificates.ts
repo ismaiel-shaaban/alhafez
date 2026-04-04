@@ -9,6 +9,7 @@ export interface Certificate {
   memorization_amount?: string
   student_image?: string | null
   certificate_image?: string | null
+  certificate_url?: string | null
   status: 'pending' | 'accept' | 'cancel'
   status_label?: string
   teacher?: {
@@ -37,17 +38,20 @@ export const getParentCertificates = async (
   return apiRequest<CertificatesResponse>(`/api/parent-certificates?${params.toString()}`, { locale })
 }
 
-// Update parent certificate status (accept with certificate_image uses multipart FormData)
+// Update parent certificate status (accept with certificate_image uses multipart FormData; optional certificate_url)
 export const updateParentCertificateStatus = async (
   id: number,
   status: 'pending' | 'accept' | 'cancel',
   locale?: string,
-  certificateImage?: File | null
+  certificateImage?: File | null,
+  certificateUrl?: string
 ): Promise<Certificate> => {
   if (status === 'accept' && certificateImage) {
     const formData = new FormData()
     formData.append('status', status)
     formData.append('certificate_image', certificateImage)
+    const urlTrim = certificateUrl?.trim()
+    if (urlTrim) formData.append('certificate_url', urlTrim)
     return apiRequest<Certificate>(`/api/parent-certificates/${id}/status`, {
       method: 'POST',
       body: formData,
@@ -73,17 +77,20 @@ export const getStudentCertificates = async (
   return apiRequest<CertificatesResponse>(`/api/student-certificates?${params.toString()}`, { locale })
 }
 
-// Update student certificate status (accept with certificate_image uses multipart FormData)
+// Update student certificate status (accept with certificate_image uses multipart FormData; optional certificate_url)
 export const updateStudentCertificateStatus = async (
   id: number,
   status: 'pending' | 'accept' | 'cancel',
   locale?: string,
-  certificateImage?: File | null
+  certificateImage?: File | null,
+  certificateUrl?: string
 ): Promise<Certificate> => {
   if (status === 'accept' && certificateImage) {
     const formData = new FormData()
     formData.append('status', status)
     formData.append('certificate_image', certificateImage)
+    const urlTrim = certificateUrl?.trim()
+    if (urlTrim) formData.append('certificate_url', urlTrim)
     return apiRequest<Certificate>(`/api/student-certificates/${id}/status`, {
       method: 'POST',
       body: formData,
