@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { Award, CheckCircle, XCircle, Clock, User, RefreshCw, GraduationCap, ChevronRight, ChevronLeft, BookOpen, Image as ImageIcon, Trash2, X, Upload } from 'lucide-react'
+import { Award, CheckCircle, XCircle, Clock, User, RefreshCw, GraduationCap, ChevronRight, ChevronLeft, BookOpen, Image as ImageIcon, Trash2, X, Upload, Link2 } from 'lucide-react'
 import {
   getParentCertificates,
   getStudentCertificates,
@@ -28,6 +28,7 @@ export default function CertificatesPage() {
   const [approveModal, setApproveModal] = useState<{ id: number; type: 'parent' | 'student' } | null>(null)
   const [approveFile, setApproveFile] = useState<File | null>(null)
   const [approvePreview, setApprovePreview] = useState<string | null>(null)
+  const [approveCertificateUrl, setApproveCertificateUrl] = useState('')
   const approveFileInputRef = useRef<HTMLInputElement>(null)
 
   // Load certificates based on active tab
@@ -67,6 +68,7 @@ export default function CertificatesPage() {
   const closeApproveModal = () => {
     setApproveModal(null)
     setApproveFile(null)
+    setApproveCertificateUrl('')
     if (approvePreview) {
       URL.revokeObjectURL(approvePreview)
       setApprovePreview(null)
@@ -111,6 +113,7 @@ export default function CertificatesPage() {
         return null
       })
       setApproveFile(null)
+      setApproveCertificateUrl('')
       setApproveModal({ id, type })
       setTimeout(() => {
         if (approveFileInputRef.current) approveFileInputRef.current.value = ''
@@ -145,10 +148,11 @@ export default function CertificatesPage() {
     const locale = getCurrentLocale()
     setUpdatingId(id)
     try {
+      const url = approveCertificateUrl.trim()
       if (type === 'parent') {
-        await updateParentCertificateStatus(id, 'accept', locale, approveFile)
+        await updateParentCertificateStatus(id, 'accept', locale, approveFile, url || undefined)
       } else {
-        await updateStudentCertificateStatus(id, 'accept', locale, approveFile)
+        await updateStudentCertificateStatus(id, 'accept', locale, approveFile, url || undefined)
       }
       closeApproveModal()
       await reloadAfterStatus(type)
@@ -330,6 +334,24 @@ export default function CertificatesPage() {
                                 target.style.display = 'none'
                               }}
                             />
+                          </a>
+                        </div>
+                      )}
+
+                      {certificate.certificate_url && (
+                        <div className="mb-3 sm:mb-4">
+                          <p className="text-xs text-primary-600 mb-1 font-medium flex items-center gap-1">
+                            <Link2 className="w-3.5 h-3.5" />
+                            رابط الشهادة
+                          </p>
+                          <a
+                            href={certificate.certificate_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-primary-600 hover:text-primary-800 underline break-all"
+                            dir="ltr"
+                          >
+                            {certificate.certificate_url}
                           </a>
                         </div>
                       )}
@@ -518,8 +540,20 @@ export default function CertificatesPage() {
               </div>
               <div className="p-4 sm:p-5 space-y-4">
                 <p className="text-sm text-primary-700 text-right">
-                  يرجى رفع صورة الشهادة النهائية لإتمام القبول.
+                  يرجى رفع صورة الشهادة النهائية لإتمام القبول. يمكنك إضافة رابط إضافي للشهادة (اختياري).
                 </p>
+                <div>
+                  <label className="block text-sm font-medium text-primary-800 mb-2 text-right">رابط الشهادة (اختياري)</label>
+                  <input
+                    type="url"
+                    value={approveCertificateUrl}
+                    onChange={(e) => setApproveCertificateUrl(e.target.value)}
+                    placeholder="https://..."
+                    disabled={updatingId === approveModal.id}
+                    className="w-full px-4 py-2 border-2 border-primary-200 rounded-lg focus:border-primary-500 outline-none text-sm"
+                    dir="ltr"
+                  />
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-primary-800 mb-2 text-right">صورة الشهادة *</label>
                   <input
