@@ -4,6 +4,7 @@ export interface StudentDeletionRequest {
   id: number
   teacher_id: number
   student_id: number
+  type?: 'full' | 'partial'
   reason?: string
   status: 'pending' | 'approved' | 'rejected'
   status_label?: string

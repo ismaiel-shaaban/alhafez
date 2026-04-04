@@ -50,16 +50,20 @@ export default function StudentDeletionRequestsPage() {
     }
   }
 
-  const handleApprove = async (id: number) => {
-    if (!confirm('تحذير: الموافقة على هذا الطلب سيؤدي إلى حذف الطالب وجميع بياناته بشكل دائم (الحصص، الاشتراكات، الآراء، إلخ). هل أنت متأكد؟')) {
+  const handleApprove = async (id: number, type?: 'full' | 'partial') => {
+    const fullConfirm =
+      'تحذير: الموافقة على هذا الطلب سيؤدي إلى حذف الطالب وجميع بياناته بشكل دائم (الحصص، الاشتراكات، الآراء، إلخ). هل أنت متأكد؟'
+    const partialConfirm =
+      'تحذير: الموافقة على هذا الطلب ستنفّذ حذفاً جزئياً للبيانات المرتبطة بالطالب. هل أنت متأكد؟'
+    if (!confirm(type === 'partial' ? partialConfirm : fullConfirm)) {
       return
     }
-    
+
     setProcessingId(id)
     try {
       await approveStudentDeletionRequest(id)
       await loadRequests()
-      alert('تم حذف الطالب بنجاح')
+      alert(type === 'partial' ? 'تمت الموافقة على الطلب بنجاح' : 'تم حذف الطالب بنجاح')
     } catch (error: any) {
       alert(error.message || 'فشل الموافقة على الطلب')
     } finally {
@@ -107,6 +111,21 @@ export default function StudentDeletionRequestsPage() {
       default:
         return null
     }
+  }
+
+  const getDeletionTypeBadge = (type: 'full' | 'partial') => {
+    if (type === 'full') {
+      return (
+        <span className="inline-flex items-center px-2 py-1 bg-rose-100 text-rose-800 rounded-full text-xs font-medium">
+          حذف كامل
+        </span>
+      )
+    }
+    return (
+      <span className="inline-flex items-center px-2 py-1 bg-slate-100 text-slate-800 rounded-full text-xs font-medium">
+        حذف جزئي
+      </span>
+    )
   }
 
   return (
@@ -165,8 +184,9 @@ export default function StudentDeletionRequestsPage() {
             >
               <div className="flex flex-col lg:flex-row items-start lg:items-start justify-between gap-4 mb-4">
                 <div className="flex-1 w-full">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mb-3">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center flex-wrap gap-2 sm:gap-4 mb-3">
                     {getStatusBadge(request.status)}
+                    {request.type && getDeletionTypeBadge(request.type)}
                     <span className="text-xs sm:text-sm text-primary-600">
                       {new Date(request.created_at || '').toLocaleDateString('ar-EG')}
                     </span>
@@ -200,7 +220,12 @@ export default function StudentDeletionRequestsPage() {
                     <div className="mt-4 p-3 bg-red-50 rounded-lg border-2 border-red-300 flex items-start gap-2">
                       <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 flex-shrink-0 mt-0.5" />
                       <p className="text-xs sm:text-sm text-red-900 break-words">
-                        <strong>تحذير:</strong> الموافقة على هذا الطلب سيؤدي إلى حذف الطالب وجميع بياناته بشكل دائم
+                        <strong>تحذير:</strong>{' '}
+                        {request.type === 'partial' ? (
+                          <>الموافقة على هذا الطلب ستنفّذ حذفاً جزئياً للبيانات المرتبطة بالطالب، وليس بالضرورة حذف الطالب وجميع بياناته بالكامل.</>
+                        ) : (
+                          <>الموافقة على هذا الطلب سيؤدي إلى حذف الطالب وجميع بياناته بشكل دائم.</>
+                        )}
                       </p>
                     </div>
                   )}
@@ -209,7 +234,7 @@ export default function StudentDeletionRequestsPage() {
                   {request.status === 'pending' && (
                     <>
                       <button
-                        onClick={() => handleApprove(request.id)}
+                        onClick={() => handleApprove(request.id, request.type)}
                         disabled={processingId === request.id || deletingId === request.id}
                         className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-sm sm:text-base"
                       >
