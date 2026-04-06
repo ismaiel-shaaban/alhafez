@@ -24,6 +24,14 @@ const DAYS_OF_WEEK = [
   { value: 'friday', label: 'الجمعة', arName: 'الجمعة' },
 ]
 
+function formatStudentCreatedAt(value?: string | null): string {
+  if (!value) return '—'
+  const normalized = value.includes('T') ? value : value.replace(' ', 'T')
+  const d = new Date(normalized)
+  if (Number.isNaN(d.getTime())) return value
+  return d.toLocaleString('en-EG')
+}
+
 export default function StudentsPage() {
   const { 
     students, 
@@ -981,6 +989,12 @@ export default function StudentsPage() {
                       <span className="text-primary-900">{student.teacher.name}</span>
                     </div>
                   )}
+                  <div className="flex justify-between gap-2">
+                    <span className="text-primary-600 shrink-0">تاريخ التسجيل:</span>
+                    <span className="text-primary-900 text-left text-xs sm:text-sm break-words" dir="ltr">
+                      {formatStudentCreatedAt(student.created_at)}
+                    </span>
+                  </div>
                   {student.unpaid_subscriptions_list && Array.isArray(student.unpaid_subscriptions_list) && student.unpaid_subscriptions_list.length > 0 && (
                     <div className="flex justify-between">
                       <span className="text-primary-600">الاشتراكات غير المدفوعة:</span>
@@ -1053,6 +1067,7 @@ export default function StudentsPage() {
                     <th className="px-6 py-4 text-right text-primary-900 font-semibold">الجنس</th>
                     <th className="px-6 py-4 text-right text-primary-900 font-semibold">الباقة</th>
                     <th className="px-6 py-4 text-right text-primary-900 font-semibold">المعلم</th>
+                    <th className="px-6 py-4 text-right text-primary-900 font-semibold whitespace-nowrap">تاريخ التسجيل</th>
                     <th className="px-6 py-4 text-center text-primary-900 font-semibold">غير مدفوع</th>
                     <th className="px-6 py-4 text-center text-primary-900 font-semibold">الإجراءات</th>
                   </tr>
@@ -1073,6 +1088,9 @@ export default function StudentsPage() {
                       <td className="px-6 py-4 text-primary-700">{student.gender_label || (student.gender === 'male' ? 'ذكر' : 'أنثى')}</td>
                       <td className="px-6 py-4 text-primary-700">{student.package?.name || '-'}</td>
                       <td className="px-6 py-4 text-primary-700">{student.teacher?.name || '-'}</td>
+                      <td className="px-6 py-4 text-primary-700 text-sm whitespace-nowrap" dir="ltr">
+                        {formatStudentCreatedAt(student.created_at)}
+                      </td>
                       <td className="px-6 py-4 text-center">
                         {student.unpaid_subscriptions_list && Array.isArray(student.unpaid_subscriptions_list) && student.unpaid_subscriptions_list.length > 0 ? (
                           <button

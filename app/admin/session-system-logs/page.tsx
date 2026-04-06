@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { RefreshCw, Search, User, GraduationCap, UserCog, ChevronDown, ChevronUp } from 'lucide-react'
 import { listSessionSystemLogs, type SessionSystemLog } from '@/lib/api/session-system-logs'
@@ -10,13 +10,221 @@ import SearchableTeacherSelect from '@/components/admin/SearchableTeacherSelect'
 
 const SESSION_SYSTEM_LOGS_PER_PAGE = 20
 
-function formatValuesBlock(values: Record<string, unknown> | null | undefined) {
-  if (!values || typeof values !== 'object') return '—'
-  try {
-    return JSON.stringify(values, null, 2)
-  } catch {
-    return String(values)
+const WEEKDAY_AR: Record<string, string> = {
+  sunday: 'الأحد',
+  monday: 'الإثنين',
+  tuesday: 'الثلاثاء',
+  wednesday: 'الأربعاء',
+  thursday: 'الخميس',
+  friday: 'الجمعة',
+  saturday: 'السبت',
+}
+
+const SESSION_FIELD_LABELS: Record<string, string> = {
+  weekly_days: 'أيام الأسبوع',
+  weekly_schedule: 'الجدول الأسبوعي',
+  weekly_sessions: 'عدد الحصص الأسبوعية',
+  monthly_sessions: 'عدد الحصص الشهرية',
+  session_duration: 'مدة الحصة',
+  time: 'الوقت',
+  id: 'المعرّف',
+  student_id: 'معرّف الطالب',
+  teacher_id: 'معرّف المعلم',
+  changed_by_user_id: 'معرّف من نفّذ التغيير',
+  student: 'الطالب',
+  teacher: 'المعلم',
+  changed_by_user: 'من نفّذ التغيير',
+  old_values: 'القيم السابقة',
+  new_values: 'القيم الجديدة',
+  created_at: 'تاريخ الإنشاء',
+  name: 'الاسم',
+}
+
+function labelForKey(key: string): string {
+  return SESSION_FIELD_LABELS[key] ?? key.replace(/_/g, ' ')
+}
+
+function formatDayToken(token: string): string {
+  return WEEKDAY_AR[token.toLowerCase()] ?? token
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return v !== null && typeof v === 'object' && !Array.isArray(v)
+}
+
+function isScheduleSlot(o: Record<string, unknown>): boolean {
+  return 'time' in o && Object.keys(o).every((k) => ['time', 'session_duration'].includes(k))
+}
+
+function formatScalar(v: unknown): ReactNode {
+  if (v === null || v === undefined) {
+    return <span className="text-primary-500 italic">غير محدد</span>
   }
+  if (typeof v === 'boolean') {
+    return v ? 'نعم' : 'لا'
+  }
+  if (typeof v === 'number') {
+    return <span dir="ltr" className="tabular-nums inline-block">{v}</span>
+  }
+  if (typeof v === 'string') {
+    return <span dir="auto" className="break-words">{v}</span>
+  }
+  return String(v)
+}
+
+function SessionLogValuesView({ values }: { values: Record<string, unknown> | null | undefined }) {
+  if (!values || typeof values !== 'object' || Array.isArray(values)) {
+    return <p className="p-3 text-sm text-primary-600 text-right">—</p>
+  }
+  const keys = Object.keys(values)
+  if (keys.length === 0) {
+    return <p className="p-3 text-sm text-primary-600 text-right">—</p>
+  }
+
+  const preferredOrder = [
+    'weekly_days',
+    'weekly_schedule',
+    'weekly_sessions',
+    'monthly_sessions',
+    'session_duration',
+    'student',
+    'teacher',
+    'changed_by_user',
+    'id',
+    'student_id',
+    'teacher_id',
+    'changed_by_user_id',
+    'created_at',
+  ]
+  const orderedKeys = [
+    ...preferredOrder.filter((k) => k in values),
+    ...keys.filter((k) => !preferredOrder.includes(k)).sort(),
+  ]
+
+  const renderNested = (val: unknown, depth: number): ReactNode => {
+    if (val === null || val === undefined) {
+      return <span className="text-primary-500 italic text-sm">غير محدد</span>
+    }
+    if (Array.isArray(val)) {
+      if (val.length === 0) {
+        return <span className="text-primary-500 italic text-sm">لا يوجد</span>
+      }
+      if (val.every((x) => typeof x === 'string')) {
+        return (
+          <ul className="flex flex-wrap gap-1.5 justify-end list-none m-0 p-0">
+            {(val as string[]).map((item, i) => (
+              <li
+                key={`${item}-${i}`}
+                className="px-2 py-0.5 rounded-md bg-white/80 border border-primary-200 text-xs font-medium text-primary-900"
+              >
+                {formatDayToken(item)}
+              </li>
+            ))}
+          </ul>
+        )
+      }
+      return (
+        <ul className="space-y-1 text-sm text-right list-disc list-inside marker:text-primary-400">
+          {val.map((item, i) => (
+            <li key={i} className="break-words">
+              {renderNested(item, depth + 1)}
+            </li>
+          ))}
+        </ul>
+      )
+    }
+    if (isPlainObject(val)) {
+      if (isScheduleSlot(val)) {
+        const dur = val.session_duration
+        return (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 justify-end text-sm">
+            <span>
+              <span className="text-primary-600 text-xs ms-1">الوقت</span>{' '}
+              <span dir="ltr" className="font-mono tabular-nums font-semibold text-primary-900">
+                {String(val.time ?? '—')}
+              </span>
+            </span>
+            <span className="text-primary-300 hidden sm:inline">|</span>
+            <span>
+              <span className="text-primary-600 text-xs ms-1">المدة</span>{' '}
+              <span dir="ltr" className="tabular-nums font-semibold text-primary-900">
+                {dur != null ? `${dur} دقيقة` : '—'}
+              </span>
+            </span>
+          </div>
+        )
+      }
+      const refName = typeof val.name === 'string' ? val.name : null
+      const refId = typeof val.id === 'number' ? val.id : null
+      if (refName !== null || refId !== null) {
+        return (
+          <span className="text-sm font-semibold text-primary-900 break-words">
+            {refName ?? `#${refId}`}
+            {refName !== null && refId !== null ? (
+              <span className="text-primary-500 font-normal text-xs ms-1 tabular-nums" dir="ltr">
+                (#{refId})
+              </span>
+            ) : null}
+          </span>
+        )
+      }
+      const entries = Object.keys(val).sort((a, b) => {
+        const ai = ['time', 'session_duration'].indexOf(a)
+        const bi = ['time', 'session_duration'].indexOf(b)
+        if (ai >= 0 && bi >= 0) return ai - bi
+        if (ai >= 0) return -1
+        if (bi >= 0) return 1
+        return a.localeCompare(b)
+      })
+      return (
+        <div
+          className={`space-y-2 ${depth > 0 ? 'me-0 sm:me-2 ps-3 border-s-2 border-primary-200/80 rounded-s-md' : ''}`}
+        >
+          {entries.map((k) => (
+            <div key={k} className="text-right">
+              <p className="text-xs font-medium text-primary-600 mb-1">{labelForKey(k)}</p>
+              <div className="text-primary-900">{renderNested(val[k], depth + 1)}</div>
+            </div>
+          ))}
+        </div>
+      )
+    }
+    return <span className="text-sm">{formatScalar(val)}</span>
+  }
+
+  return (
+    <div className="p-3 sm:p-4 space-y-3 max-h-80 overflow-y-auto text-right" dir="rtl">
+      {orderedKeys.map((key) => (
+        <div
+          key={key}
+          className="rounded-lg bg-white/70 border border-primary-100/90 px-3 py-2.5 shadow-sm"
+        >
+          <p className="text-xs font-semibold text-primary-700 mb-2 border-b border-primary-100 pb-1.5">
+            {labelForKey(key)}
+          </p>
+          <div className="text-primary-900">
+            {key === 'weekly_schedule' && isPlainObject(values[key]) ? (
+              <div className="space-y-2">
+                {Object.entries(values[key] as Record<string, unknown>)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([day, cfg]) => (
+                    <div
+                      key={day}
+                      className="rounded-md border border-primary-200/80 bg-primary-50/40 px-2.5 py-2"
+                    >
+                      <p className="text-xs font-bold text-primary-800 mb-1.5">{formatDayToken(day)}</p>
+                      {renderNested(cfg, 1)}
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              renderNested(values[key], 0)
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export default function SessionSystemLogsPage() {
@@ -213,17 +421,13 @@ export default function SessionSystemLogsPage() {
                           <div className="px-3 py-2 bg-red-100 text-red-900 text-sm font-semibold text-right">
                             القيم السابقة
                           </div>
-                          <pre className="p-3 text-xs leading-relaxed text-primary-900 overflow-x-auto max-h-80 whitespace-pre-wrap break-words text-left" dir="ltr">
-                            {formatValuesBlock(log.old_values as Record<string, unknown>)}
-                          </pre>
+                          <SessionLogValuesView values={log.old_values as Record<string, unknown>} />
                         </div>
                         <div className="rounded-lg border-2 border-green-200 bg-green-50/60 overflow-hidden">
                           <div className="px-3 py-2 bg-green-100 text-green-900 text-sm font-semibold text-right">
                             القيم الجديدة
                           </div>
-                          <pre className="p-3 text-xs leading-relaxed text-primary-900 overflow-x-auto max-h-80 whitespace-pre-wrap break-words text-left" dir="ltr">
-                            {formatValuesBlock(log.new_values as Record<string, unknown>)}
-                          </pre>
+                          <SessionLogValuesView values={log.new_values as Record<string, unknown>} />
                         </div>
                       </div>
                     </motion.div>
