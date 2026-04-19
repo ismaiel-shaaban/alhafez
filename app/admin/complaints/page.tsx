@@ -13,6 +13,9 @@ import {
   MessageSquare,
   ChevronRight,
   ChevronLeft,
+  Phone,
+  Calendar,
+  ClipboardList,
 } from 'lucide-react'
 import { getComplaints, updateComplaint, Complaint, ComplaintType, ComplaintStatus } from '@/lib/api/complaints'
 import { getSessionEvaluations, SessionEvaluation } from '@/lib/api/session-evaluations'
@@ -395,66 +398,182 @@ export default function ComplaintsPage() {
             لا توجد تقييمات
           </div>
         ) : (
-          <div className="space-y-4">
-            {evaluations.map((ev) => (
+          <div className="space-y-6">
+            {evaluations.map((ev) => {
+              const studentFromStore = students.find((s) => s.id === ev.student_id)
+              const studentName = ev.student?.name ?? studentFromStore?.name
+              const studentPhone = ev.student?.phone ?? studentFromStore?.phone
+              const teacherFromStore =
+                ev.teacher_id != null ? teachers.find((t) => t.id === ev.teacher_id) : undefined
+              const teacherName = ev.teacher?.name ?? teacherFromStore?.name
+              const teacherPhone = ev.teacher?.phone
+              const shortQuestions: { num: string; label: string; value: string | null | undefined }[] = [
+                { num: '١', label: 'مستوى الرضا عن الدروس', value: ev.satisfaction_level_label },
+                { num: '٢', label: 'تقدم مستوى الطالب', value: ev.student_progress_label },
+                { num: '٣', label: 'ضوضاء في الحصة', value: ev.noise_in_session_label },
+                { num: '٤', label: 'جودة الإنترنت', value: ev.internet_quality_label },
+                { num: '٥', label: 'فتح الكاميرا من المعلم في الحصة', value: ev.teacher_camera_on_label },
+                { num: '٦', label: 'مشاركة الشاشة (شير الشاشة)', value: ev.screen_sharing_on_label },
+              ]
+              return (
               <motion.div
                 key={ev.id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-xl border-2 border-primary-200 p-4 sm:p-6 shadow-lg"
+                transition={{ duration: 0.25 }}
+                className="group relative overflow-hidden rounded-2xl border border-primary-200/70 bg-white shadow-md shadow-primary-900/[0.06] transition-all duration-300 hover:border-primary-300/80 hover:shadow-lg hover:shadow-primary-900/[0.08]"
               >
-                <div className="flex flex-wrap items-center gap-2 mb-4">
-                  {ev.student?.name && (
-                    <span className="px-2.5 py-1 bg-primary-100 text-primary-800 rounded-lg text-sm font-semibold">
-                      {ev.student.name}
-                    </span>
-                  )}
-                  <span className="text-xs sm:text-sm text-primary-600">
-                    {ev.created_at
-                      ? new Date(ev.created_at).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })
-                      : '-'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
-                  <div>
-                    <p className="text-primary-600 font-medium mb-0.5">١. مستوى الرضا عن الدروس</p>
-                    <p className="text-primary-900 font-semibold">{ev.satisfaction_level_label ?? '-'}</p>
+                <div className="h-1.5 bg-gradient-to-l from-primary-600 via-primary-400 to-emerald-500" aria-hidden />
+                <div className="p-4 sm:p-6" dir="rtl">
+                  <div className="mb-5 flex flex-col gap-3 border-b border-primary-100/90 pb-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {ev.is_monthly_subscription_evaluation && ev.evaluation_period ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900 ring-1 ring-amber-200/80">
+                          <Star className="h-3.5 w-3.5 text-amber-600" aria-hidden />
+                          تقييم شهري · {ev.evaluation_period}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-800 ring-1 ring-primary-200/70">
+                          <ClipboardList className="h-3.5 w-3.5 text-primary-600" aria-hidden />
+                          تقييم حصة
+                        </span>
+                      )}
+                    </div>
+                    <div className="inline-flex items-center gap-2 text-sm text-primary-700">
+                      <Calendar className="h-4 w-4 shrink-0 text-primary-500" aria-hidden />
+                      <span className="font-medium tabular-nums">
+                        {ev.created_at
+                          ? new Date(ev.created_at).toLocaleString('ar-EG', {
+                              dateStyle: 'medium',
+                              timeStyle: 'short',
+                            })
+                          : '—'}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-primary-600 font-medium mb-0.5">٢. تقدم مستوى الطالب</p>
-                    <p className="text-primary-900 font-semibold">{ev.student_progress_label ?? '-'}</p>
+
+                  <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div className="relative overflow-hidden rounded-xl border border-primary-100/90 bg-gradient-to-br from-primary-50/90 via-white to-white p-4 shadow-sm ring-1 ring-primary-900/[0.03]">
+                      <div className="absolute -left-6 -top-6 h-24 w-24 rounded-full bg-primary-200/25 blur-2xl" aria-hidden />
+                      <div className="relative flex items-start gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-100 text-primary-700 shadow-inner shadow-primary-900/5">
+                          <User className="h-5 w-5" strokeWidth={2} aria-hidden />
+                        </div>
+                        <div className="min-w-0 flex-1 space-y-3">
+                          <p className="text-xs font-bold tracking-wide text-primary-600/90">الطالب</p>
+                          <p className="truncate text-lg font-bold text-primary-950">
+                            {studentName ? studentName : <span className="text-primary-400">—</span>}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-medium text-primary-600">الهاتف</span>
+                            {studentPhone ? (
+                              <span
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-white/90 px-2.5 py-1.5 text-sm font-semibold text-primary-900 shadow-sm ring-1 ring-primary-200/60"
+                                dir="ltr"
+                              >
+                                <Phone className="h-3.5 w-3.5 shrink-0 text-primary-500" aria-hidden />
+                                {studentPhone}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-primary-400">—</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="relative overflow-hidden rounded-xl border border-emerald-100/90 bg-gradient-to-br from-emerald-50/80 via-white to-white p-4 shadow-sm ring-1 ring-emerald-900/[0.03]">
+                      <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-emerald-200/20 blur-2xl" aria-hidden />
+                      <div className="relative flex items-start gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800 shadow-inner shadow-emerald-900/5">
+                          <GraduationCap className="h-5 w-5" strokeWidth={2} aria-hidden />
+                        </div>
+                        <div className="min-w-0 flex-1 space-y-3">
+                          <p className="text-xs font-bold tracking-wide text-emerald-700/90">المعلم</p>
+                          <p className="truncate text-lg font-bold text-emerald-950">
+                            {teacherName ? teacherName : <span className="text-emerald-400/80">—</span>}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-medium text-emerald-700">الهاتف</span>
+                            {teacherPhone ? (
+                              <span
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-white/90 px-2.5 py-1.5 text-sm font-semibold text-emerald-950 shadow-sm ring-1 ring-emerald-200/70"
+                                dir="ltr"
+                              >
+                                <Phone className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
+                                {teacherPhone}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-emerald-400/90">—</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-primary-600 font-medium mb-0.5">٣. ضوضاء في الحصة</p>
-                    <p className="text-primary-900 font-semibold">{ev.noise_in_session_label ?? '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-primary-600 font-medium mb-0.5">٤. جودة الإنترنت</p>
-                    <p className="text-primary-900 font-semibold">{ev.internet_quality_label ?? '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-primary-600 font-medium mb-0.5">٥. فتح الكاميرا من المعلم في الحصة</p>
-                    <p className="text-primary-900 font-semibold">{ev.teacher_camera_on_label ?? '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-primary-600 font-medium mb-0.5">٦. مشاركة الشاشة (شير الشاشة)</p>
-                    <p className="text-primary-900 font-semibold">{ev.screen_sharing_on_label ?? '-'}</p>
-                  </div>
-                  <div className="sm:col-span-2 lg:col-span-3">
-                    <p className="text-primary-600 font-medium mb-0.5">٧. مميزات الأكاديمية</p>
-                    <p className="text-primary-900 break-words">{ev.academy_advantages ?? '-'}</p>
-                  </div>
-                  <div className="sm:col-span-2 lg:col-span-3">
-                    <p className="text-primary-600 font-medium mb-0.5">٨. ملاحظات على الأكاديمية / المعلم</p>
-                    <p className="text-primary-900 break-words">{ev.notes ?? '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-primary-600 font-medium mb-0.5">٩. بترشحونا للناس</p>
-                    <p className="text-primary-900 font-semibold">{ev.would_recommend_label ?? '-'}</p>
+
+                  <div className="rounded-xl bg-gradient-to-b from-slate-50/80 to-transparent p-1 sm:p-2">
+                    <h3 className="mb-4 flex items-center gap-2 px-1 text-base font-bold text-primary-950">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-100 text-primary-700">
+                        <ClipboardList className="h-4 w-4" aria-hidden />
+                      </span>
+                      أسئلة التقييم
+                    </h3>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {shortQuestions.map((q) => (
+                        <div
+                          key={q.num}
+                          className="flex gap-3 rounded-xl border border-primary-100/70 bg-white/90 p-3.5 shadow-sm transition-colors hover:border-primary-200 hover:bg-white"
+                        >
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xs font-bold text-primary-800">
+                            {q.num}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="mb-1 text-xs leading-snug text-primary-600">{q.label}</p>
+                            <p className="text-sm font-semibold leading-relaxed text-primary-950">{q.value ?? '—'}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-3 space-y-3">
+                      <div className="rounded-xl border border-primary-100/80 bg-white p-4 shadow-sm">
+                        <div className="mb-2 flex items-center gap-2">
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-xs font-bold text-violet-800">
+                            ٧
+                          </span>
+                          <p className="text-sm font-semibold text-primary-800">مميزات الأكاديمية</p>
+                        </div>
+                        <p className="whitespace-pre-wrap pr-1 text-sm leading-relaxed text-primary-900 sm:pr-10">
+                          {ev.academy_advantages?.trim() ? ev.academy_advantages : '—'}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-primary-100/80 bg-white p-4 shadow-sm">
+                        <div className="mb-2 flex items-center gap-2">
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-xs font-bold text-violet-800">
+                            ٨
+                          </span>
+                          <p className="text-sm font-semibold text-primary-800">ملاحظات على الأكاديمية / المعلم</p>
+                        </div>
+                        <p className="whitespace-pre-wrap pr-1 text-sm leading-relaxed text-primary-900 sm:pr-10">
+                          {ev.notes?.trim() ? ev.notes : '—'}
+                        </p>
+                      </div>
+                      <div className="flex gap-3 rounded-xl border border-primary-100/70 bg-gradient-to-l from-primary-50/50 to-white p-3.5">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xs font-bold text-primary-800">
+                          ٩
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="mb-1 text-xs text-primary-600">بترشحونا للناس</p>
+                          <p className="text-sm font-bold text-primary-950">{ev.would_recommend_label ?? '—'}</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </motion.div>
-            ))}
+              )
+            })}
           </div>
         )
       )}

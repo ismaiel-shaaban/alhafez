@@ -307,3 +307,43 @@ export const createSubscriptionPartialPayment = async (
   })
 }
 
+/** GET /api/dashboard/students/{id}/audit-logs */
+export interface StudentAuditLogActor {
+  type: string
+  type_label?: string
+  id: number | null
+  name: string | null
+  phone: string | null
+}
+
+export interface StudentAuditLogChange {
+  field: string
+  label: string
+  before: unknown
+  after: unknown
+}
+
+export interface StudentAuditLog {
+  id: number
+  created_at: string
+  path: string
+  http_method: string
+  response_status: number
+  actor: StudentAuditLogActor
+  changes: StudentAuditLogChange[]
+}
+
+export interface StudentAuditLogsData {
+  student: { id: number; name: string; phone?: string | null }
+  logs: StudentAuditLog[]
+}
+
+export const getStudentAuditLogs = async (
+  studentId: number,
+  locale?: string
+): Promise<StudentAuditLogsData> => {
+  return apiRequest<StudentAuditLogsData>(`/api/students/${studentId}/audit-logs`, {
+    locale,
+  })
+}
+

@@ -113,7 +113,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     : allNavItems
 
   return (
-    <div className="min-h-screen bg-primary-50 flex">
+    <div className="min-h-screen bg-primary-50 flex min-w-0 overflow-x-hidden">
       {/* Sidebar */}
       <aside
         className={`fixed lg:static inset-y-0 right-0 z-50 w-64 bg-gradient-to-b from-primary-800 to-primary-900 text-white transform transition-transform duration-300 ease-in-out ${
@@ -206,7 +206,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </AnimatePresence>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:mr-0">
+      <div className="flex-1 flex flex-col lg:mr-0 min-w-0 max-w-full">
         {/* Top Bar */}
         <header className="bg-white border-b border-primary-200 px-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
           <button
@@ -227,7 +227,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 lg:p-8">{children}</main>
+        <main className="flex-1 p-3 sm:p-4 lg:p-8 min-w-0 max-w-full">{children}</main>
       </div>
     </div>
   )
