@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useAdminStore } from '@/store/useAdminStore'
-import { Plus, Edit, Trash2, Search, X, Eye, Calendar, CheckCircle, Clock, Filter, ChevronDown, ChevronUp, CreditCard, DollarSign, Image as ImageIcon, AlertTriangle } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, X, Eye, Calendar, CheckCircle, Clock, Filter, ChevronDown, ChevronUp, CreditCard, DollarSign, Image as ImageIcon, AlertTriangle, History } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import SearchableTeacherSelect from '@/components/admin/SearchableTeacherSelect'
 import {
@@ -1015,6 +1016,13 @@ export default function StudentsPage() {
                   >
                     <Eye className="w-4 h-4" />
                   </button>
+                  <Link
+                    href={`/admin/students/${student.id}/audit-logs`}
+                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-flex"
+                    title="سجل العمليات"
+                  >
+                    <History className="w-4 h-4" />
+                  </Link>
                   <button
                     onClick={() => handleViewSubscriptionsOnly(student)}
                     className="p-2 text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"
@@ -1113,6 +1121,13 @@ export default function StudentsPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
+                          <Link
+                            href={`/admin/students/${student.id}/audit-logs`}
+                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-flex"
+                            title="سجل العمليات"
+                          >
+                            <History className="w-4 h-4" />
+                          </Link>
                           <button
                             onClick={() => handleViewSubscriptionsOnly(student)}
                             className="p-2 text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"

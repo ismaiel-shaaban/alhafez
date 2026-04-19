@@ -1,9 +1,25 @@
 import { apiRequest, Pagination } from '../api-client'
 
+/** Nested student as returned on session-evaluation list/detail */
+export interface SessionEvaluationStudent {
+  id: number
+  name: string
+  phone?: string
+}
+
+/** Nested teacher as returned on session-evaluation list/detail */
+export interface SessionEvaluationTeacher {
+  id: number
+  name: string
+  phone?: string
+}
+
 export interface SessionEvaluation {
   id: number
-  session_id: number
+  session_id: number | null
+  student_subscription_id?: number
   student_id: number
+  teacher_id?: number
   satisfaction_level: string
   satisfaction_level_label?: string
   student_progress: string
@@ -20,8 +36,14 @@ export interface SessionEvaluation {
   notes?: string | null
   would_recommend: string
   would_recommend_label?: string
-  student?: { id: number; name: string }
+  student?: SessionEvaluationStudent
+  teacher?: SessionEvaluationTeacher
+  is_monthly_subscription_evaluation?: boolean
+  evaluation_year?: number
+  evaluation_month?: number
+  evaluation_period?: string
   created_at: string
+  updated_at?: string
 }
 
 export interface SessionEvaluationsFilters {

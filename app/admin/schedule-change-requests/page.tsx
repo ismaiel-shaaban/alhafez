@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { CheckCircle, XCircle, Clock, User, Calendar, RefreshCw, ChevronRight, ChevronLeft, Trash2 } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, RefreshCw, ChevronRight, ChevronLeft, Trash2 } from 'lucide-react'
 import {
   getScheduleChangeRequests,
   approveScheduleChangeRequest,
@@ -11,8 +11,12 @@ import {
   ScheduleChangeRequest,
 } from '@/lib/api/schedule-change-requests'
 import { Pagination } from '@/lib/api-client'
+import { useAdminStore } from '@/store/useAdminStore'
+import SearchableStudentSelect from '@/components/admin/SearchableStudentSelect'
+import SearchableTeacherSelect from '@/components/admin/SearchableTeacherSelect'
 
 export default function ScheduleChangeRequestsPage() {
+  const { students, fetchStudents, teachers, fetchTeachers } = useAdminStore()
   const [requests, setRequests] = useState<ScheduleChangeRequest[]>([])
   const [pagination, setPagination] = useState<Pagination | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -26,19 +30,24 @@ export default function ScheduleChangeRequestsPage() {
   })
 
   useEffect(() => {
+    fetchTeachers(1, 1000)
+    fetchStudents({ per_page: 1000, page: 1 })
+  }, [fetchTeachers, fetchStudents])
+
+  useEffect(() => {
     loadRequests()
-  }, [currentPage, filters.status])
+  }, [currentPage, filters.status, filters.teacher_id, filters.student_id])
 
   const loadRequests = async () => {
     setLoading(true)
     try {
-      const apiFilters: any = {
+      const apiFilters: Parameters<typeof getScheduleChangeRequests>[0] = {
         page: currentPage,
         per_page: 15,
       }
       if (filters.status) apiFilters.status = filters.status
-      if (filters.teacher_id) apiFilters.teacher_id = parseInt(filters.teacher_id)
-      if (filters.student_id) apiFilters.student_id = parseInt(filters.student_id)
+      if (filters.teacher_id) apiFilters.teacher_id = parseInt(filters.teacher_id, 10)
+      if (filters.student_id) apiFilters.student_id = parseInt(filters.student_id, 10)
 
       const data = await getScheduleChangeRequests(apiFilters)
       setRequests(data?.requests || [])
@@ -138,6 +147,30 @@ export default function ScheduleChangeRequestsPage() {
               <option value="approved">موافق عليه</option>
               <option value="rejected">مرفوض</option>
             </select>
+          </div>
+          <div>
+            <label className="block text-primary-900 font-semibold mb-2 text-right">المعلم</label>
+            <SearchableTeacherSelect
+              value={filters.teacher_id}
+              onChange={(value) => {
+                setFilters({ ...filters, teacher_id: value })
+                setCurrentPage(1)
+              }}
+              teachers={teachers}
+              placeholder="جميع المعلمين"
+            />
+          </div>
+          <div>
+            <label className="block text-primary-900 font-semibold mb-2 text-right">الطالب</label>
+            <SearchableStudentSelect
+              value={filters.student_id}
+              onChange={(value) => {
+                setFilters({ ...filters, student_id: value })
+                setCurrentPage(1)
+              }}
+              students={students}
+              placeholder="جميع الطلاب"
+            />
           </div>
         </div>
       </div>
